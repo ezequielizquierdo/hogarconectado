@@ -1,23 +1,22 @@
 import { useState, useEffect, useRef } from 'react';
-import { categoriasService, handleApiError } from '../services';
-import type { Categoria } from '../services';
+import { productosService, handleApiError } from '../services';
 
 // Rate limiting para evitar múltiples requests
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-export const useCategorias = () => {
-    const [categorias, setCategorias] = useState<Categoria[]>([]);
-    const [loading, setLoading] = useState(true);
+export const useMarcas = () => {
+    const [marcas, setMarcas] = useState<string[]>([]);
+    const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
     // Control de rate limiting
     const lastRequestTime = useRef<number>(0);
     const isRequestInProgress = useRef<boolean>(false);
 
-    const cargarCategorias = async () => {
+    const cargarMarcas = async () => {
         // Evitar requests simultáneos
         if (isRequestInProgress.current) {
-            console.log('Request de categorías en progreso, omitiendo...');
+            console.log('Request de marcas en progreso, omitiendo...');
             return;
         }
 
@@ -34,12 +33,12 @@ export const useCategorias = () => {
             setLoading(true);
             setError(null);
 
-            const data = await categoriasService.obtenerCategorias();
-            setCategorias(data);
+            const data = await productosService.obtenerMarcas();
+            setMarcas(data);
         } catch (err) {
             const errorMessage = handleApiError(err);
             setError(errorMessage);
-            console.error('Error cargando categorías:', err);
+            console.error('Error cargando marcas:', errorMessage);
         } finally {
             setLoading(false);
             isRequestInProgress.current = false;
@@ -47,15 +46,15 @@ export const useCategorias = () => {
     };
 
     useEffect(() => {
-        cargarCategorias();
+        cargarMarcas();
     }, []);
 
     const recargar = () => {
-        cargarCategorias();
+        cargarMarcas();
     };
 
     return {
-        categorias,
+        marcas,
         loading,
         error,
         recargar,

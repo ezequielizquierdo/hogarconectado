@@ -67,24 +67,15 @@ export const RADIUS = {
 // Sombras predefinidas
 export const SHADOWS = {
     sm: {
-        shadowColor: COLORS.shadow,
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.5,
-        shadowRadius: 3,
+        boxShadow: `0 1px 3px ${COLORS.shadow}`,
         elevation: 2,
     },
     md: {
-        shadowColor: COLORS.shadow,
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.8,
-        shadowRadius: 6,
+        boxShadow: `0 2px 6px ${COLORS.shadow}`,
         elevation: 4,
     },
     lg: {
-        shadowColor: COLORS.shadowDark,
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 1,
-        shadowRadius: 12,
+        boxShadow: `0 4px 12px ${COLORS.shadowDark}`,
         elevation: 8,
     },
 };

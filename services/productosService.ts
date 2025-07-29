@@ -118,6 +118,48 @@ class ProductosService {
             throw error;
         }
     }
+
+    // Obtener marcas únicas
+    async obtenerMarcas(): Promise<string[]> {
+        try {
+            const { productos } = await this.obtenerProductos({ limite: 1000 });
+            const marcasUnicas = [...new Set(productos.map(p => p.marca).filter(Boolean))];
+            return marcasUnicas.sort();
+        } catch (error) {
+            console.error('Error obteniendo marcas:', error);
+            throw error;
+        }
+    }
+
+    // Obtener marcas por categoría
+    async obtenerMarcasPorCategoria(categoriaId: string): Promise<string[]> {
+        try {
+            const { productos } = await this.obtenerProductos({
+                categoria: categoriaId,
+                limite: 1000
+            });
+            const marcasUnicas = [...new Set(productos.map(p => p.marca).filter(Boolean))];
+            return marcasUnicas.sort();
+        } catch (error) {
+            console.error('Error obteniendo marcas por categoría:', error);
+            throw error;
+        }
+    }
+
+    // Obtener productos por categoría y marca
+    async obtenerProductosPorCategoriaYMarca(categoriaId: string, marca: string): Promise<Producto[]> {
+        try {
+            const { productos } = await this.obtenerProductos({
+                categoria: categoriaId,
+                marca: marca,
+                limite: 1000
+            });
+            return productos;
+        } catch (error) {
+            console.error('Error obteniendo productos por categoría y marca:', error);
+            throw error;
+        }
+    }
 }
 
 export default new ProductosService();

@@ -1,0 +1,1880 @@
+import React, { useState, useEffect } from "react";
+import {
+  StyleSheet,
+  ScrollView,
+  View,
+  Alert,
+  Modal,
+  TextInput,
+  TouchableOpacity,
+  FlatList,
+  RefreshControl,
+  Platform,
+  Dimensions,
+  SafeAreaView,
+} from "react-native";
+import { Image } from "expo-image";
+import * as ImagePicker from "expo-image-picker";
+import * as DocumentPicker from "expo-document-picker";
+import * as FileSystem from "expo-file-system";
+import { HelloWave } from "@/components/HelloWave";
+import ParallaxScrollView from "@/components/ParallaxScrollView";
+import { ThemedText } from "@/components/ThemedText";
+import { ThemedView } from "@/components/ThemedView";
+import LabeledDropdown from "@/components/LabeledDropdown";
+import EditableDropdown from "@/components/EditableDropdown";
+import AnimatedInput from "@/components/AnimatedInput";
+import AnimatedButton from "@/components/AnimatedButton";
+import FadeInView from "@/components/FadeInView";
+import { useCategorias } from "@/hooks/useCategorias";
+import { useProductos } from "@/hooks/useProductos";
+import { useMarcas } from "@/hooks/useMarcas";
+import useDebounce from "@/hooks/useDebounce";
+import { productosService } from "@/services";
+import { Producto } from "@/services/types";
+import { COLORS, SPACING, RADIUS, SHADOWS } from "@/constants/theme";
+
+interface ProductoForm {
+  marca: string;
+  modelo: string;
+  descripcion: string;
+  categoria: string;
+  precioBase: string;
+  stockCantidad: string;
+  stockDisponible: string;
+  imagen: string;
+}
+
+const initialForm: ProductoForm = {
+  marca: "",
+  modelo: "",
+  descripcion: "",
+  categoria: "",
+  precioBase: "",
+  stockCantidad: "",
+  stockDisponible: "true",
+  imagen: "",
+};
+
+export default function ProductosScreen() {
+  const { categorias, loading: categoriasLoading } = useCategorias();
+  const { productos, loading: productosLoading, recargar } = useProductos();
+  const {
+    marcas,
+    loading: marcasLoading,
+    recargar: recargarMarcas,
+  } = useMarcas();
+
+  const [modalVisible, setModalVisible] = useState(false);
+  const [statsModalVisible, setStatsModalVisible] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<Producto | null>(null);
+  const [form, setForm] = useState<ProductoForm>(initialForm);
+  const [saving, setSaving] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+
+  // Estados para búsqueda y filtros
+  const [searchText, setSearchText] = useState("");
+  const [filtroCategoria, setFiltroCategoria] = useState("");
+  const [filtroMarca, setFiltroMarca] = useState("");
+  const [filtroStock, setFiltroStock] = useState(""); // "disponible", "agotado", ""
+  const [vistaDetallada, setVistaDetallada] = useState(false);
+
+  // Debounce search text para evitar búsquedas excesivas
+  const debouncedSearchText = useDebounce(searchText, 300);
+
+  // Rate limiting: agregar delay entre operaciones
+  const delay = (ms: number) =>
+    new Promise((resolve) => setTimeout(resolve, ms));
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    try {
+      // Agregar delay entre recarga de datos para evitar rate limiting
+      await recargar();
+      await delay(500); // 500ms de delay
+      await recargarMarcas();
+    } catch (error) {
+      console.error("Error al refrescar datos:", error);
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  // Función para filtrar productos
+  const productosFiltrados = productos.filter((producto) => {
+    // Filtro por texto de búsqueda (usando debounced text)
+    const matchesSearch =
+      debouncedSearchText === "" ||
+      producto.marca
+        .toLowerCase()
+        .includes(debouncedSearchText.toLowerCase()) ||
+      producto.modelo
+        .toLowerCase()
+        .includes(debouncedSearchText.toLowerCase()) ||
+      (producto.descripcion &&
+        producto.descripcion
+          .toLowerCase()
+          .includes(debouncedSearchText.toLowerCase()));
+
+    // Filtro por categoría
+    const categoriaId =
+      typeof producto.categoria === "string"
+        ? producto.categoria
+        : producto.categoria._id;
+    const matchesCategoria =
+      filtroCategoria === "" || categoriaId === filtroCategoria;
+
+    // Filtro por marca
+    const matchesMarca = filtroMarca === "" || producto.marca === filtroMarca;
+
+    // Filtro por stock
+    const matchesStock =
+      filtroStock === "" ||
+      (filtroStock === "disponible" &&
+        producto.stock.disponible &&
+        producto.stock.cantidad > 0) ||
+      (filtroStock === "agotado" &&
+        (!producto.stock.disponible || producto.stock.cantidad === 0));
+
+    return matchesSearch && matchesCategoria && matchesMarca && matchesStock;
+  });
+
+  // Función para limpiar filtros
+  const limpiarFiltros = () => {
+    setSearchText("");
+    setFiltroCategoria("");
+    setFiltroMarca("");
+    setFiltroStock("");
+  };
+
+  // Estadísticas del inventario
+  const estadisticas = {
+    total: productos.length,
+    disponibles: productos.filter(
+      (p) => p.stock.disponible && p.stock.cantidad > 0
+    ).length,
+    agotados: productos.filter(
+      (p) => !p.stock.disponible || p.stock.cantidad === 0
+    ).length,
+    valorTotal: productos.reduce(
+      (sum, p) => sum + p.precioBase * p.stock.cantidad,
+      0
+    ),
+  };
+
+  const openModal = (producto?: Producto) => {
+    if (producto) {
+      setEditingProduct(producto);
+      const categoriaId =
+        typeof producto.categoria === "string"
+          ? producto.categoria
+          : producto.categoria._id;
+
+      setForm({
+        marca: producto.marca,
+        modelo: producto.modelo,
+        descripcion: producto.descripcion || "",
+        categoria: categoriaId,
+        precioBase: producto.precioBase.toString(),
+        stockCantidad: producto.stock.cantidad.toString(),
+        stockDisponible: producto.stock.disponible.toString(),
+        imagen:
+          producto.imagenes && producto.imagenes.length > 0
+            ? producto.imagenes[0]
+            : "",
+      });
+    } else {
+      setEditingProduct(null);
+      setForm(initialForm);
+    }
+    setModalVisible(true);
+  };
+
+  const closeModal = () => {
+    setModalVisible(false);
+    setEditingProduct(null);
+    setForm(initialForm);
+  };
+
+  const handleSave = async () => {
+    if (!form.marca || !form.modelo || !form.categoria || !form.precioBase) {
+      Alert.alert("Error", "Por favor completa los campos obligatorios");
+      return;
+    }
+
+    setSaving(true);
+    try {
+      // Preparar la imagen
+      let imagenesArray: string[] = [];
+      if (form.imagen) {
+        console.log("Imagen URL:", form.imagen);
+        imagenesArray = [form.imagen];
+        console.log("Imagen agregada al producto:", form.imagen);
+      }
+
+      const productoData = {
+        marca: form.marca,
+        modelo: form.modelo,
+        descripcion: form.descripcion,
+        categoria: form.categoria,
+        precioBase: parseFloat(form.precioBase),
+        stock: {
+          cantidad: parseInt(form.stockCantidad) || 0,
+          disponible: form.stockDisponible === "true",
+        },
+        tags: [],
+        imagenes: imagenesArray,
+        activo: true,
+      };
+
+      // Log para debug
+      console.log(
+        "Datos del producto a enviar:",
+        JSON.stringify(productoData, null, 2)
+      );
+
+      if (editingProduct) {
+        await productosService.actualizarProducto(
+          editingProduct._id,
+          productoData
+        );
+        Alert.alert("Éxito", "Producto actualizado correctamente");
+      } else {
+        await productosService.crearProducto(productoData);
+        Alert.alert("Éxito", "Producto creado correctamente");
+      }
+
+      closeModal();
+
+      // Agregar delay antes de recargar para evitar rate limiting
+      await delay(500);
+      await recargar();
+      await delay(300);
+      await recargarMarcas(); // Recargar marcas para incluir la nueva marca si se agregó una
+    } catch (error: any) {
+      console.error("Error al guardar producto:", error);
+
+      // Log más detallado del error
+      if (error.response) {
+        console.error("Error response data:", error.response.data);
+        console.error("Error response status:", error.response.status);
+        console.error("Error response headers:", error.response.headers);
+      }
+
+      Alert.alert(
+        "Error",
+        "No se pudo guardar el producto. Revisa la consola para más detalles."
+      );
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = (producto: Producto) => {
+    Alert.alert(
+      "Confirmar eliminación",
+      `¿Estás seguro de que quieres eliminar "${producto.marca} ${producto.modelo}"?`,
+      [
+        { text: "Cancelar", style: "cancel" },
+        {
+          text: "Eliminar",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await productosService.eliminarProducto(producto._id);
+              Alert.alert("Éxito", "Producto eliminado correctamente");
+
+              // Agregar delay antes de recargar para evitar rate limiting
+              await delay(500);
+              await recargar();
+            } catch (error) {
+              console.error("Error al eliminar producto:", error);
+              Alert.alert("Error", "No se pudo eliminar el producto");
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  // Función para manejo de imágenes
+  const requestPermissions = async () => {
+    if (Platform.OS !== "web") {
+      const { status } =
+        await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== "granted") {
+        Alert.alert(
+          "Permisos requeridos",
+          "Se necesitan permisos para acceder a la galería"
+        );
+        return false;
+      }
+    }
+    return true;
+  };
+
+  // Cache para evitar múltiples peticiones de la misma imagen
+  const imageCache = new Map<string, string>();
+  const imageRequestQueue = new Map<string, Promise<string>>();
+  const lastImageRequestTime = { value: 0 };
+
+  // Función para convertir URL del servidor a data URL en web con cache y manejo de errores mejorado
+  const getImageUrl = async (originalUrl: string): Promise<string> => {
+    // Si ya es un data URL, devolverlo tal como está
+    if (originalUrl.startsWith("data:")) {
+      return originalUrl;
+    }
+
+    // Verificar cache primero
+    if (imageCache.has(originalUrl)) {
+      return imageCache.get(originalUrl)!;
+    }
+
+    // Si ya hay una request en progreso para esta URL, esperar a que termine
+    if (imageRequestQueue.has(originalUrl)) {
+      return imageRequestQueue.get(originalUrl)!;
+    }
+
+    // Si es una URL externa (http/https), devolverla tal como está
+    if (
+      originalUrl.startsWith("http://") &&
+      !originalUrl.includes("192.168.1.13:3000") &&
+      !originalUrl.includes("localhost:3000")
+    ) {
+      imageCache.set(originalUrl, originalUrl);
+      return originalUrl;
+    }
+
+    // En web, si es una URL del servidor local, intentar convertir a data URL
+    if (
+      Platform.OS === "web" &&
+      (originalUrl.includes("192.168.1.13:3000") ||
+        originalUrl.includes("localhost:3000"))
+    ) {
+      const imagePromise = (async () => {
+        try {
+          // Rate limiting más agresivo para imágenes
+          const now = Date.now();
+          const timeSinceLastRequest = now - lastImageRequestTime.value;
+          const minDelay = 500; // 500ms entre requests de imágenes
+
+          if (timeSinceLastRequest < minDelay) {
+            await new Promise((resolve) =>
+              setTimeout(resolve, minDelay - timeSinceLastRequest)
+            );
+          }
+
+          lastImageRequestTime.value = Date.now();
+
+          console.log(
+            "Convirtiendo URL del servidor a data URL en web:",
+            originalUrl
+          );
+
+          // Intentar obtener la imagen del servidor con timeout extendido
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 segundos timeout
+
+          const response = await fetch(originalUrl, {
+            signal: controller.signal,
+            mode: "cors",
+            headers: {
+              Accept: "image/*",
+              "Cache-Control": "max-age=3600", // Cache por 1 hora
+            },
+          });
+
+          clearTimeout(timeoutId);
+
+          if (response.ok) {
+            const blob = await response.blob();
+            const dataUrl = await new Promise<string>((resolve) => {
+              const reader = new FileReader();
+              reader.onload = () => resolve(reader.result as string);
+              reader.readAsDataURL(blob);
+            });
+
+            // Guardar en cache
+            imageCache.set(originalUrl, dataUrl);
+            imageRequestQueue.delete(originalUrl);
+            return dataUrl;
+          } else {
+            console.warn(
+              `No se pudo obtener la imagen del servidor (${response.status}), usando placeholder`
+            );
+            // En caso de 429 o otros errores, no intentar de nuevo
+            const fallbackUrl = originalUrl;
+            imageCache.set(originalUrl, fallbackUrl);
+            imageRequestQueue.delete(originalUrl);
+            return fallbackUrl;
+          }
+        } catch (error: any) {
+          console.error(
+            "Error al convertir imagen del servidor:",
+            error.message
+          );
+          // Para errores CORS, timeout o rate limiting, usar URL original
+          const fallbackUrl = originalUrl;
+          imageCache.set(originalUrl, fallbackUrl);
+          imageRequestQueue.delete(originalUrl);
+          return fallbackUrl;
+        }
+      })();
+
+      // Guardar la promesa en la cola para evitar requests duplicados
+      imageRequestQueue.set(originalUrl, imagePromise);
+      return imagePromise;
+    }
+
+    // En móvil, devolver la URL original
+    imageCache.set(originalUrl, originalUrl);
+    return originalUrl;
+  };
+
+  // Componente de imagen que maneja conversión automática para web con manejo de errores mejorado
+  const SmartImage: React.FC<{
+    source: { uri: string };
+    style: any;
+    onError?: (error: any) => void;
+    onLoad?: () => void;
+  }> = ({ source, style, onError, onLoad }) => {
+    const [imageUri, setImageUri] = useState(source.uri);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(false);
+
+    React.useEffect(() => {
+      const loadImage = async () => {
+        setLoading(true);
+        setError(false);
+
+        try {
+          const convertedUri = await getImageUrl(source.uri);
+          setImageUri(convertedUri);
+        } catch (error) {
+          console.error("Error al procesar imagen:", error);
+          setError(true);
+          setImageUri(source.uri); // Fallback
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      loadImage();
+    }, [source.uri]);
+
+    const handleImageError = (errorEvent: any) => {
+      console.error("Error al cargar imagen:", errorEvent);
+      setError(true);
+      if (onError) {
+        onError(errorEvent);
+      }
+    };
+
+    const handleImageLoad = () => {
+      setError(false);
+      if (onLoad) {
+        onLoad();
+      }
+    };
+
+    if (loading) {
+      return (
+        <View
+          style={[
+            style,
+            {
+              backgroundColor: COLORS.surface,
+              justifyContent: "center",
+              alignItems: "center",
+              borderRadius: RADIUS.md,
+            },
+          ]}
+        >
+          <ThemedText style={{ fontSize: 28, color: COLORS.textSecondary }}>
+            📷
+          </ThemedText>
+        </View>
+      );
+    }
+
+    if (error) {
+      return (
+        <View
+          style={[
+            style,
+            {
+              backgroundColor: COLORS.surface,
+              justifyContent: "center",
+              alignItems: "center",
+              borderRadius: RADIUS.md,
+              borderWidth: 1,
+              borderColor: COLORS.border,
+            },
+          ]}
+        >
+          <ThemedText style={{ fontSize: 20, color: COLORS.textSecondary }}>
+            ❌
+          </ThemedText>
+          <ThemedText
+            style={{
+              fontSize: 10,
+              color: COLORS.textSecondary,
+              textAlign: "center",
+            }}
+          >
+            Error cargando imagen
+          </ThemedText>
+        </View>
+      );
+    }
+
+    return (
+      <Image
+        source={{ uri: imageUri }}
+        style={style}
+        onError={handleImageError}
+        onLoad={handleImageLoad}
+        contentFit="cover"
+      />
+    );
+  };
+
+  // Función para subir imagen al backend
+  const uploadImageToBackend = async (
+    imageUri: string
+  ): Promise<string | null> => {
+    try {
+      console.log("Subiendo imagen al backend:", imageUri);
+
+      // Si es una URL de internet, devolverla directamente
+      if (imageUri.startsWith("http://") || imageUri.startsWith("https://")) {
+        return imageUri;
+      }
+
+      // Para archivos locales, convertir a base64
+      const base64 = await FileSystem.readAsStringAsync(imageUri, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
+
+      // Determinar el tipo de imagen
+      const extension = imageUri.split(".").pop()?.toLowerCase() || "jpg";
+      const mimeType = extension === "png" ? "image/png" : "image/jpeg";
+
+      // Crear data URL para uso directo en web (evita problemas de CORS)
+      const dataUrl = `data:${mimeType};base64,${base64}`;
+      console.log("Data URL creada:", dataUrl.substring(0, 100) + "...");
+
+      // En web, usar directamente el data URL para evitar problemas de CORS
+      if (Platform.OS === "web") {
+        console.log("Plataforma web detectada, usando data URL directamente");
+        return dataUrl;
+      }
+
+      // En móvil, intentar subir al servidor
+      const getBackendURL = () => {
+        return "http://192.168.1.13:3000";
+      };
+
+      const backendURL = getBackendURL();
+      console.log("Subiendo al servidor móvil:", backendURL);
+
+      const requestBody = {
+        imageData: dataUrl,
+        filename: `product_${Date.now()}.${extension}`,
+      };
+
+      const response = await fetch(`${backendURL}/api/upload/base64`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(requestBody),
+      });
+
+      console.log("Respuesta del servidor:", {
+        status: response.status,
+        statusText: response.statusText,
+        ok: response.ok,
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("Error response body:", errorText);
+        // En móvil, si falla el servidor, usar el data URL como fallback
+        console.log("Servidor falló, usando data URL como fallback");
+        return dataUrl;
+      }
+
+      const data = await response.json();
+      console.log("Imagen subida exitosamente:", data);
+
+      // Construir URL completa si es relativa
+      let fullUrl = data.url || data.data?.url;
+      if (fullUrl && fullUrl.startsWith("/")) {
+        fullUrl = `${backendURL}${fullUrl}`;
+      }
+
+      console.log("URL final de la imagen:", fullUrl);
+      return fullUrl || dataUrl;
+    } catch (error) {
+      console.error("Error al subir imagen:", error);
+
+      // Como último fallback, crear data URL si es posible
+      try {
+        if (imageUri && !imageUri.startsWith("data:")) {
+          const base64 = await FileSystem.readAsStringAsync(imageUri, {
+            encoding: FileSystem.EncodingType.Base64,
+          });
+          const extension = imageUri.split(".").pop()?.toLowerCase() || "jpg";
+          const mimeType = extension === "png" ? "image/png" : "image/jpeg";
+          const fallbackDataUrl = `data:${mimeType};base64,${base64}`;
+          console.log("Usando data URL como fallback final");
+          return fallbackDataUrl;
+        }
+      } catch (fallbackError) {
+        console.error("Error al crear fallback:", fallbackError);
+      }
+
+      return null;
+    }
+  };
+
+  const selectImageFromGallery = async () => {
+    const hasPermissions = await requestPermissions();
+    if (!hasPermissions) return;
+
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ["images"],
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const imageUri = result.assets[0].uri;
+        console.log("Imagen seleccionada de galería:", imageUri);
+
+        // Subir imagen al backend automáticamente
+        const uploadedUrl = await uploadImageToBackend(imageUri);
+        console.log("URL recibida del upload (galería):", uploadedUrl);
+        if (uploadedUrl) {
+          console.log("Guardando URL en form:", uploadedUrl);
+          setForm({ ...form, imagen: uploadedUrl });
+          Alert.alert("Éxito", "Imagen subida correctamente");
+        } else {
+          console.error("No se recibió URL válida del upload");
+        }
+      }
+    } catch (error) {
+      console.error("Error al seleccionar imagen:", error);
+      Alert.alert("Error", "No se pudo seleccionar la imagen");
+    }
+  };
+
+  const selectImageFromCamera = async () => {
+    if (Platform.OS === "web") {
+      Alert.alert("No disponible", "La cámara no está disponible en web");
+      return;
+    }
+
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== "granted") {
+      Alert.alert(
+        "Permisos requeridos",
+        "Se necesitan permisos para usar la cámara"
+      );
+      return;
+    }
+
+    try {
+      const result = await ImagePicker.launchCameraAsync({
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const imageUri = result.assets[0].uri;
+        console.log("Imagen tomada con cámara:", imageUri);
+
+        // Subir imagen al backend automáticamente
+        const uploadedUrl = await uploadImageToBackend(imageUri);
+        if (uploadedUrl) {
+          setForm({ ...form, imagen: uploadedUrl });
+          Alert.alert("Éxito", "Imagen subida correctamente");
+        }
+      }
+    } catch (error) {
+      console.error("Error al tomar foto:", error);
+      Alert.alert("Error", "No se pudo tomar la foto");
+    }
+  };
+
+  const selectImageFromFiles = async () => {
+    if (Platform.OS !== "web") {
+      Alert.alert(
+        "No disponible",
+        "Selección de archivos solo disponible en web"
+      );
+      return;
+    }
+
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: "image/*",
+        copyToCacheDirectory: true,
+      });
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const imageUri = result.assets[0].uri;
+        console.log("Archivo seleccionado:", imageUri);
+
+        // Subir imagen al backend automáticamente
+        const uploadedUrl = await uploadImageToBackend(imageUri);
+        if (uploadedUrl) {
+          setForm({ ...form, imagen: uploadedUrl });
+          Alert.alert("Éxito", "Imagen subida correctamente");
+        }
+      }
+    } catch (error) {
+      console.error("Error al seleccionar archivo:", error);
+      Alert.alert("Error", "No se pudo seleccionar el archivo");
+    }
+  };
+
+  const showImagePicker = () => {
+    const options = [
+      {
+        text: "Ingresar URL",
+        onPress: () => promptForImageURL(),
+      },
+      { text: "Galería", onPress: selectImageFromGallery },
+    ];
+
+    if (Platform.OS !== "web") {
+      options.push({
+        text: "Cámara",
+        onPress: selectImageFromCamera,
+      });
+    } else {
+      options.push({
+        text: "Archivos",
+        onPress: selectImageFromFiles,
+      });
+    }
+
+    options.push({ text: "Cancelar", onPress: () => {} });
+
+    Alert.alert("Seleccionar imagen", "Elige la fuente de la imagen", options);
+  };
+
+  const promptForImageURL = () => {
+    if (Platform.OS === "ios") {
+      Alert.prompt(
+        "URL de imagen",
+        "Ingresa la URL de la imagen",
+        [
+          { text: "Cancelar" },
+          {
+            text: "Agregar",
+            onPress: (url) => {
+              if (url && url.trim()) {
+                const cleanUrl = url.trim();
+                console.log("URL ingresada:", cleanUrl);
+
+                // Validar URL básica
+                if (
+                  cleanUrl.startsWith("http") ||
+                  cleanUrl.startsWith("https") ||
+                  cleanUrl.startsWith("data:")
+                ) {
+                  setForm({ ...form, imagen: cleanUrl });
+                } else {
+                  Alert.alert(
+                    "Error",
+                    "Por favor ingresa una URL válida que comience con http://, https:// o data:"
+                  );
+                }
+              }
+            },
+          },
+        ],
+        "plain-text",
+        form.imagen
+      );
+    } else {
+      // Para Android y Web, mostrar un input simple
+      Alert.alert(
+        "URL de imagen",
+        "Ve a configuración avanzada para ingresar URL manualmente"
+      );
+    }
+  };
+
+  const removeImage = () => {
+    setForm({ ...form, imagen: "" });
+  };
+
+  const renderProducto = ({ item }: { item: Producto }) => {
+    const categoria = categorias.find(
+      (c) =>
+        c._id ===
+        (typeof item.categoria === "string"
+          ? item.categoria
+          : item.categoria._id)
+    );
+
+    const isWeb = Platform.OS === "web";
+    const cardStyle = styles.productCardGrid; // Usar el mismo estilo para ambas plataformas
+
+    return (
+      <View key={item._id} style={cardStyle}>
+        {/* Imagen del producto - Prominente en la parte superior */}
+        <View style={styles.productImageHeader}>
+          {item.imagenes &&
+          item.imagenes.length > 0 &&
+          item.imagenes[0] &&
+          (item.imagenes[0].startsWith("http") ||
+            item.imagenes[0].startsWith("file") ||
+            item.imagenes[0].startsWith("data:")) ? (
+            <SmartImage
+              source={{ uri: item.imagenes[0] }}
+              style={styles.productMainImage}
+              onError={(error) =>
+                console.error("Error al cargar imagen del producto:", error)
+              }
+            />
+          ) : (
+            <View style={styles.productImagePlaceholder}>
+              <ThemedText style={styles.imagePlaceholderIcon}>📷</ThemedText>
+            </View>
+          )}
+
+          {/* ID del producto en esquina de la imagen */}
+          <View style={styles.productIdBadge}>
+            <ThemedText style={styles.productIdText}>
+              #{item._id.slice(-6)}
+            </ThemedText>
+          </View>
+        </View>
+
+        {/* Contenido de información - Flex para empujar botones abajo */}
+        <View style={styles.productContent}>
+          {/* Modelo - Elemento principal más prominente */}
+          <ThemedText style={styles.productModel} numberOfLines={2}>
+            {item.modelo}
+          </ThemedText>
+
+          {/* Marca */}
+          <ThemedText style={styles.productBrand} numberOfLines={1}>
+            🏷️ {item.marca}
+          </ThemedText>
+
+          {/* Categoría */}
+          <ThemedText style={styles.productCategory} numberOfLines={1}>
+            {categoria?.nombre || "Sin categoría"}
+          </ThemedText>
+
+          {/* Stock */}
+          <ThemedText style={styles.productStock}>
+            Stock: {item.stock.cantidad} {item.stock.disponible ? "✅" : "❌"}
+          </ThemedText>
+
+          {/* Precio - Destacado al final */}
+          <ThemedText style={styles.productPrice}>
+            {Platform.OS === "web" ? "💰 " : ""}$
+            {item.precioBase.toLocaleString()}
+          </ThemedText>
+        </View>
+
+        {/* Botones de acción - Siempre al final */}
+        <View style={styles.productActions}>
+          <TouchableOpacity
+            style={[styles.actionButton, styles.editButton]}
+            onPress={() => openModal(item)}
+          >
+            <ThemedText style={styles.actionButtonText}>
+              {Platform.OS === "web" ? "✏️ Editar" : "✏️"}
+            </ThemedText>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.actionButton, styles.deleteButton]}
+            onPress={() => handleDelete(item)}
+          >
+            <ThemedText style={[styles.actionButtonText, styles.deleteText]}>
+              {Platform.OS === "web" ? "🗑️ Eliminar" : "🗑️"}
+            </ThemedText>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  };
+
+  return (
+    <>
+      <ParallaxScrollView
+        headerBackgroundImage={require("@/assets/images/background-hogar.jpeg")}
+        headerImage={
+          <View style={styles.logoContainer}>
+            <View style={styles.logoCircle}>
+              <Image
+                source={require("@/assets/images/logo-transparent.png")}
+                style={styles.logoHeader}
+                contentFit="contain"
+              />
+            </View>
+          </View>
+        }
+      >
+        <ThemedView style={styles.container}>
+          <FadeInView delay={0}>
+            <ThemedView style={styles.titleContainer}>
+              <ThemedText type="title">Administrar Productos</ThemedText>
+              <HelloWave />
+            </ThemedView>
+          </FadeInView>
+
+          {/* Resumen del inventario como link simple */}
+          <FadeInView delay={100}>
+            <TouchableOpacity
+              style={styles.statsSimpleLink}
+              onPress={() => setStatsModalVisible(true)}
+            >
+              <ThemedText style={styles.statsSimpleLinkText}>
+                📊 Ver Resumen del Inventario
+              </ThemedText>
+            </TouchableOpacity>
+          </FadeInView>
+
+          {/* Botón de agregar producto */}
+          <FadeInView delay={200}>
+            <ThemedView style={styles.actionContainer}>
+              <AnimatedButton
+                title="➕ Agregar Nuevo Producto"
+                onPress={() => openModal()}
+                variant="primary"
+                style={styles.addButton}
+              />
+            </ThemedView>
+          </FadeInView>
+
+          {/* Filtros y búsqueda */}
+          <FadeInView delay={300}>
+            <ThemedView style={styles.searchContainer}>
+              {/* Dropdowns en una línea */}
+              <View style={styles.filtersRow}>
+                <LabeledDropdown
+                  label="Categoría"
+                  options={[
+                    { label: "Todas las categorías", value: "" },
+                    ...categorias.map((cat) => ({
+                      label: cat.nombre,
+                      value: cat._id,
+                    })),
+                  ]}
+                  selectedValue={filtroCategoria}
+                  onSelect={(value) => setFiltroCategoria(value)}
+                  placeholder="Filtrar por categoría"
+                />
+
+                <LabeledDropdown
+                  label="Marca"
+                  options={[
+                    { label: "Todas las marcas", value: "" },
+                    ...marcas.map((marca) => ({
+                      label: marca,
+                      value: marca,
+                    })),
+                  ]}
+                  selectedValue={filtroMarca}
+                  onSelect={(value) => setFiltroMarca(value)}
+                  placeholder="Filtrar por marca"
+                />
+
+                <LabeledDropdown
+                  label="Stock"
+                  options={[
+                    { label: "Todo el stock", value: "" },
+                    { label: "Disponible", value: "disponible" },
+                    { label: "Agotado", value: "agotado" },
+                  ]}
+                  selectedValue={filtroStock}
+                  onSelect={(value) => setFiltroStock(value)}
+                  placeholder="Filtrar por stock"
+                />
+              </View>
+
+              {/* Buscador debajo */}
+              <View style={styles.searchRow}>
+                <View style={styles.searchInputContainer}>
+                  <TextInput
+                    style={styles.searchInput}
+                    placeholder="🔍 Buscar productos..."
+                    value={searchText}
+                    onChangeText={setSearchText}
+                    placeholderTextColor="#999"
+                  />
+                </View>
+              </View>
+            </ThemedView>
+          </FadeInView>
+
+          {/* Lista de productos sin FlatList anidado */}
+          <FadeInView delay={400}>
+            <ThemedView style={styles.productListContainer}>
+              {productosFiltrados.length === 0 ? (
+                <ThemedView style={styles.emptyContainer}>
+                  <ThemedText style={styles.emptyText}>
+                    {productosLoading
+                      ? "Cargando productos..."
+                      : searchText ||
+                        filtroCategoria ||
+                        filtroMarca ||
+                        filtroStock
+                      ? "No se encontraron productos con los filtros aplicados"
+                      : "No hay productos disponibles"}
+                  </ThemedText>
+                </ThemedView>
+              ) : (
+                <View
+                  style={
+                    Platform.OS === "web" ? styles.webGrid : styles.mobileList
+                  }
+                >
+                  {productosFiltrados.map((producto) =>
+                    renderProducto({ item: producto })
+                  )}
+                </View>
+              )}
+            </ThemedView>
+          </FadeInView>
+        </ThemedView>
+      </ParallaxScrollView>
+
+      <Modal
+        visible={modalVisible}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={closeModal}
+      >
+        <SafeAreaView style={styles.modalContainer}>
+          <ThemedView style={styles.modalHeader}>
+            <ThemedText type="subtitle">
+              {editingProduct ? "Editar Producto" : "Nuevo Producto"}
+            </ThemedText>
+            <TouchableOpacity onPress={closeModal}>
+              <ThemedText style={styles.cancelButton}>Cancelar</ThemedText>
+            </TouchableOpacity>
+          </ThemedView>
+
+          <ScrollView
+            style={styles.modalContent}
+            contentContainerStyle={styles.modalContentContainer}
+            showsVerticalScrollIndicator={true}
+            keyboardShouldPersistTaps="handled"
+          >
+            <View style={styles.form}>
+              <EditableDropdown
+                label="Marca *"
+                required
+                options={marcas}
+                selectedValue={form.marca}
+                onSelect={(value) => setForm({ ...form, marca: value })}
+                placeholder="Seleccionar o escribir marca"
+                loading={marcasLoading}
+              />
+
+              <AnimatedInput
+                label="Modelo *"
+                value={form.modelo}
+                onChangeText={(text) => setForm({ ...form, modelo: text })}
+                placeholder="Modelo del producto"
+              />
+
+              <LabeledDropdown
+                label="Categoría *"
+                options={categorias.map((cat) => ({
+                  label: cat.nombre,
+                  value: cat._id,
+                }))}
+                selectedValue={form.categoria}
+                onSelect={(value) => setForm({ ...form, categoria: value })}
+                placeholder="Seleccionar categoría"
+                loading={categoriasLoading}
+              />
+
+              <AnimatedInput
+                label="Precio Base *"
+                value={form.precioBase}
+                onChangeText={(text) => setForm({ ...form, precioBase: text })}
+                placeholder="0.00"
+                keyboardType="numeric"
+              />
+
+              <AnimatedInput
+                label="Stock Cantidad"
+                value={form.stockCantidad}
+                onChangeText={(text) =>
+                  setForm({ ...form, stockCantidad: text })
+                }
+                placeholder="Cantidad en stock"
+                keyboardType="numeric"
+              />
+
+              <LabeledDropdown
+                label="Stock Disponible"
+                options={[
+                  { label: "Disponible", value: "true" },
+                  { label: "No disponible", value: "false" },
+                ]}
+                selectedValue={form.stockDisponible}
+                onSelect={(value) =>
+                  setForm({ ...form, stockDisponible: value })
+                }
+                placeholder="Seleccionar disponibilidad"
+              />
+
+              <AnimatedInput
+                label="Descripción"
+                value={form.descripcion}
+                onChangeText={(text) => setForm({ ...form, descripcion: text })}
+                placeholder="Descripción del producto"
+                multiline
+                numberOfLines={3}
+              />
+
+              {/* Campo de imagen */}
+              <View style={styles.imageSection}>
+                <ThemedText style={styles.imageLabel}>
+                  Imagen del producto
+                </ThemedText>
+                <ThemedText style={styles.imageSectionNote}>
+                  📸 Puedes agregar imágenes desde URL, galería, cámara o
+                  archivos.
+                </ThemedText>
+
+                {form.imagen &&
+                (form.imagen.startsWith("http") ||
+                  form.imagen.startsWith("file") ||
+                  form.imagen.startsWith("data:")) ? (
+                  <View style={styles.imagePreviewContainer}>
+                    <SmartImage
+                      source={{ uri: form.imagen }}
+                      style={styles.imagePreview}
+                      onLoad={() =>
+                        console.log("Imagen cargada exitosamente:", form.imagen)
+                      }
+                      onError={(error) =>
+                        console.error(
+                          "Error al cargar imagen:",
+                          error,
+                          "URL:",
+                          form.imagen
+                        )
+                      }
+                    />
+                    <TouchableOpacity
+                      style={styles.removeImageButton}
+                      onPress={removeImage}
+                    >
+                      <ThemedText style={styles.removeImageText}>✕</ThemedText>
+                    </TouchableOpacity>
+                  </View>
+                ) : (
+                  <TouchableOpacity
+                    style={styles.imagePlaceholder}
+                    onPress={showImagePicker}
+                  >
+                    <ThemedText style={styles.imagePlaceholderText}>
+                      📷 Agregar Imagen
+                    </ThemedText>
+                    <ThemedText style={styles.imagePlaceholderSubtext}>
+                      URL, Galería, Cámara o Archivos
+                    </ThemedText>
+                  </TouchableOpacity>
+                )}
+
+                {form.imagen && (
+                  <View style={styles.imageActions}>
+                    <TouchableOpacity
+                      style={styles.changeImageButton}
+                      onPress={showImagePicker}
+                    >
+                      <ThemedText style={styles.changeImageText}>
+                        🔄 Cambiar imagen
+                      </ThemedText>
+                    </TouchableOpacity>
+
+                    <AnimatedInput
+                      label="URL de imagen (opcional)"
+                      value={form.imagen}
+                      onChangeText={(text) =>
+                        setForm({ ...form, imagen: text })
+                      }
+                      placeholder="https://ejemplo.com/imagen.jpg"
+                    />
+                  </View>
+                )}
+              </View>
+            </View>
+          </ScrollView>
+
+          {/* Botón fijo en la parte inferior */}
+          <View style={styles.modalActions}>
+            <AnimatedButton
+              title={editingProduct ? "Actualizar" : "Crear"}
+              onPress={handleSave}
+              loading={saving}
+              style={styles.saveButton}
+            />
+          </View>
+        </SafeAreaView>
+      </Modal>
+
+      {/* Modal de estadísticas detalladas */}
+      <Modal
+        visible={statsModalVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setStatsModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.statsModalContainer}>
+            <View style={styles.statsModalHeader}>
+              <ThemedText style={styles.statsModalTitle}>
+                📊 Resumen del Inventario
+              </ThemedText>
+              <TouchableOpacity
+                style={styles.closeButton}
+                onPress={() => setStatsModalVisible(false)}
+              >
+                <ThemedText style={styles.closeButtonText}>✕</ThemedText>
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.statsDetailGrid}>
+              <View style={styles.statDetailItem}>
+                <ThemedText style={styles.statNumber}>
+                  {estadisticas.total}
+                </ThemedText>
+                <ThemedText style={styles.statLabel}>
+                  Total de Productos
+                </ThemedText>
+              </View>
+              <View style={styles.statDetailItem}>
+                <ThemedText style={[styles.statNumber, styles.availableColor]}>
+                  {estadisticas.disponibles}
+                </ThemedText>
+                <ThemedText style={styles.statLabel}>Disponibles</ThemedText>
+              </View>
+              <View style={styles.statDetailItem}>
+                <ThemedText
+                  style={[styles.statNumber, styles.unavailableColor]}
+                >
+                  {estadisticas.agotados}
+                </ThemedText>
+                <ThemedText style={styles.statLabel}>Agotados</ThemedText>
+              </View>
+              <View style={styles.statDetailItem}>
+                <ThemedText style={[styles.statNumber, styles.valueColor]}>
+                  ${estadisticas.valorTotal.toLocaleString()}
+                </ThemedText>
+                <ThemedText style={styles.statLabel}>
+                  Valor Total del Inventario
+                </ThemedText>
+              </View>
+            </View>
+          </View>
+        </View>
+      </Modal>
+    </>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: SPACING.lg,
+    paddingTop: SPACING.xl,
+  },
+  addButton: {
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
+  },
+  list: {
+    flex: 1,
+    paddingHorizontal: SPACING.lg,
+  },
+  productCard: {
+    backgroundColor: COLORS.cardBackground,
+    borderRadius: RADIUS.lg,
+    padding: SPACING.xl,
+    marginBottom: SPACING.lg,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    ...SHADOWS.lg,
+  },
+  productHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    marginBottom: SPACING.sm,
+  },
+  productName: {
+    fontSize: 18,
+    fontWeight: "bold",
+    flex: 1,
+    marginRight: SPACING.sm,
+  },
+  productPrice: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: COLORS.primary,
+    marginBottom: SPACING.xs, // Reducir margen
+    minHeight: 24, // Altura mínima fija
+  },
+  productCategory: {
+    fontSize: 16,
+    color: COLORS.textSecondary,
+    marginBottom: SPACING.xs, // Reducir margen
+    fontWeight: "500",
+    minHeight: 22, // Altura mínima fija
+  },
+  productDetail: {
+    fontSize: 14,
+    color: COLORS.textSecondary,
+    marginBottom: SPACING.xs,
+  },
+  productActions: {
+    flexDirection: "column",
+    marginTop: SPACING.sm, // Reducir margen superior
+    gap: SPACING.sm, // Reducir gap entre botones
+    minHeight: Platform.OS === "web" ? 90 : 70, // Altura mínima fija para alineación
+  },
+  actionButton: {
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: Platform.OS === "web" ? SPACING.md : SPACING.sm, // Menos padding en móvil
+    borderRadius: RADIUS.md,
+    backgroundColor: COLORS.primary,
+    width: "100%",
+    alignItems: "center",
+    minHeight: Platform.OS === "web" ? 40 : 32, // Altura mínima fija
+  },
+  editButton: {
+    backgroundColor: COLORS.primary,
+  },
+  deleteButton: {
+    backgroundColor: COLORS.error,
+  },
+  actionButtonText: {
+    color: COLORS.surface,
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  deleteText: {
+    color: COLORS.surface,
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingVertical: SPACING.xxl,
+  },
+  emptyText: {
+    color: COLORS.textSecondary,
+    fontSize: 16,
+  },
+  modalContainer: {
+    flex: 1,
+    backgroundColor: COLORS.background,
+  },
+  modalContent: {
+    flex: 1,
+  },
+  modalContentContainer: {
+    flexGrow: 1,
+    paddingBottom: SPACING.xl,
+  },
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: SPACING.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+    backgroundColor: COLORS.surface,
+  },
+  cancelButton: {
+    color: COLORS.primary,
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  form: {
+    padding: SPACING.lg,
+    gap: SPACING.lg,
+    paddingBottom: SPACING.xl,
+  },
+  modalActions: {
+    padding: SPACING.xl,
+    paddingTop: SPACING.lg,
+    paddingBottom: SPACING.xxl,
+    backgroundColor: COLORS.surface,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
+    ...SHADOWS.lg,
+    minHeight: 80,
+  },
+  saveButton: {
+    width: "100%",
+    minHeight: 50,
+    justifyContent: "center",
+  },
+  // Nuevos estilos
+  headerActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: SPACING.sm,
+  },
+  viewToggle: {
+    padding: SPACING.sm,
+    borderRadius: RADIUS.sm,
+    backgroundColor: COLORS.surface,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  viewToggleText: {
+    fontSize: 16,
+  },
+  statsContainer: {
+    flexDirection: "row",
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: SPACING.md,
+    gap: SPACING.sm,
+  },
+  statCard: {
+    flex: 1,
+    backgroundColor: COLORS.surface,
+    padding: SPACING.md,
+    borderRadius: RADIUS.md,
+    alignItems: "center",
+    ...SHADOWS.sm,
+  },
+  statNumber: {
+    fontSize: 20,
+    fontWeight: "bold",
+    color: COLORS.text,
+  },
+  statLabel: {
+    fontSize: 12,
+    color: COLORS.textSecondary,
+    marginTop: SPACING.xs,
+  },
+  availableColor: {
+    color: COLORS.success,
+  },
+  unavailableColor: {
+    color: COLORS.error,
+  },
+  searchContainer: {
+    paddingHorizontal: SPACING.lg,
+    paddingBottom: SPACING.md,
+  },
+  searchRow: {
+    marginBottom: SPACING.sm,
+  },
+  searchInputContainer: {
+    flex: 1,
+  },
+  searchInput: {
+    backgroundColor: COLORS.surface,
+    borderRadius: RADIUS.md,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
+    fontSize: 16,
+    color: COLORS.text,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  filtersRow: {
+    flexDirection: Platform.OS === "web" ? "row" : "column",
+    gap: SPACING.sm, // Reducir de SPACING.md a SPACING.sm
+  },
+  filterDropdown: {
+    minWidth: 120,
+    marginRight: SPACING.sm,
+  },
+  // Estilos para grilla en web
+  gridRow: {
+    justifyContent: "space-around",
+    paddingHorizontal: SPACING.md,
+  },
+  productCardGrid: {
+    backgroundColor: COLORS.cardBackground,
+    borderRadius: Platform.OS === "web" ? RADIUS.lg : 0, // Sin border radius en móvil
+    padding: Platform.OS === "web" ? SPACING.xl : SPACING.md, // Menos padding en móvil
+    marginBottom: Platform.OS === "web" ? SPACING.xl : 0, // Sin margin bottom en móvil
+    width: Platform.OS === "web" ? "31%" : "50%", // 50% en móvil para ocupar toda la pantalla
+    minHeight: Platform.OS === "web" ? 280 : 250, // Altura mínima aumentada para acomodar contenido
+    borderWidth: Platform.OS === "web" ? 1 : 0, // Sin border en móvil
+    borderBottomWidth: Platform.OS === "web" ? 1 : 1, // Border bottom sutil en móvil
+    borderRightWidth: Platform.OS === "web" ? 1 : 0.5, // Border derecho sutil en móvil para separar columnas
+    borderColor: Platform.OS === "web" ? COLORS.border : "#f0f0f0", // Color más sutil en móvil
+    ...(Platform.OS === "web" ? SHADOWS.lg : {}), // Sin sombra en móvil
+    flexDirection: "column", // Layout vertical
+    justifyContent: "space-between", // Distribuir espacio entre elementos
+  },
+  productContent: {
+    flex: 1, // Toma el espacio disponible entre imagen y botones
+    justifyContent: "flex-start", // Alinear contenido al inicio
+  },
+  productNameGrid: {
+    fontSize: 14,
+    fontWeight: "bold",
+    flex: 1,
+    marginRight: SPACING.xs,
+    marginBottom: SPACING.xs,
+  },
+  productActionsGrid: {
+    flexDirection: "column",
+    marginTop: SPACING.sm,
+    gap: SPACING.xs,
+  },
+  actionButtonSmall: {
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: SPACING.sm,
+    width: "100%",
+    alignItems: "center",
+  },
+  actionButtonTextSmall: {
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  // Estilos para el header del ParallaxScrollView
+  logoContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  logoCircle: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: "rgba(255,255,255,0.9)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  logoHeader: {
+    width: 60,
+    height: 60,
+  },
+  titleContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: SPACING.sm,
+    marginBottom: SPACING.md, // Reducir de SPACING.lg a SPACING.md
+    paddingHorizontal: SPACING.lg,
+  },
+  // Estilos para link simple de estadísticas
+  statsSimpleLink: {
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: SPACING.sm,
+    marginBottom: SPACING.sm,
+  },
+  statsSimpleLinkText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: COLORS.primary,
+    textAlign: "center",
+  },
+  // Estilos para estadísticas compactas
+  statsCard: {
+    backgroundColor: COLORS.cardBackground,
+    marginHorizontal: SPACING.lg,
+    marginBottom: SPACING.lg,
+    padding: SPACING.lg,
+    borderRadius: RADIUS.lg,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    ...SHADOWS.lg,
+  },
+  statsTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    marginBottom: SPACING.md,
+    textAlign: "center",
+    color: COLORS.text,
+  },
+  statsGrid: {
+    flexDirection: "row",
+    justifyContent: "space-around",
+  },
+  statItem: {
+    alignItems: "center",
+    flex: 1,
+  },
+  actionContainer: {
+    paddingHorizontal: SPACING.lg,
+    marginBottom: SPACING.sm, // Reducir de SPACING.lg a SPACING.sm
+  },
+  // Estilos para la estructura reorganizada de productos
+  productIdContainer: {
+    position: "absolute",
+    top: SPACING.xs,
+    right: SPACING.xs,
+    backgroundColor: "rgba(0,0,0,0.1)",
+    paddingHorizontal: SPACING.xs,
+    paddingVertical: 2,
+    borderRadius: RADIUS.sm,
+  },
+  productId: {
+    fontSize: 12,
+    color: COLORS.textSecondary,
+    fontWeight: "600",
+  },
+  productBrand: {
+    fontSize: 16,
+    color: COLORS.text,
+    marginBottom: SPACING.xs, // Reducir margen para más consistencia
+    fontWeight: "600",
+    minHeight: 22, // Altura mínima fija
+  },
+  productModel: {
+    fontSize: 17,
+    color: COLORS.text,
+    marginBottom: SPACING.xs, // Reducir margen para más consistencia
+    fontWeight: "700",
+    minHeight: 44, // Altura mínima fija para 2 líneas
+  },
+  productStock: {
+    fontSize: 16,
+    fontWeight: "600",
+    marginBottom: SPACING.xs, // Reducir margen
+    color: COLORS.textSecondary,
+    minHeight: 22, // Altura mínima fija
+  },
+  actionButtonLabel: {
+    color: COLORS.surface,
+    fontWeight: "600",
+    textAlign: "center",
+    fontSize: 12,
+  },
+  productsList: {
+    flex: 1,
+    paddingHorizontal: SPACING.lg,
+  },
+  productListContainer: {
+    flex: 1,
+  },
+  webGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+    paddingHorizontal: SPACING.lg,
+  },
+  mobileList: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "flex-start", // Cambiar a flex-start para que no haya espacios
+    paddingHorizontal: 0, // Sin padding lateral en móvil
+  },
+  scrollContainer: {
+    flex: 1,
+  },
+  // Estilos para componentes de imagen
+  imageSection: {
+    marginBottom: SPACING.lg,
+  },
+  imageSectionNote: {
+    fontSize: 12,
+    color: COLORS.warning,
+    marginBottom: SPACING.sm,
+    fontStyle: "italic",
+  },
+  imageLabel: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: COLORS.text,
+    marginBottom: SPACING.sm,
+  },
+  imagePreviewContainer: {
+    position: "relative",
+    alignSelf: "flex-start",
+  },
+  imagePreview: {
+    width: 120,
+    height: 120,
+    borderRadius: RADIUS.md,
+    backgroundColor: COLORS.surface,
+    resizeMode: "cover",
+  },
+  removeImageButton: {
+    position: "absolute",
+    top: -8,
+    right: -8,
+    backgroundColor: COLORS.error,
+    borderRadius: 12,
+    width: 24,
+    height: 24,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  removeImageText: {
+    color: COLORS.surface,
+    fontSize: 14,
+    fontWeight: "bold",
+  },
+  imagePlaceholder: {
+    borderWidth: 2,
+    borderColor: COLORS.border,
+    borderStyle: "dashed",
+    borderRadius: RADIUS.md,
+    padding: SPACING.lg,
+    alignItems: "center",
+    backgroundColor: COLORS.cardBackground,
+  },
+  imagePlaceholderText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: COLORS.text,
+    marginBottom: SPACING.xs,
+  },
+  imagePlaceholderSubtext: {
+    fontSize: 12,
+    color: COLORS.textSecondary,
+    textAlign: "center",
+  },
+  imageActions: {
+    marginTop: SPACING.md,
+  },
+  changeImageButton: {
+    backgroundColor: COLORS.secondary,
+    padding: SPACING.sm,
+    borderRadius: RADIUS.sm,
+    marginBottom: SPACING.md,
+    alignItems: "center",
+  },
+  changeImageText: {
+    color: COLORS.text,
+    fontWeight: "600",
+  },
+  // Estilos para imagen en cards de productos
+  productImageContainer: {
+    alignItems: "center",
+    marginBottom: SPACING.sm,
+  },
+  productImage: {
+    width: 80,
+    height: 80,
+    borderRadius: RADIUS.md,
+    backgroundColor: COLORS.surface,
+  },
+
+  // Estilos para el header de imagen de productos
+  productImageHeader: {
+    position: "relative",
+    width: "100%",
+    aspectRatio: 1, // Hace que sea cuadrado
+    marginBottom: SPACING.sm,
+    borderRadius: RADIUS.md,
+    overflow: "hidden",
+    backgroundColor: COLORS.surface,
+  },
+  productMainImage: {
+    width: "100%",
+    height: "100%",
+    borderRadius: RADIUS.md,
+    resizeMode: "cover", // Cubre todo el contenedor manteniendo proporción
+  },
+  productImagePlaceholder: {
+    width: "100%",
+    height: "100%",
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: COLORS.surface,
+    borderRadius: RADIUS.md,
+  },
+  imagePlaceholderIcon: {
+    fontSize: 32,
+    color: COLORS.textSecondary,
+  },
+  productIdBadge: {
+    position: "absolute",
+    top: SPACING.xs,
+    right: SPACING.xs,
+    backgroundColor: "rgba(0,0,0,0.7)",
+    borderRadius: RADIUS.sm,
+    paddingHorizontal: SPACING.xs,
+    paddingVertical: 2,
+  },
+  productIdText: {
+    color: COLORS.surface,
+    fontSize: 10,
+    fontWeight: "600",
+  },
+
+  // Estilos para modal de estadísticas
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: SPACING.lg,
+  },
+  statsModalContainer: {
+    backgroundColor: COLORS.background,
+    borderRadius: RADIUS.lg,
+    padding: SPACING.lg,
+    maxWidth: 400,
+    width: "100%",
+    maxHeight: "80%",
+  },
+  statsModalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: SPACING.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+    paddingBottom: SPACING.md,
+  },
+  statsModalTitle: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: COLORS.text,
+  },
+  closeButton: {
+    padding: SPACING.sm,
+    backgroundColor: COLORS.error,
+    borderRadius: RADIUS.sm,
+    minWidth: 32,
+    minHeight: 32,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  closeButtonText: {
+    color: COLORS.surface,
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  statsDetailGrid: {
+    gap: SPACING.lg,
+  },
+  statDetailItem: {
+    alignItems: "center",
+    padding: SPACING.md,
+    backgroundColor: COLORS.surface,
+    borderRadius: RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  valueColor: {
+    color: COLORS.warning,
+  },
+});

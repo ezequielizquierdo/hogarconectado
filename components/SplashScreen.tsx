@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect } from "react";
 import { StyleSheet, Dimensions } from "react-native";
 import { Image } from "expo-image";
 import Animated, {
@@ -21,7 +21,6 @@ export default function SplashScreen({
 }: SplashScreenProps) {
   const logoOpacity = useSharedValue(0);
   const logoScale = useSharedValue(0.3);
-  const backgroundOpacity = useSharedValue(1);
   const containerOpacity = useSharedValue(1);
 
   useEffect(() => {
@@ -122,9 +121,6 @@ const styles = StyleSheet.create({
   logo: {
     width: 250,
     height: 150,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.5,
-    shadowRadius: 8,
+    boxShadow: "0 4px 8px rgba(0, 0, 0, 0.5)",
   },
 });

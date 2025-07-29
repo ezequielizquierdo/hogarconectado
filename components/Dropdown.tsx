@@ -4,7 +4,6 @@ import {
   TouchableOpacity,
   Modal,
   FlatList,
-  Platform,
   ActivityIndicator,
 } from "react-native";
 import { ThemedText } from "@/components/ThemedText";

@@ -15,37 +15,74 @@ import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
 import { HelloWave } from "@/components/HelloWave";
 import LabeledDropdown from "@/components/LabeledDropdown";
+import EditableDropdown from "@/components/EditableDropdown";
+import ModeloDropdown from "@/components/ModeloDropdown";
 import AnimatedInput from "@/components/AnimatedInput";
 import AnimatedButton from "@/components/AnimatedButton";
 import FadeInView from "@/components/FadeInView";
-import { CATEGORIAS } from "@/constants/categorias";
+import { useCategorias } from "@/hooks/useCategorias";
+import { useMarcasPorCategoria } from "@/hooks/useMarcasPorCategoria";
+import { useProductosPorCategoriaYMarca } from "@/hooks/useProductosPorCategoriaYMarca";
 import { COLORS, GRADIENTS, RADIUS, SHADOWS, SPACING } from "@/constants/theme";
+import { Producto } from "@/services/types";
 
 export default function ConsultaStockScreen() {
+  const {
+    categorias,
+    loading: categoriasLoading,
+    error: categoriasError,
+  } = useCategorias();
+
   const [categoria, setCategoria] = useState("");
   const [marca, setMarca] = useState("");
   const [modelo, setModelo] = useState("");
+  const [productoSeleccionado, setProductoSeleccionado] =
+    useState<Producto | null>(null);
   const [mensajeGenerado, setMensajeGenerado] = useState("");
   const [modalVisible, setModalVisible] = useState<boolean>(false);
 
-  // Limpiar mensaje cuando se editen los campos
-  const handleCategoriaChange = (text: string) => {
-    setCategoria(text);
-    setMensajeGenerado("");
+  // Hooks para cascada de datos
+  const {
+    marcas,
+    loading: marcasLoading,
+    error: marcasError,
+  } = useMarcasPorCategoria(categoria);
+
+  const {
+    productos,
+    loading: productosLoading,
+    error: productosError,
+  } = useProductosPorCategoriaYMarca(categoria, marca);
+
+  // Funciones para manejar cascada de selección
+  const handleCategoriaChange = (categoriaId: string) => {
+    setCategoria(categoriaId);
+    setMarca(""); // Reset marca cuando cambia categoría
+    setModelo(""); // Reset modelo
+    setProductoSeleccionado(null); // Reset producto
+    setMensajeGenerado(""); // Reset mensaje
   };
 
-  const handleMarcaChange = (text: string) => {
-    setMarca(text);
-    setMensajeGenerado("");
+  const handleMarcaChange = (marcaSeleccionada: string) => {
+    setMarca(marcaSeleccionada);
+    setModelo(""); // Reset modelo cuando cambia marca
+    setProductoSeleccionado(null); // Reset producto
+    setMensajeGenerado(""); // Reset mensaje
   };
 
-  const handleModeloChange = (text: string) => {
-    setModelo(text);
-    setMensajeGenerado("");
+  const handleModeloChange = (modelo: string, producto: Producto) => {
+    setModelo(modelo);
+    setProductoSeleccionado(producto); // Guardar producto completo
+    setMensajeGenerado(""); // Reset mensaje
   };
 
   const generarConsulta = () => {
-    if (!categoria.trim() || !marca.trim() || !modelo.trim()) {
+    if (
+      !categoria.trim() ||
+      !marca.trim() ||
+      !modelo.trim() ||
+      !productoSeleccionado
+    ) {
       Alert.alert(
         "Atención",
         "Por favor completa todos los campos para generar la consulta"
@@ -53,8 +90,13 @@ export default function ConsultaStockScreen() {
       return;
     }
 
+    // Buscar el nombre de la categoría
+    const categoriaNombre =
+      categorias.find((cat) => cat._id === categoria)?.nombre || categoria;
+
     const mensaje = `Me confirmas si hay stock de:
-📦 Categoría: ${categoria}
+🆔 ID: ${productoSeleccionado._id}
+📦 Categoría: ${categoriaNombre}
 🏷️ Marca: ${marca}
 📱 Modelo: ${modelo}`;
 
@@ -105,28 +147,39 @@ export default function ConsultaStockScreen() {
           <LabeledDropdown
             label="Categoría"
             required
-            options={CATEGORIAS}
+            options={categorias.map((cat) => ({
+              label: cat.nombre,
+              value: cat._id,
+            }))}
             selectedValue={categoria}
             onSelect={handleCategoriaChange}
             placeholder="Seleccionar categoría..."
+            loading={categoriasLoading}
+            error={categoriasError}
           />
 
-          <AnimatedInput
+          <EditableDropdown
             label="Marca"
-            icon="🏷️"
             required
-            value={marca}
-            onChangeText={handleMarcaChange}
-            placeholder="Ej: Samsung, Apple, Xiaomi..."
+            options={marcas}
+            selectedValue={marca}
+            onSelect={handleMarcaChange}
+            placeholder="Seleccionar o escribir marca..."
+            loading={marcasLoading}
+            error={marcasError}
+            disabled={!categoria}
           />
 
-          <AnimatedInput
+          <ModeloDropdown
             label="Modelo"
-            icon="📱"
             required
-            value={modelo}
-            onChangeText={handleModeloChange}
-            placeholder="Ej: Galaxy S24, iPhone 15, Redmi Note 13..."
+            productos={productos}
+            selectedValue={modelo}
+            onSelect={handleModeloChange}
+            placeholder="Seleccionar modelo..."
+            loading={productosLoading}
+            error={productosError}
+            disabled={!marca}
           />
         </ThemedView>
       </FadeInView>

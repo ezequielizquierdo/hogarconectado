@@ -5,7 +5,6 @@ import {
   TextInputProps,
   View,
   Animated,
-  Platform,
 } from "react-native";
 import { ThemedText } from "@/components/ThemedText";
 import { COLORS, RADIUS, SHADOWS, SPACING } from "@/constants/theme";

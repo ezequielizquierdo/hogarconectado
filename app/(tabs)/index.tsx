@@ -17,11 +17,17 @@ import ParallaxScrollView from "@/components/ParallaxScrollView";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
 import LabeledDropdown from "@/components/LabeledDropdown";
+import EditableDropdown from "@/components/EditableDropdown";
+import ModeloDropdown from "@/components/ModeloDropdown";
+import ReadOnlyField from "@/components/ReadOnlyField";
 import AnimatedInput from "@/components/AnimatedInput";
 import AnimatedButton from "@/components/AnimatedButton";
 import FadeInView from "@/components/FadeInView";
 import { useCategorias } from "@/hooks/useCategorias";
+import { useMarcasPorCategoria } from "@/hooks/useMarcasPorCategoria";
+import { useProductosPorCategoriaYMarca } from "@/hooks/useProductosPorCategoriaYMarca";
 import { COLORS, SPACING, RADIUS, SHADOWS } from "@/constants/theme";
+import { Producto } from "@/services/types";
 
 interface CotizacionData {
   categoria: string;
@@ -54,6 +60,19 @@ export default function HomeScreen() {
     valorReal: "",
     porcentajeAplicado: "10",
   });
+
+  // Hooks para cascada de datos
+  const {
+    marcas,
+    loading: marcasLoading,
+    error: marcasError,
+  } = useMarcasPorCategoria(cotizacion.categoria);
+
+  const {
+    productos,
+    loading: productosLoading,
+    error: productosError,
+  } = useProductosPorCategoriaYMarca(cotizacion.categoria, cotizacion.marca);
 
   const [mensajeFinal, setMensajeFinal] = useState<string>("");
   const [modalVisible, setModalVisible] = useState<boolean>(false);
@@ -139,6 +158,37 @@ export default function HomeScreen() {
     setModalVisible(false);
   };
 
+  // Funciones para manejar cascada de selección
+  const handleCategoriaChange = (categoriaId: string) => {
+    setCotizacion({
+      ...cotizacion,
+      categoria: categoriaId,
+      marca: "", // Reset marca cuando cambia categoría
+      modelo: "", // Reset modelo
+      detalle: "", // Reset detalle
+      valorReal: "", // Reset valor
+    });
+  };
+
+  const handleMarcaChange = (marca: string) => {
+    setCotizacion({
+      ...cotizacion,
+      marca: marca,
+      modelo: "", // Reset modelo cuando cambia marca
+      detalle: "", // Reset detalle
+      valorReal: "", // Reset valor
+    });
+  };
+
+  const handleModeloChange = (modelo: string, producto: Producto) => {
+    setCotizacion({
+      ...cotizacion,
+      modelo: modelo,
+      detalle: producto.descripcion || "",
+      valorReal: producto.precioBase?.toString() || "",
+    });
+  };
+
   const cerrarModal = () => {
     setModalVisible(false);
   };
@@ -178,47 +228,44 @@ export default function HomeScreen() {
               value: cat._id,
             }))}
             selectedValue={cotizacion.categoria}
-            onSelect={(value: string) =>
-              setCotizacion({ ...cotizacion, categoria: value })
-            }
+            onSelect={handleCategoriaChange}
             placeholder="Seleccionar categoría..."
             loading={categoriasLoading}
             error={categoriasError}
           />
 
           {/* Marca */}
-          <AnimatedInput
+          <EditableDropdown
             label="Marca"
-            icon="🏷️"
             required
-            value={cotizacion.marca}
-            onChangeText={(text) =>
-              setCotizacion({ ...cotizacion, marca: text })
-            }
-            placeholder="Ej: MIDEA"
+            options={marcas}
+            selectedValue={cotizacion.marca}
+            onSelect={handleMarcaChange}
+            placeholder="Seleccionar o escribir marca..."
+            loading={marcasLoading}
+            error={marcasError}
+            disabled={!cotizacion.categoria}
           />
 
           {/* Modelo */}
-          <AnimatedInput
+          <ModeloDropdown
             label="Modelo"
-            icon="📱"
             required
-            value={cotizacion.modelo}
-            onChangeText={(text) =>
-              setCotizacion({ ...cotizacion, modelo: text })
-            }
-            placeholder="Ej: MSCBIC-12H 3139"
+            productos={productos}
+            selectedValue={cotizacion.modelo}
+            onSelect={handleModeloChange}
+            placeholder="Seleccionar modelo..."
+            loading={productosLoading}
+            error={productosError}
+            disabled={!cotizacion.marca}
           />
 
           {/* Detalle */}
-          <AnimatedInput
-            label="Detalle"
-            icon="✏️"
+          <ReadOnlyField
+            label="Detalle del Producto"
+            icon="📝"
             value={cotizacion.detalle}
-            onChangeText={(text) =>
-              setCotizacion({ ...cotizacion, detalle: text })
-            }
-            placeholder="Ej: 90 CM 5 HORNALLAS"
+            placeholder="Selecciona un modelo para ver los detalles"
           />
 
           {/* Valor Real */}
@@ -230,7 +277,7 @@ export default function HomeScreen() {
             onChangeText={(text) =>
               setCotizacion({ ...cotizacion, valorReal: text })
             }
-            placeholder="Ej: 705000"
+            placeholder="Se autocompletará al seleccionar modelo"
             keyboardType="numeric"
           />
 
