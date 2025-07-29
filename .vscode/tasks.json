@@ -1,0 +1,64 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Iniciar Expo Dev Server",
+      "type": "shell",
+      "command": "npm",
+      "args": ["start"],
+      "group": "build",
+      "isBackground": true,
+      "problemMatcher": [],
+      "options": {
+        "cwd": "${workspaceFolder}/hogarconectado"
+      }
+    },
+    {
+      "label": "Abrir en Android",
+      "type": "shell",
+      "command": "npm",
+      "args": ["run", "android"],
+      "group": "build",
+      "isBackground": true,
+      "options": {
+        "cwd": "${workspaceFolder}/hogarconectado"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Abrir en iOS",
+      "type": "shell",
+      "command": "npm",
+      "args": ["run", "ios"],
+      "group": "build",
+      "isBackground": true,
+      "options": {
+        "cwd": "${workspaceFolder}/hogarconectado"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Abrir en Web",
+      "type": "shell",
+      "command": "npm",
+      "args": ["run", "web"],
+      "group": "build",
+      "isBackground": true,
+      "options": {
+        "cwd": "${workspaceFolder}/hogarconectado"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Instalar dependencias",
+      "type": "shell",
+      "command": "npm",
+      "args": ["install"],
+      "group": "build",
+      "options": {
+        "cwd": "${workspaceFolder}/hogarconectado"
+      },
+      "problemMatcher": []
+    }
+  ]
+}
