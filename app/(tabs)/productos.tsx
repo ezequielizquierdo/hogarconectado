@@ -1158,182 +1158,383 @@ export default function ProductosScreen() {
 
       <Modal
         visible={modalVisible}
-        animationType="slide"
-        presentationStyle="pageSheet"
+        animationType={Platform.OS === "web" ? "fade" : "slide"}
+        transparent={Platform.OS === "web"}
+        presentationStyle={
+          Platform.OS === "web" ? "overFullScreen" : "pageSheet"
+        }
         onRequestClose={closeModal}
       >
-        <SafeAreaView style={styles.modalContainer}>
-          <ThemedView style={styles.modalHeader}>
-            <ThemedText type="subtitle">
-              {editingProduct ? "Editar Producto" : "Nuevo Producto"}
-            </ThemedText>
-            <TouchableOpacity onPress={closeModal}>
-              <ThemedText style={styles.cancelButton}>Cancelar</ThemedText>
-            </TouchableOpacity>
-          </ThemedView>
-
-          <ScrollView
-            style={styles.modalContent}
-            contentContainerStyle={styles.modalContentContainer}
-            showsVerticalScrollIndicator={true}
-            keyboardShouldPersistTaps="handled"
-          >
-            <View style={styles.form}>
-              <EditableDropdown
-                label="Marca *"
-                required
-                options={marcas}
-                selectedValue={form.marca}
-                onSelect={(value) => setForm({ ...form, marca: value })}
-                placeholder="Seleccionar o escribir marca"
-                loading={marcasLoading}
-              />
-
-              <AnimatedInput
-                label="Modelo *"
-                value={form.modelo}
-                onChangeText={(text) => setForm({ ...form, modelo: text })}
-                placeholder="Modelo del producto"
-              />
-
-              <LabeledDropdown
-                label="Categoría *"
-                options={categorias.map((cat) => ({
-                  label: cat.nombre,
-                  value: cat._id,
-                }))}
-                selectedValue={form.categoria}
-                onSelect={(value) => setForm({ ...form, categoria: value })}
-                placeholder="Seleccionar categoría"
-                loading={categoriasLoading}
-              />
-
-              <AnimatedInput
-                label="Precio Base *"
-                value={form.precioBase}
-                onChangeText={(text) => setForm({ ...form, precioBase: text })}
-                placeholder="0.00"
-                keyboardType="numeric"
-              />
-
-              <AnimatedInput
-                label="Stock Cantidad"
-                value={form.stockCantidad}
-                onChangeText={(text) =>
-                  setForm({ ...form, stockCantidad: text })
-                }
-                placeholder="Cantidad en stock"
-                keyboardType="numeric"
-              />
-
-              <LabeledDropdown
-                label="Stock Disponible"
-                options={[
-                  { label: "Disponible", value: "true" },
-                  { label: "No disponible", value: "false" },
-                ]}
-                selectedValue={form.stockDisponible}
-                onSelect={(value) =>
-                  setForm({ ...form, stockDisponible: value })
-                }
-                placeholder="Seleccionar disponibilidad"
-              />
-
-              <AnimatedInput
-                label="Descripción"
-                value={form.descripcion}
-                onChangeText={(text) => setForm({ ...form, descripcion: text })}
-                placeholder="Descripción del producto"
-                multiline
-                numberOfLines={3}
-              />
-
-              {/* Campo de imagen */}
-              <View style={styles.imageSection}>
-                <ThemedText style={styles.imageLabel}>
-                  Imagen del producto
+        {Platform.OS === "web" ? (
+          // Modal web estilo "paper" centrado igual que el de detalle
+          <View style={styles.webModalOverlay}>
+            <View style={styles.webModalContainer}>
+              <ThemedView style={styles.webModalHeader}>
+                <ThemedText style={styles.webModalTitle}>
+                  {editingProduct ? "Editar Producto" : "Nuevo Producto"}
                 </ThemedText>
-                <ThemedText style={styles.imageSectionNote}>
-                  📸 Puedes agregar imágenes desde URL, galería, cámara o
-                  archivos.
-                </ThemedText>
+                <TouchableOpacity
+                  style={styles.closeButton}
+                  onPress={closeModal}
+                >
+                  <ThemedText style={styles.closeButtonText}>✕</ThemedText>
+                </TouchableOpacity>
+              </ThemedView>
 
-                {form.imagen &&
-                (form.imagen.startsWith("http") ||
-                  form.imagen.startsWith("file") ||
-                  form.imagen.startsWith("data:")) ? (
-                  <View style={styles.imagePreviewContainer}>
-                    <SmartImage
-                      source={{ uri: form.imagen }}
-                      style={styles.imagePreview}
-                      onLoad={() =>
-                        console.log("Imagen cargada exitosamente:", form.imagen)
-                      }
-                      onError={(error) =>
-                        console.error(
-                          "Error al cargar imagen:",
-                          error,
-                          "URL:",
-                          form.imagen
-                        )
-                      }
-                    />
-                    <TouchableOpacity
-                      style={styles.removeImageButton}
-                      onPress={removeImage}
-                    >
-                      <ThemedText style={styles.removeImageText}>✕</ThemedText>
-                    </TouchableOpacity>
-                  </View>
-                ) : (
-                  <TouchableOpacity
-                    style={styles.imagePlaceholder}
-                    onPress={showImagePicker}
-                  >
-                    <ThemedText style={styles.imagePlaceholderText}>
-                      📷 Agregar Imagen
+              <ScrollView
+                style={styles.webModalContent}
+                contentContainerStyle={styles.webModalContentContainer}
+                showsVerticalScrollIndicator={true}
+                keyboardShouldPersistTaps="handled"
+              >
+                <View style={styles.form}>
+                  <EditableDropdown
+                    label="Marca *"
+                    required
+                    options={marcas}
+                    selectedValue={form.marca}
+                    onSelect={(value) => setForm({ ...form, marca: value })}
+                    placeholder="Seleccionar o escribir marca"
+                    loading={marcasLoading}
+                  />
+
+                  <AnimatedInput
+                    label="Modelo *"
+                    value={form.modelo}
+                    onChangeText={(text) => setForm({ ...form, modelo: text })}
+                    placeholder="Modelo del producto"
+                  />
+
+                  <LabeledDropdown
+                    label="Categoría *"
+                    options={categorias.map((cat) => ({
+                      label: cat.nombre,
+                      value: cat._id,
+                    }))}
+                    selectedValue={form.categoria}
+                    onSelect={(value) => setForm({ ...form, categoria: value })}
+                    placeholder="Seleccionar categoría"
+                    loading={categoriasLoading}
+                  />
+
+                  <AnimatedInput
+                    label="Precio Base *"
+                    value={form.precioBase}
+                    onChangeText={(text) =>
+                      setForm({ ...form, precioBase: text })
+                    }
+                    placeholder="0.00"
+                    keyboardType="numeric"
+                  />
+
+                  <AnimatedInput
+                    label="Stock Cantidad"
+                    value={form.stockCantidad}
+                    onChangeText={(text) =>
+                      setForm({ ...form, stockCantidad: text })
+                    }
+                    placeholder="Cantidad en stock"
+                    keyboardType="numeric"
+                  />
+
+                  <LabeledDropdown
+                    label="Stock Disponible"
+                    options={[
+                      { label: "Disponible", value: "true" },
+                      { label: "No disponible", value: "false" },
+                    ]}
+                    selectedValue={form.stockDisponible}
+                    onSelect={(value) =>
+                      setForm({ ...form, stockDisponible: value })
+                    }
+                    placeholder="Seleccionar disponibilidad"
+                  />
+
+                  <AnimatedInput
+                    label="Descripción"
+                    value={form.descripcion}
+                    onChangeText={(text) =>
+                      setForm({ ...form, descripcion: text })
+                    }
+                    placeholder="Descripción del producto"
+                    multiline
+                    numberOfLines={3}
+                  />
+
+                  {/* Campo de imagen */}
+                  <View style={styles.imageSection}>
+                    <ThemedText style={styles.imageLabel}>
+                      Imagen del producto
                     </ThemedText>
-                    <ThemedText style={styles.imagePlaceholderSubtext}>
-                      URL, Galería, Cámara o Archivos
+                    <ThemedText style={styles.imageSectionNote}>
+                      📸 Puedes agregar imágenes desde URL, galería, cámara o
+                      archivos.
                     </ThemedText>
-                  </TouchableOpacity>
-                )}
 
-                {form.imagen && (
-                  <View style={styles.imageActions}>
-                    <TouchableOpacity
-                      style={styles.changeImageButton}
-                      onPress={showImagePicker}
-                    >
-                      <ThemedText style={styles.changeImageText}>
-                        🔄 Cambiar imagen
-                      </ThemedText>
-                    </TouchableOpacity>
+                    {form.imagen &&
+                    (form.imagen.startsWith("http") ||
+                      form.imagen.startsWith("file") ||
+                      form.imagen.startsWith("data:")) ? (
+                      <View style={styles.imagePreviewContainer}>
+                        <SmartImage
+                          source={{ uri: form.imagen }}
+                          style={styles.imagePreview}
+                          onLoad={() =>
+                            console.log(
+                              "Imagen cargada exitosamente:",
+                              form.imagen
+                            )
+                          }
+                          onError={(error) =>
+                            console.error(
+                              "Error al cargar imagen:",
+                              error,
+                              "URL:",
+                              form.imagen
+                            )
+                          }
+                        />
+                        <TouchableOpacity
+                          style={styles.removeImageButton}
+                          onPress={removeImage}
+                        >
+                          <ThemedText style={styles.removeImageText}>
+                            ✕
+                          </ThemedText>
+                        </TouchableOpacity>
+                      </View>
+                    ) : (
+                      <TouchableOpacity
+                        style={styles.imagePlaceholder}
+                        onPress={showImagePicker}
+                      >
+                        <ThemedText style={styles.imagePlaceholderText}>
+                          📷 Agregar Imagen
+                        </ThemedText>
+                        <ThemedText style={styles.imagePlaceholderSubtext}>
+                          URL, Galería, Cámara o Archivos
+                        </ThemedText>
+                      </TouchableOpacity>
+                    )}
 
-                    <AnimatedInput
-                      label="URL de imagen (opcional)"
-                      value={form.imagen}
-                      onChangeText={(text) =>
-                        setForm({ ...form, imagen: text })
-                      }
-                      placeholder="https://ejemplo.com/imagen.jpg"
-                    />
+                    {form.imagen && (
+                      <View style={styles.imageActions}>
+                        <TouchableOpacity
+                          style={styles.changeImageButton}
+                          onPress={showImagePicker}
+                        >
+                          <ThemedText style={styles.changeImageText}>
+                            🔄 Cambiar imagen
+                          </ThemedText>
+                        </TouchableOpacity>
+
+                        <AnimatedInput
+                          label="URL de imagen (opcional)"
+                          value={form.imagen}
+                          onChangeText={(text) =>
+                            setForm({ ...form, imagen: text })
+                          }
+                          placeholder="https://ejemplo.com/imagen.jpg"
+                        />
+                      </View>
+                    )}
                   </View>
-                )}
+                </View>
+              </ScrollView>
+
+              <View style={styles.webModalActions}>
+                <AnimatedButton
+                  title={editingProduct ? "Actualizar" : "Crear"}
+                  onPress={handleSave}
+                  loading={saving}
+                  style={styles.saveButton}
+                />
               </View>
             </View>
-          </ScrollView>
-
-          {/* Botón fijo en la parte inferior */}
-          <View style={styles.modalActions}>
-            <AnimatedButton
-              title={editingProduct ? "Actualizar" : "Crear"}
-              onPress={handleSave}
-              loading={saving}
-              style={styles.saveButton}
-            />
           </View>
-        </SafeAreaView>
+        ) : (
+          // Modal nativo para móvil (sin cambios)
+          <SafeAreaView style={styles.modalContainer}>
+            <ThemedView style={styles.modalHeader}>
+              <ThemedText type="subtitle">
+                {editingProduct ? "Editar Producto" : "Nuevo Producto"}
+              </ThemedText>
+              <TouchableOpacity onPress={closeModal}>
+                <ThemedText style={styles.cancelButton}>Cancelar</ThemedText>
+              </TouchableOpacity>
+            </ThemedView>
+
+            <ScrollView
+              style={styles.modalContent}
+              contentContainerStyle={styles.modalContentContainer}
+              showsVerticalScrollIndicator={true}
+              keyboardShouldPersistTaps="handled"
+            >
+              <View style={styles.form}>
+                <EditableDropdown
+                  label="Marca *"
+                  required
+                  options={marcas}
+                  selectedValue={form.marca}
+                  onSelect={(value) => setForm({ ...form, marca: value })}
+                  placeholder="Seleccionar o escribir marca"
+                  loading={marcasLoading}
+                />
+
+                <AnimatedInput
+                  label="Modelo *"
+                  value={form.modelo}
+                  onChangeText={(text) => setForm({ ...form, modelo: text })}
+                  placeholder="Modelo del producto"
+                />
+
+                <LabeledDropdown
+                  label="Categoría *"
+                  options={categorias.map((cat) => ({
+                    label: cat.nombre,
+                    value: cat._id,
+                  }))}
+                  selectedValue={form.categoria}
+                  onSelect={(value) => setForm({ ...form, categoria: value })}
+                  placeholder="Seleccionar categoría"
+                  loading={categoriasLoading}
+                />
+
+                <AnimatedInput
+                  label="Precio Base *"
+                  value={form.precioBase}
+                  onChangeText={(text) =>
+                    setForm({ ...form, precioBase: text })
+                  }
+                  placeholder="0.00"
+                  keyboardType="numeric"
+                />
+
+                <AnimatedInput
+                  label="Stock Cantidad"
+                  value={form.stockCantidad}
+                  onChangeText={(text) =>
+                    setForm({ ...form, stockCantidad: text })
+                  }
+                  placeholder="Cantidad en stock"
+                  keyboardType="numeric"
+                />
+
+                <LabeledDropdown
+                  label="Stock Disponible"
+                  options={[
+                    { label: "Disponible", value: "true" },
+                    { label: "No disponible", value: "false" },
+                  ]}
+                  selectedValue={form.stockDisponible}
+                  onSelect={(value) =>
+                    setForm({ ...form, stockDisponible: value })
+                  }
+                  placeholder="Seleccionar disponibilidad"
+                />
+
+                <AnimatedInput
+                  label="Descripción"
+                  value={form.descripcion}
+                  onChangeText={(text) =>
+                    setForm({ ...form, descripcion: text })
+                  }
+                  placeholder="Descripción del producto"
+                  multiline
+                  numberOfLines={3}
+                />
+
+                {/* Campo de imagen */}
+                <View style={styles.imageSection}>
+                  <ThemedText style={styles.imageLabel}>
+                    Imagen del producto
+                  </ThemedText>
+                  <ThemedText style={styles.imageSectionNote}>
+                    📸 Puedes agregar imágenes desde URL, galería, cámara o
+                    archivos.
+                  </ThemedText>
+
+                  {form.imagen &&
+                  (form.imagen.startsWith("http") ||
+                    form.imagen.startsWith("file") ||
+                    form.imagen.startsWith("data:")) ? (
+                    <View style={styles.imagePreviewContainer}>
+                      <SmartImage
+                        source={{ uri: form.imagen }}
+                        style={styles.imagePreview}
+                        onLoad={() =>
+                          console.log(
+                            "Imagen cargada exitosamente:",
+                            form.imagen
+                          )
+                        }
+                        onError={(error) =>
+                          console.error(
+                            "Error al cargar imagen:",
+                            error,
+                            "URL:",
+                            form.imagen
+                          )
+                        }
+                      />
+                      <TouchableOpacity
+                        style={styles.removeImageButton}
+                        onPress={removeImage}
+                      >
+                        <ThemedText style={styles.removeImageText}>
+                          ✕
+                        </ThemedText>
+                      </TouchableOpacity>
+                    </View>
+                  ) : (
+                    <TouchableOpacity
+                      style={styles.imagePlaceholder}
+                      onPress={showImagePicker}
+                    >
+                      <ThemedText style={styles.imagePlaceholderText}>
+                        📷 Agregar Imagen
+                      </ThemedText>
+                      <ThemedText style={styles.imagePlaceholderSubtext}>
+                        URL, Galería, Cámara o Archivos
+                      </ThemedText>
+                    </TouchableOpacity>
+                  )}
+
+                  {form.imagen && (
+                    <View style={styles.imageActions}>
+                      <TouchableOpacity
+                        style={styles.changeImageButton}
+                        onPress={showImagePicker}
+                      >
+                        <ThemedText style={styles.changeImageText}>
+                          🔄 Cambiar imagen
+                        </ThemedText>
+                      </TouchableOpacity>
+
+                      <AnimatedInput
+                        label="URL de imagen (opcional)"
+                        value={form.imagen}
+                        onChangeText={(text) =>
+                          setForm({ ...form, imagen: text })
+                        }
+                        placeholder="https://ejemplo.com/imagen.jpg"
+                      />
+                    </View>
+                  )}
+                </View>
+              </View>
+            </ScrollView>
+
+            <View style={styles.modalActions}>
+              <AnimatedButton
+                title={editingProduct ? "Actualizar" : "Crear"}
+                onPress={handleSave}
+                loading={saving}
+                style={styles.saveButton}
+              />
+            </View>
+          </SafeAreaView>
+        )}
       </Modal>
 
       {/* Modal de estadísticas detalladas */}
@@ -2681,5 +2882,11 @@ const styles = StyleSheet.create({
   webModalContentContainer: {
     flexGrow: 1,
     paddingBottom: SPACING.lg,
+  },
+  webModalActions: {
+    padding: SPACING.lg,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
+    backgroundColor: COLORS.surface,
   },
 });
