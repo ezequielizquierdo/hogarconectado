@@ -12,6 +12,7 @@ import {
   Platform,
   Dimensions,
   SafeAreaView,
+  Image as RNImage,
 } from "react-native";
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
@@ -26,12 +27,13 @@ import EditableDropdown from "@/components/forms/EditableDropdown";
 import AnimatedInput from "@/components/forms/AnimatedInput";
 import AnimatedButton from "@/components/ui/AnimatedButton";
 import FadeInView from "@/components/ui/FadeInView";
+import ProductCard from "@/components/product/ProductCard";
 import { useCategorias } from "@/hooks/useCategorias";
 import { useProductos } from "@/hooks/useProductos";
 import { useMarcas } from "@/hooks/useMarcas";
 import useDebounce from "@/hooks/useDebounce";
 import { productosService } from "@/services";
-import { Producto } from "@/services/types";
+import { Producto, ProductoConPrecios } from "@/services/types";
 import { COLORS, SPACING, RADIUS, SHADOWS } from "@/constants/theme";
 
 interface ProductoForm {
@@ -67,6 +69,9 @@ export default function ProductosScreen() {
 
   const [modalVisible, setModalVisible] = useState(false);
   const [statsModalVisible, setStatsModalVisible] = useState(false);
+  const [detailModalVisible, setDetailModalVisible] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<Producto | null>(null);
+  const [imageAspectRatio, setImageAspectRatio] = useState<number>(1);
   const [editingProduct, setEditingProduct] = useState<Producto | null>(null);
   const [form, setForm] = useState<ProductoForm>(initialForm);
   const [saving, setSaving] = useState(false);
@@ -816,102 +821,42 @@ export default function ProductosScreen() {
     setForm({ ...form, imagen: "" });
   };
 
-  const renderProducto = ({ item }: { item: Producto }) => {
-    const categoria = categorias.find(
-      (c) =>
-        c._id ===
-        (typeof item.categoria === "string"
-          ? item.categoria
-          : item.categoria._id)
-    );
+  // Convertir productos a ProductoConPrecios para las cards (simplificado)
+  const convertirAProductoConPrecios = (
+    producto: Producto
+  ): ProductoConPrecios => ({
+    ...producto,
+    precios: {
+      contado: producto.precioBase,
+      tresCuotas: {
+        total: producto.precioBase,
+        cuota: producto.precioBase / 3,
+      },
+      seisCuotas: {
+        total: producto.precioBase,
+        cuota: producto.precioBase / 6,
+      },
+    },
+  });
 
-    const isWeb = Platform.OS === "web";
-    const cardStyle = styles.productCardGrid; // Usar el mismo estilo para ambas plataformas
+  const renderProducto = ({ item }: { item: Producto }) => {
+    const productoConPrecios = convertirAProductoConPrecios(item);
 
     return (
-      <View key={item._id} style={cardStyle}>
-        {/* Imagen del producto - Prominente en la parte superior */}
-        <View style={styles.productImageHeader}>
-          {item.imagenes &&
-          item.imagenes.length > 0 &&
-          item.imagenes[0] &&
-          (item.imagenes[0].startsWith("http") ||
-            item.imagenes[0].startsWith("file") ||
-            item.imagenes[0].startsWith("data:")) ? (
-            <SmartImage
-              source={{ uri: item.imagenes[0] }}
-              style={styles.productMainImage}
-              onError={(error) =>
-                console.error("Error al cargar imagen del producto:", error)
-              }
-            />
-          ) : (
-            <View style={styles.productImagePlaceholder}>
-              <ThemedText style={styles.imagePlaceholderIcon}>📷</ThemedText>
-            </View>
-          )}
-
-          {/* ID del producto en esquina de la imagen */}
-          <View style={styles.productIdBadge}>
-            <ThemedText style={styles.productIdText}>
-              #{item._id.slice(-6)}
-            </ThemedText>
-          </View>
-        </View>
-
-        {/* Contenido de información - Flex para empujar botones abajo */}
-        <View style={styles.productContent}>
-          {/* Modelo - Elemento principal más prominente */}
-          <ThemedText style={styles.productModel} numberOfLines={2}>
-            {item.modelo}
-          </ThemedText>
-
-          {/* Marca */}
-          <ThemedText style={styles.productBrand} numberOfLines={1}>
-            🏷️ {item.marca}
-          </ThemedText>
-
-          {/* Categoría */}
-          <ThemedText style={styles.productCategory} numberOfLines={1}>
-            {categoria?.nombre || "Sin categoría"}
-          </ThemedText>
-
-          {/* Stock */}
-          <ThemedText style={styles.productStock}>
-            Stock: {item.stock.cantidad} {item.stock.disponible ? "✅" : "❌"}
-          </ThemedText>
-
-          {/* Precio - Destacado al final */}
-          <ThemedText style={styles.productPrice}>
-            {Platform.OS === "web" ? "💰 " : ""}$
-            {item.precioBase.toLocaleString()}
-          </ThemedText>
-        </View>
-
-        {/* Botones de acción - Siempre al final */}
-        <View style={styles.productActions}>
-          <TouchableOpacity
-            style={[styles.actionButton, styles.editButton]}
-            onPress={() => openModal(item)}
-          >
-            <ThemedText style={styles.actionButtonText}>
-              {Platform.OS === "web" ? "✏️ Editar" : "✏️"}
-            </ThemedText>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.actionButton, styles.deleteButton]}
-            onPress={() => handleDelete(item)}
-          >
-            <ThemedText style={[styles.actionButtonText, styles.deleteText]}>
-              {Platform.OS === "web" ? "🗑️ Eliminar" : "🗑️"}
-            </ThemedText>
-          </TouchableOpacity>
-        </View>
+      <View style={styles.cardContainer}>
+        <ProductCard
+          producto={productoConPrecios}
+          onPress={() => {
+            setSelectedProduct(item);
+            setDetailModalVisible(true);
+          }}
+          showAdminButtons={true}
+          onEdit={() => openModal(item)}
+          onDelete={() => handleDelete(item)}
+        />
       </View>
     );
   };
-
   return (
     <>
       <ParallaxScrollView
@@ -1288,6 +1233,179 @@ export default function ProductosScreen() {
             </View>
           </View>
         </View>
+      </Modal>
+
+      {/* Modal de detalle del producto */}
+      <Modal
+        visible={detailModalVisible}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setDetailModalVisible(false)}
+      >
+        <SafeAreaView style={styles.modalContainer}>
+          <ThemedView style={styles.modalHeader}>
+            <ThemedText type="subtitle">Detalle del Producto</ThemedText>
+            <TouchableOpacity onPress={() => setDetailModalVisible(false)}>
+              <ThemedText style={styles.cancelButton}>Cerrar</ThemedText>
+            </TouchableOpacity>
+          </ThemedView>
+
+          {selectedProduct && (
+            <ScrollView
+              style={styles.modalContent}
+              contentContainerStyle={styles.modalContentContainer}
+              showsVerticalScrollIndicator={true}
+            >
+              <View style={styles.detailContainer}>
+                {/* Imagen del producto */}
+                {selectedProduct.imagenes &&
+                  selectedProduct.imagenes.length > 0 && (
+                    <View style={styles.detailImageContainer}>
+                      <SmartImage
+                        source={{ uri: selectedProduct.imagenes[0] }}
+                        style={[
+                          styles.detailImage,
+                          { aspectRatio: imageAspectRatio },
+                        ]}
+                        onLoad={() => {
+                          // Para SmartImage, usaremos RNImage.getSize para obtener las dimensiones
+                          if (selectedProduct.imagenes?.[0]) {
+                            RNImage.getSize(
+                              selectedProduct.imagenes[0],
+                              (width: number, height: number) => {
+                                setImageAspectRatio(width / height);
+                              },
+                              (error: any) => {
+                                console.error(
+                                  "Error al obtener dimensiones:",
+                                  error
+                                );
+                                // Mantener aspect ratio por defecto
+                                setImageAspectRatio(1);
+                              }
+                            );
+                          }
+                        }}
+                        onError={(error) =>
+                          console.error(
+                            "Error al cargar imagen del producto:",
+                            error
+                          )
+                        }
+                      />
+                    </View>
+                  )}
+
+                {/* Información básica */}
+                <View style={styles.detailSection}>
+                  <ThemedText style={styles.detailTitle}>
+                    {selectedProduct.marca} {selectedProduct.modelo}
+                  </ThemedText>
+
+                  <View style={styles.detailRow}>
+                    <ThemedText style={styles.detailLabel}>ID:</ThemedText>
+                    <ThemedText style={styles.detailValue}>
+                      #{selectedProduct._id.slice(-6)}
+                    </ThemedText>
+                  </View>
+
+                  <View style={styles.detailRow}>
+                    <ThemedText style={styles.detailLabel}>Marca:</ThemedText>
+                    <ThemedText style={styles.detailValue}>
+                      {selectedProduct.marca}
+                    </ThemedText>
+                  </View>
+
+                  <View style={styles.detailRow}>
+                    <ThemedText style={styles.detailLabel}>Modelo:</ThemedText>
+                    <ThemedText style={styles.detailValue}>
+                      {selectedProduct.modelo}
+                    </ThemedText>
+                  </View>
+
+                  <View style={styles.detailRow}>
+                    <ThemedText style={styles.detailLabel}>
+                      Categoría:
+                    </ThemedText>
+                    <ThemedText style={styles.detailValue}>
+                      {typeof selectedProduct.categoria === "string"
+                        ? selectedProduct.categoria
+                        : selectedProduct.categoria.nombre}
+                    </ThemedText>
+                  </View>
+
+                  {selectedProduct.descripcion && (
+                    <View style={styles.detailRow}>
+                      <ThemedText style={styles.detailLabel}>
+                        Descripción:
+                      </ThemedText>
+                      <ThemedText style={styles.detailValue}>
+                        {selectedProduct.descripcion}
+                      </ThemedText>
+                    </View>
+                  )}
+
+                  <View style={styles.detailRow}>
+                    <ThemedText style={styles.detailLabel}>
+                      Precio Base:
+                    </ThemedText>
+                    <ThemedText style={[styles.detailValue, styles.priceText]}>
+                      ${selectedProduct.precioBase.toLocaleString()}
+                    </ThemedText>
+                  </View>
+
+                  <View style={styles.detailRow}>
+                    <ThemedText style={styles.detailLabel}>Stock:</ThemedText>
+                    <ThemedText
+                      style={[
+                        styles.detailValue,
+                        selectedProduct.stock.disponible
+                          ? styles.availableText
+                          : styles.unavailableText,
+                      ]}
+                    >
+                      {selectedProduct.stock.cantidad} unidades
+                      {selectedProduct.stock.disponible
+                        ? " ✅ Disponible"
+                        : " ❌ No disponible"}
+                    </ThemedText>
+                  </View>
+                </View>
+
+                {/* Botones de acción */}
+                <View style={styles.detailActionsContainer}>
+                  <TouchableOpacity
+                    style={styles.detailEditButton}
+                    onPress={() => {
+                      setDetailModalVisible(false);
+                      openModal(selectedProduct);
+                    }}
+                  >
+                    <ThemedText style={styles.detailActionIcon}>✏️</ThemedText>
+                    <ThemedText style={styles.detailActionText}>
+                      Editar Producto
+                    </ThemedText>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.detailDeleteButton}
+                    onPress={() => {
+                      setDetailModalVisible(false);
+                      if (selectedProduct) {
+                        handleDelete(selectedProduct);
+                      }
+                    }}
+                  >
+                    <ThemedText style={styles.detailActionIcon}>🗑️</ThemedText>
+                    <ThemedText style={styles.detailActionText}>
+                      Eliminar Producto
+                    </ThemedText>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </ScrollView>
+          )}
+        </SafeAreaView>
       </Modal>
     </>
   );
@@ -1876,5 +1994,108 @@ const styles = StyleSheet.create({
   },
   valueColor: {
     color: COLORS.warning,
+  },
+  cardContainer: {
+    marginBottom: SPACING.md,
+  },
+  // Estilos para modal de detalle
+  detailContainer: {
+    padding: SPACING.lg,
+  },
+  detailImageContainer: {
+    width: "100%",
+    borderRadius: RADIUS.lg,
+    marginBottom: SPACING.lg,
+    backgroundColor: COLORS.surface,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: SPACING.lg,
+    ...SHADOWS.md, // Sombra para efecto de card
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  detailImage: {
+    width: "100%",
+    resizeMode: "contain", // Mantiene la proporción original de la imagen
+    borderRadius: RADIUS.md,
+    maxHeight: 250, // Altura máxima para evitar imágenes demasiado grandes
+  },
+  detailSection: {
+    gap: SPACING.md,
+  },
+  detailTitle: {
+    fontSize: 24,
+    fontWeight: "bold",
+    color: COLORS.text,
+    marginBottom: SPACING.md,
+    textAlign: "center",
+  },
+  detailRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    paddingVertical: SPACING.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  detailLabel: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: COLORS.textSecondary,
+    flex: 1,
+  },
+  detailValue: {
+    fontSize: 16,
+    color: COLORS.text,
+    flex: 2,
+    textAlign: "right",
+  },
+  priceText: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: COLORS.primary,
+  },
+  availableText: {
+    color: COLORS.success,
+    fontWeight: "600",
+  },
+  unavailableText: {
+    color: COLORS.error,
+    fontWeight: "600",
+  },
+  // Estilos para botones de acción en modal de detalle
+  detailActionsContainer: {
+    marginTop: SPACING.xl,
+    gap: SPACING.md,
+  },
+  detailEditButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: COLORS.primary,
+    paddingVertical: SPACING.md,
+    paddingHorizontal: SPACING.lg,
+    borderRadius: RADIUS.lg,
+    gap: SPACING.sm,
+    ...SHADOWS.sm,
+  },
+  detailDeleteButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: COLORS.error,
+    paddingVertical: SPACING.md,
+    paddingHorizontal: SPACING.lg,
+    borderRadius: RADIUS.lg,
+    gap: SPACING.sm,
+    ...SHADOWS.sm,
+  },
+  detailActionIcon: {
+    fontSize: 18,
+  },
+  detailActionText: {
+    color: COLORS.surface,
+    fontSize: 16,
+    fontWeight: "600",
   },
 });
