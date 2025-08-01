@@ -2,7 +2,7 @@ const XLSX = require('xlsx');
 const path = require('path');
 
 // Leer el archivo Excel
-const filePath = path.join(__dirname, 'stock.xlsx');
+const filePath = path.join(__dirname, '../data/stock.xlsx');
 const workbook = XLSX.readFile(filePath);
 
 // Obtener los nombres de las hojas

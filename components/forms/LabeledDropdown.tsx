@@ -1,7 +1,7 @@
 import React from "react";
 import { View, StyleSheet } from "react-native";
 import { ThemedText } from "@/components/ThemedText";
-import Dropdown from "@/components/Dropdown";
+import Dropdown from "./Dropdown";
 import { COLORS, SPACING } from "@/constants/theme";
 
 interface DropdownOption {

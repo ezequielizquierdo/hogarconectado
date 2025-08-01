@@ -10,7 +10,7 @@ import { useState } from "react";
 import "react-native-reanimated";
 
 import { useColorScheme } from "@/hooks/useColorScheme";
-import SplashScreen from "@/components/SplashScreen";
+import SplashScreen from "@/components/ui/SplashScreen";
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
