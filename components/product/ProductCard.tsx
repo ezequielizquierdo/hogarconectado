@@ -22,6 +22,7 @@ interface ProductCardProps {
   // Props para administración
   onEdit?: () => void;
   onDelete?: () => void;
+  onInstagramStory?: () => void;
   showAdminButtons?: boolean;
 }
 
@@ -36,6 +37,7 @@ export default function ProductCard({
   isFavorite = false,
   onEdit,
   onDelete,
+  onInstagramStory,
   showAdminButtons = false,
 }: ProductCardProps) {
   const formatPrice = (price: number) => {
@@ -120,10 +122,20 @@ export default function ProductCard({
         </TouchableOpacity>
 
         {/* Línea separatoria y zona de acciones */}
-        {showAdminButtons && (onEdit || onDelete) && (
+        {showAdminButtons && (onEdit || onDelete || onInstagramStory) && (
           <>
             <View style={styles.separator} />
             <View style={styles.actionsSection}>
+              {onInstagramStory && (
+                <TouchableOpacity
+                  onPress={onInstagramStory}
+                  style={[styles.actionButton, styles.instagramButton]}
+                  activeOpacity={0.7}
+                >
+                  <ThemedText style={styles.actionIcon}>📸</ThemedText>
+                </TouchableOpacity>
+              )}
+
               {onEdit && (
                 <TouchableOpacity
                   onPress={onEdit}
@@ -264,6 +276,9 @@ const styles = StyleSheet.create({
   },
   deleteButton: {
     backgroundColor: COLORS.error + "15", // Color rojizo muy suave
+  },
+  instagramButton: {
+    backgroundColor: "#E4405F" + "15", // Color de Instagram muy suave
   },
   actionIcon: {
     fontSize: 20,

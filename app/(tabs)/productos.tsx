@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   StyleSheet,
   ScrollView,
@@ -19,6 +19,8 @@ import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
 import * as DocumentPicker from "expo-document-picker";
 import * as FileSystem from "expo-file-system";
+import * as Sharing from "expo-sharing";
+import { captureRef } from "react-native-view-shot";
 import { HelloWave } from "@/components/HelloWave";
 import ParallaxScrollView from "@/components/ParallaxScrollView";
 import { ThemedText } from "@/components/ThemedText";
@@ -37,6 +39,27 @@ import useDebounce from "@/hooks/useDebounce";
 import { productosService } from "@/services";
 import { Producto, ProductoConPrecios } from "@/services/types";
 import { COLORS, SPACING, RADIUS, SHADOWS } from "@/constants/theme";
+
+// Funciones de utilidad
+const formatPrice = (price: number | string): string => {
+  const numPrice = typeof price === "string" ? parseFloat(price) : price;
+  if (isNaN(numPrice)) return "0,00";
+
+  return numPrice.toLocaleString("es-ES", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+};
+
+const parsePrice = (formattedPrice: string): number => {
+  // Convierte de formato local (1.234,56) a formato numérico (1234.56)
+  const numericString = formattedPrice.replace(/\./g, "").replace(",", ".");
+  return parseFloat(numericString);
+};
+
+const formatModeloToUpperCase = (modelo: string): string => {
+  return modelo.toUpperCase().trim();
+};
 
 interface ProductoForm {
   marca: string;
@@ -72,12 +95,29 @@ export default function ProductosScreen() {
   const [modalVisible, setModalVisible] = useState(false);
   const [statsModalVisible, setStatsModalVisible] = useState(false);
   const [detailModalVisible, setDetailModalVisible] = useState(false);
+  const [instagramModalVisible, setInstagramModalVisible] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Producto | null>(null);
+  const [selectedProductForInstagram, setSelectedProductForInstagram] =
+    useState<Producto | null>(null);
+  const [instagramStoryOptions, setInstagramStoryOptions] = useState({
+    showMarca: true,
+    showModelo: true,
+    showCategoria: true,
+    showPrecio: true,
+    showStock: false,
+    showDescripcion: false,
+    showConsultaPrecio: false,
+  });
   const [imageAspectRatio, setImageAspectRatio] = useState<number>(1);
   const [editingProduct, setEditingProduct] = useState<Producto | null>(null);
   const [form, setForm] = useState<ProductoForm>(initialForm);
   const [saving, setSaving] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [modeloError, setModeloError] = useState<string>("");
+
+  // Referencia para capturar la vista de Instagram Story
+  const instagramViewRef = useRef<View>(null);
+  const instagramViewRefMobile = useRef<View>(null);
 
   // Estados para búsqueda y filtros
   const [searchText, setSearchText] = useState("");
@@ -216,11 +256,98 @@ export default function ProductosScreen() {
     setModalVisible(false);
     setEditingProduct(null);
     setForm(initialForm);
+    setModeloError("");
+  };
+
+  const validateModelo = async (modelo: string) => {
+    if (!modelo.trim()) {
+      setModeloError("");
+      return true;
+    }
+
+    const modeloUpperCase = formatModeloToUpperCase(modelo);
+
+    // Verificar si ya existe un producto con ese modelo (excepto el que estamos editando)
+    const existingProduct = productos.find(
+      (p) =>
+        formatModeloToUpperCase(p.modelo) === modeloUpperCase &&
+        p._id !== editingProduct?._id
+    );
+
+    if (existingProduct) {
+      setModeloError(`El modelo "${modeloUpperCase}" ya existe`);
+      return false;
+    } else {
+      setModeloError("");
+      return true;
+    }
+  };
+
+  const openInstagramModal = (producto: Producto) => {
+    setSelectedProductForInstagram(producto);
+    setInstagramModalVisible(true);
+  };
+
+  const closeInstagramModal = () => {
+    setInstagramModalVisible(false);
+    setSelectedProductForInstagram(null);
+  };
+
+  const shareToInstagram = async () => {
+    try {
+      // Usar la referencia correcta según la plataforma
+      const viewRef =
+        Platform.OS === "web" ? instagramViewRef : instagramViewRefMobile;
+
+      if (!viewRef.current) {
+        Alert.alert("Error", "No se pudo capturar la vista para compartir");
+        return;
+      }
+
+      // Capturar la vista como imagen
+      const uri = await captureRef(viewRef.current, {
+        format: "png",
+        quality: 1.0,
+        width: 1080, // Tamaño óptimo para Instagram Stories
+        height: 1920,
+      });
+
+      // Verificar si Sharing está disponible
+      if (!(await Sharing.isAvailableAsync())) {
+        Alert.alert(
+          "Error",
+          "El compartir no está disponible en este dispositivo"
+        );
+        return;
+      }
+
+      // Compartir la imagen
+      await Sharing.shareAsync(uri, {
+        mimeType: "image/png",
+        dialogTitle: "Compartir en Instagram",
+      });
+
+      // Cerrar el modal después de compartir
+      closeInstagramModal();
+    } catch (error) {
+      console.error("Error al compartir en Instagram:", error);
+      Alert.alert("Error", "No se pudo compartir la imagen");
+    }
   };
 
   const handleSave = async () => {
     if (!form.marca || !form.modelo || !form.categoria || !form.precioBase) {
       Alert.alert("Error", "Por favor completa los campos obligatorios");
+      return;
+    }
+
+    // Validar que el modelo sea único
+    const modeloValido = await validateModelo(form.modelo);
+    if (!modeloValido) {
+      Alert.alert(
+        "Error",
+        "Ya existe un producto con este modelo. Por favor elige otro modelo."
+      );
       return;
     }
 
@@ -234,12 +361,20 @@ export default function ProductosScreen() {
         console.log("Imagen agregada al producto:", form.imagen);
       }
 
+      // Convertir precio a número (parsePrice maneja formato español)
+      const precioNumerico = parsePrice(form.precioBase);
+      if (isNaN(precioNumerico) || precioNumerico <= 0) {
+        Alert.alert("Error", "El precio debe ser un número válido mayor a 0");
+        setSaving(false);
+        return;
+      }
+
       const productoData = {
         marca: form.marca,
-        modelo: form.modelo,
+        modelo: formatModeloToUpperCase(form.modelo), // Convertir a mayúsculas
         descripcion: form.descripcion,
         categoria: form.categoria,
-        precioBase: parseFloat(form.precioBase),
+        precioBase: precioNumerico,
         stock: {
           cantidad: parseInt(form.stockCantidad) || 0,
           disponible: form.stockDisponible === "true",
@@ -870,6 +1005,7 @@ export default function ProductosScreen() {
           showAdminButtons={true}
           onEdit={() => openModal(item)}
           onDelete={() => handleDelete(item)}
+          onInstagramStory={() => openInstagramModal(item)}
         />
       </View>
     );
@@ -1201,8 +1337,13 @@ export default function ProductosScreen() {
                   <AnimatedInput
                     label="Modelo *"
                     value={form.modelo}
-                    onChangeText={(text) => setForm({ ...form, modelo: text })}
+                    onChangeText={async (text) => {
+                      const modeloUpperCase = formatModeloToUpperCase(text);
+                      setForm({ ...form, modelo: modeloUpperCase });
+                      await validateModelo(text);
+                    }}
                     placeholder="Modelo del producto"
+                    error={modeloError}
                   />
 
                   <LabeledDropdown
@@ -1220,10 +1361,22 @@ export default function ProductosScreen() {
                   <AnimatedInput
                     label="Precio Base *"
                     value={form.precioBase}
-                    onChangeText={(text) =>
-                      setForm({ ...form, precioBase: text })
-                    }
-                    placeholder="0.00"
+                    onChangeText={(text) => {
+                      // Solo permitir números, puntos y comas
+                      const filteredText = text.replace(/[^0-9.,]/g, "");
+                      setForm({ ...form, precioBase: filteredText });
+                    }}
+                    onBlur={() => {
+                      // Formatear al perder el foco
+                      if (form.precioBase) {
+                        const numericValue = parsePrice(form.precioBase);
+                        if (!isNaN(numericValue)) {
+                          const formattedPrice = formatPrice(numericValue);
+                          setForm({ ...form, precioBase: formattedPrice });
+                        }
+                      }
+                    }}
+                    placeholder="0,00"
                     keyboardType="numeric"
                   />
 
@@ -1384,8 +1537,13 @@ export default function ProductosScreen() {
                 <AnimatedInput
                   label="Modelo *"
                   value={form.modelo}
-                  onChangeText={(text) => setForm({ ...form, modelo: text })}
+                  onChangeText={async (text) => {
+                    const modeloUpperCase = formatModeloToUpperCase(text);
+                    setForm({ ...form, modelo: modeloUpperCase });
+                    await validateModelo(text);
+                  }}
                   placeholder="Modelo del producto"
+                  error={modeloError}
                 />
 
                 <LabeledDropdown
@@ -1403,10 +1561,22 @@ export default function ProductosScreen() {
                 <AnimatedInput
                   label="Precio Base *"
                   value={form.precioBase}
-                  onChangeText={(text) =>
-                    setForm({ ...form, precioBase: text })
-                  }
-                  placeholder="0.00"
+                  onChangeText={(text) => {
+                    // Solo permitir números, puntos y comas
+                    const filteredText = text.replace(/[^0-9.,]/g, "");
+                    setForm({ ...form, precioBase: filteredText });
+                  }}
+                  onBlur={() => {
+                    // Formatear al perder el foco
+                    if (form.precioBase) {
+                      const numericValue = parsePrice(form.precioBase);
+                      if (!isNaN(numericValue)) {
+                        const formattedPrice = formatPrice(numericValue);
+                        setForm({ ...form, precioBase: formattedPrice });
+                      }
+                    }
+                  }}
+                  placeholder="0,00"
                   keyboardType="numeric"
                 />
 
@@ -1962,6 +2132,646 @@ export default function ProductosScreen() {
                 </View>
               </ScrollView>
             )}
+          </SafeAreaView>
+        )}
+      </Modal>
+
+      {/* Modal de Instagram Story */}
+      <Modal
+        visible={instagramModalVisible}
+        animationType={Platform.OS === "web" ? "fade" : "slide"}
+        transparent={Platform.OS === "web"}
+        presentationStyle={
+          Platform.OS === "web" ? "overFullScreen" : "pageSheet"
+        }
+        onRequestClose={closeInstagramModal}
+      >
+        {Platform.OS === "web" ? (
+          <View style={styles.webModalOverlay}>
+            <View style={styles.instagramModalContainer}>
+              <ThemedView style={styles.webModalHeader}>
+                <ThemedText style={styles.webModalTitle}>
+                  📸 Crear Historia de Instagram
+                </ThemedText>
+                <TouchableOpacity
+                  style={styles.closeButton}
+                  onPress={closeInstagramModal}
+                >
+                  <ThemedText style={styles.closeButtonText}>✕</ThemedText>
+                </TouchableOpacity>
+              </ThemedView>
+
+              <ScrollView
+                style={styles.webModalContent}
+                contentContainerStyle={styles.webModalContentContainer}
+                showsVerticalScrollIndicator={true}
+              >
+                <View style={styles.instagramPreviewContainer}>
+                  {/* Vista previa de la historia */}
+                  <View ref={instagramViewRef} style={styles.storyPreview}>
+                    <Image
+                      source={require("@/assets/images/back-history.jpeg")}
+                      style={styles.storyBackground}
+                      resizeMode="cover"
+                    />
+
+                    {/* Contenido superpuesto */}
+                    <View style={styles.storyContent}>
+                      {/* Imagen del producto */}
+                      {selectedProductForInstagram?.imagenes &&
+                        selectedProductForInstagram.imagenes.length > 0 && (
+                          <View style={styles.storyProductImageContainer}>
+                            <Image
+                              source={{
+                                uri: selectedProductForInstagram.imagenes[0],
+                              }}
+                              style={styles.storyProductImage}
+                              resizeMode="contain"
+                            />
+                          </View>
+                        )}
+
+                      {/* Box de categoría entre imagen y detalles */}
+                      {instagramStoryOptions.showCategoria &&
+                        selectedProductForInstagram?.categoria && (
+                          <View style={styles.storyCategoryBox}>
+                            <ThemedText style={styles.storyCategoryText}>
+                              {typeof selectedProductForInstagram.categoria ===
+                              "string"
+                                ? selectedProductForInstagram.categoria
+                                : selectedProductForInstagram.categoria.nombre}
+                            </ThemedText>
+                          </View>
+                        )}
+
+                      {/* Información del producto */}
+                      <View style={styles.storyProductInfo}>
+                        {instagramStoryOptions.showMarca &&
+                          selectedProductForInstagram?.marca && (
+                            <ThemedText style={styles.storyText}>
+                              {selectedProductForInstagram.marca}
+                            </ThemedText>
+                          )}
+
+                        {instagramStoryOptions.showModelo &&
+                          selectedProductForInstagram?.modelo && (
+                            <ThemedText style={styles.storyTextBold}>
+                              {selectedProductForInstagram.modelo}
+                            </ThemedText>
+                          )}
+
+                        {instagramStoryOptions.showPrecio &&
+                          selectedProductForInstagram?.precioBase && (
+                            <ThemedText style={styles.storyPrice}>
+                              $
+                              {Number(
+                                selectedProductForInstagram.precioBase
+                              ).toFixed(2)}
+                            </ThemedText>
+                          )}
+
+                        {instagramStoryOptions.showStock &&
+                          selectedProductForInstagram?.stock && (
+                            <ThemedText style={styles.storyText}>
+                              Stock:{" "}
+                              {selectedProductForInstagram.stock.cantidad}
+                              {selectedProductForInstagram.stock.disponible
+                                ? " ✅"
+                                : " ❌"}
+                            </ThemedText>
+                          )}
+
+                        {instagramStoryOptions.showDescripcion &&
+                          selectedProductForInstagram?.descripcion && (
+                            <ThemedText style={styles.storyDescription}>
+                              {selectedProductForInstagram.descripcion}
+                            </ThemedText>
+                          )}
+                      </View>
+                    </View>
+                  </View>
+                </View>
+
+                {/* Mensaje de consulta precio - Fuera del contenedor de detalles */}
+                {instagramStoryOptions.showConsultaPrecio && (
+                  <View style={styles.storyConsultaBox}>
+                    <ThemedText style={styles.storyConsultaText}>
+                      💬 Consultá por el mejor precio!
+                    </ThemedText>
+                  </View>
+                )}
+
+                {/* Opciones de personalización */}
+                <View style={styles.instagramOptions}>
+                  <ThemedText style={styles.optionsTitle}>
+                    ⚙️ Personalizar información
+                  </ThemedText>
+
+                  <View style={styles.checkboxContainer}>
+                    <TouchableOpacity
+                      style={styles.checkboxRow}
+                      onPress={() =>
+                        setInstagramStoryOptions((prev) => ({
+                          ...prev,
+                          showMarca: !prev.showMarca,
+                        }))
+                      }
+                    >
+                      <View
+                        style={[
+                          styles.checkbox,
+                          instagramStoryOptions.showMarca &&
+                            styles.checkboxChecked,
+                        ]}
+                      >
+                        {instagramStoryOptions.showMarca && (
+                          <ThemedText style={styles.checkmark}>✓</ThemedText>
+                        )}
+                      </View>
+                      <ThemedText style={styles.checkboxLabel}>
+                        Mostrar Marca
+                      </ThemedText>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={styles.checkboxRow}
+                      onPress={() =>
+                        setInstagramStoryOptions((prev) => ({
+                          ...prev,
+                          showModelo: !prev.showModelo,
+                        }))
+                      }
+                    >
+                      <View
+                        style={[
+                          styles.checkbox,
+                          instagramStoryOptions.showModelo &&
+                            styles.checkboxChecked,
+                        ]}
+                      >
+                        {instagramStoryOptions.showModelo && (
+                          <ThemedText style={styles.checkmark}>✓</ThemedText>
+                        )}
+                      </View>
+                      <ThemedText style={styles.checkboxLabel}>
+                        Mostrar Modelo
+                      </ThemedText>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={styles.checkboxRow}
+                      onPress={() =>
+                        setInstagramStoryOptions((prev) => ({
+                          ...prev,
+                          showCategoria: !prev.showCategoria,
+                        }))
+                      }
+                    >
+                      <View
+                        style={[
+                          styles.checkbox,
+                          instagramStoryOptions.showCategoria &&
+                            styles.checkboxChecked,
+                        ]}
+                      >
+                        {instagramStoryOptions.showCategoria && (
+                          <ThemedText style={styles.checkmark}>✓</ThemedText>
+                        )}
+                      </View>
+                      <ThemedText style={styles.checkboxLabel}>
+                        Mostrar Categoría
+                      </ThemedText>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={styles.checkboxRow}
+                      onPress={() =>
+                        setInstagramStoryOptions((prev) => ({
+                          ...prev,
+                          showPrecio: !prev.showPrecio,
+                        }))
+                      }
+                    >
+                      <View
+                        style={[
+                          styles.checkbox,
+                          instagramStoryOptions.showPrecio &&
+                            styles.checkboxChecked,
+                        ]}
+                      >
+                        {instagramStoryOptions.showPrecio && (
+                          <ThemedText style={styles.checkmark}>✓</ThemedText>
+                        )}
+                      </View>
+                      <ThemedText style={styles.checkboxLabel}>
+                        Mostrar Precio
+                      </ThemedText>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={styles.checkboxRow}
+                      onPress={() =>
+                        setInstagramStoryOptions((prev) => ({
+                          ...prev,
+                          showStock: !prev.showStock,
+                        }))
+                      }
+                    >
+                      <View
+                        style={[
+                          styles.checkbox,
+                          instagramStoryOptions.showStock &&
+                            styles.checkboxChecked,
+                        ]}
+                      >
+                        {instagramStoryOptions.showStock && (
+                          <ThemedText style={styles.checkmark}>✓</ThemedText>
+                        )}
+                      </View>
+                      <ThemedText style={styles.checkboxLabel}>
+                        Mostrar Stock
+                      </ThemedText>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={styles.checkboxRow}
+                      onPress={() =>
+                        setInstagramStoryOptions((prev) => ({
+                          ...prev,
+                          showDescripcion: !prev.showDescripcion,
+                        }))
+                      }
+                    >
+                      <View
+                        style={[
+                          styles.checkbox,
+                          instagramStoryOptions.showDescripcion &&
+                            styles.checkboxChecked,
+                        ]}
+                      >
+                        {instagramStoryOptions.showDescripcion && (
+                          <ThemedText style={styles.checkmark}>✓</ThemedText>
+                        )}
+                      </View>
+                      <ThemedText style={styles.checkboxLabel}>
+                        Mostrar Descripción
+                      </ThemedText>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={styles.checkboxRow}
+                      onPress={() =>
+                        setInstagramStoryOptions((prev) => ({
+                          ...prev,
+                          showConsultaPrecio: !prev.showConsultaPrecio,
+                        }))
+                      }
+                    >
+                      <View
+                        style={[
+                          styles.checkbox,
+                          instagramStoryOptions.showConsultaPrecio &&
+                            styles.checkboxChecked,
+                        ]}
+                      >
+                        {instagramStoryOptions.showConsultaPrecio && (
+                          <ThemedText style={styles.checkmark}>✓</ThemedText>
+                        )}
+                      </View>
+                      <ThemedText style={styles.checkboxLabel}>
+                        Mostrar "Consultá por el mejor precio!"
+                      </ThemedText>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </ScrollView>
+
+              <View style={styles.webModalActions}>
+                <AnimatedButton
+                  title="📱 Compartir en Instagram"
+                  onPress={shareToInstagram}
+                  style={styles.instagramShareButton}
+                />
+              </View>
+            </View>
+          </View>
+        ) : (
+          // Versión móvil del modal
+          <SafeAreaView style={styles.modalContainer}>
+            <ThemedView style={styles.modalHeader}>
+              <ThemedText type="subtitle">
+                📸 Crear Historia de Instagram
+              </ThemedText>
+              <TouchableOpacity onPress={closeInstagramModal}>
+                <ThemedText style={styles.cancelButton}>Cancelar</ThemedText>
+              </TouchableOpacity>
+            </ThemedView>
+
+            <ScrollView
+              style={styles.modalContent}
+              contentContainerStyle={styles.modalContentContainer}
+              showsVerticalScrollIndicator={true}
+            >
+              <View style={styles.instagramPreviewContainer}>
+                {/* Vista previa de la historia para móvil */}
+                <View
+                  ref={instagramViewRefMobile}
+                  style={[styles.storyPreview, { width: 250, height: 444 }]}
+                >
+                  <Image
+                    source={require("@/assets/images/back-history.jpeg")}
+                    style={styles.storyBackground}
+                    resizeMode="cover"
+                  />
+
+                  {/* Contenido superpuesto */}
+                  <View style={styles.storyContent}>
+                    {/* Imagen del producto */}
+                    {selectedProductForInstagram?.imagenes &&
+                      selectedProductForInstagram.imagenes.length > 0 && (
+                        <View style={styles.storyProductImageContainer}>
+                          <Image
+                            source={{
+                              uri: selectedProductForInstagram.imagenes[0],
+                            }}
+                            style={[
+                              styles.storyProductImage,
+                              { width: 150, height: 150 },
+                            ]}
+                            resizeMode="contain"
+                          />
+                        </View>
+                      )}
+
+                    {/* Box de categoría entre imagen y detalles */}
+                    {instagramStoryOptions.showCategoria &&
+                      selectedProductForInstagram?.categoria && (
+                        <View style={styles.storyCategoryBox}>
+                          <ThemedText style={styles.storyCategoryText}>
+                            {typeof selectedProductForInstagram.categoria ===
+                            "string"
+                              ? selectedProductForInstagram.categoria
+                              : selectedProductForInstagram.categoria.nombre}
+                          </ThemedText>
+                        </View>
+                      )}
+
+                    {/* Información del producto */}
+                    <View style={styles.storyProductInfo}>
+                      {instagramStoryOptions.showMarca &&
+                        selectedProductForInstagram?.marca && (
+                          <ThemedText style={styles.storyText}>
+                            {selectedProductForInstagram.marca}
+                          </ThemedText>
+                        )}
+
+                      {instagramStoryOptions.showModelo &&
+                        selectedProductForInstagram?.modelo && (
+                          <ThemedText style={styles.storyTextBold}>
+                            {selectedProductForInstagram.modelo}
+                          </ThemedText>
+                        )}
+
+                      {instagramStoryOptions.showPrecio &&
+                        selectedProductForInstagram?.precioBase && (
+                          <ThemedText style={styles.storyPrice}>
+                            $
+                            {Number(
+                              selectedProductForInstagram.precioBase
+                            ).toFixed(2)}
+                          </ThemedText>
+                        )}
+
+                      {instagramStoryOptions.showStock && (
+                        <ThemedText style={styles.storyText}>
+                          {selectedProductForInstagram?.stock?.disponible
+                            ? `Stock: ${
+                                selectedProductForInstagram.stock.cantidad ||
+                                "Disponible"
+                              }`
+                            : "Sin stock"}
+                        </ThemedText>
+                      )}
+
+                      {instagramStoryOptions.showDescripcion &&
+                        selectedProductForInstagram?.descripcion && (
+                          <ThemedText style={styles.storyDescription}>
+                            {selectedProductForInstagram.descripcion}
+                          </ThemedText>
+                        )}
+                    </View>
+                  </View>
+                </View>
+
+                {/* Mensaje de consulta precio - Fuera del contenedor de detalles */}
+                {instagramStoryOptions.showConsultaPrecio && (
+                  <View style={styles.storyConsultaBox}>
+                    <ThemedText style={styles.storyConsultaText}>
+                      💬 Consultá por el mejor precio!
+                    </ThemedText>
+                  </View>
+                )}
+
+                {/* Opciones de personalización para móvil */}
+                <View style={styles.instagramOptions}>
+                  <ThemedText style={styles.optionsTitle}>
+                    Personalizar información
+                  </ThemedText>
+
+                  <View style={styles.checkboxContainer}>
+                    {/* Checkbox Marca */}
+                    <TouchableOpacity
+                      style={styles.checkboxRow}
+                      onPress={() =>
+                        setInstagramStoryOptions((prev) => ({
+                          ...prev,
+                          showMarca: !prev.showMarca,
+                        }))
+                      }
+                    >
+                      <View
+                        style={[
+                          styles.checkbox,
+                          instagramStoryOptions.showMarca &&
+                            styles.checkboxChecked,
+                        ]}
+                      >
+                        {instagramStoryOptions.showMarca && (
+                          <ThemedText style={styles.checkmark}>✓</ThemedText>
+                        )}
+                      </View>
+                      <ThemedText style={styles.checkboxLabel}>
+                        Mostrar Marca
+                      </ThemedText>
+                    </TouchableOpacity>
+
+                    {/* Checkbox Modelo */}
+                    <TouchableOpacity
+                      style={styles.checkboxRow}
+                      onPress={() =>
+                        setInstagramStoryOptions((prev) => ({
+                          ...prev,
+                          showModelo: !prev.showModelo,
+                        }))
+                      }
+                    >
+                      <View
+                        style={[
+                          styles.checkbox,
+                          instagramStoryOptions.showModelo &&
+                            styles.checkboxChecked,
+                        ]}
+                      >
+                        {instagramStoryOptions.showModelo && (
+                          <ThemedText style={styles.checkmark}>✓</ThemedText>
+                        )}
+                      </View>
+                      <ThemedText style={styles.checkboxLabel}>
+                        Mostrar Modelo
+                      </ThemedText>
+                    </TouchableOpacity>
+
+                    {/* Checkbox Categoría */}
+                    <TouchableOpacity
+                      style={styles.checkboxRow}
+                      onPress={() =>
+                        setInstagramStoryOptions((prev) => ({
+                          ...prev,
+                          showCategoria: !prev.showCategoria,
+                        }))
+                      }
+                    >
+                      <View
+                        style={[
+                          styles.checkbox,
+                          instagramStoryOptions.showCategoria &&
+                            styles.checkboxChecked,
+                        ]}
+                      >
+                        {instagramStoryOptions.showCategoria && (
+                          <ThemedText style={styles.checkmark}>✓</ThemedText>
+                        )}
+                      </View>
+                      <ThemedText style={styles.checkboxLabel}>
+                        Mostrar Categoría
+                      </ThemedText>
+                    </TouchableOpacity>
+
+                    {/* Checkbox Precio */}
+                    <TouchableOpacity
+                      style={styles.checkboxRow}
+                      onPress={() =>
+                        setInstagramStoryOptions((prev) => ({
+                          ...prev,
+                          showPrecio: !prev.showPrecio,
+                        }))
+                      }
+                    >
+                      <View
+                        style={[
+                          styles.checkbox,
+                          instagramStoryOptions.showPrecio &&
+                            styles.checkboxChecked,
+                        ]}
+                      >
+                        {instagramStoryOptions.showPrecio && (
+                          <ThemedText style={styles.checkmark}>✓</ThemedText>
+                        )}
+                      </View>
+                      <ThemedText style={styles.checkboxLabel}>
+                        Mostrar Precio
+                      </ThemedText>
+                    </TouchableOpacity>
+
+                    {/* Checkbox Stock */}
+                    <TouchableOpacity
+                      style={styles.checkboxRow}
+                      onPress={() =>
+                        setInstagramStoryOptions((prev) => ({
+                          ...prev,
+                          showStock: !prev.showStock,
+                        }))
+                      }
+                    >
+                      <View
+                        style={[
+                          styles.checkbox,
+                          instagramStoryOptions.showStock &&
+                            styles.checkboxChecked,
+                        ]}
+                      >
+                        {instagramStoryOptions.showStock && (
+                          <ThemedText style={styles.checkmark}>✓</ThemedText>
+                        )}
+                      </View>
+                      <ThemedText style={styles.checkboxLabel}>
+                        Mostrar Stock
+                      </ThemedText>
+                    </TouchableOpacity>
+
+                    {/* Checkbox Descripción */}
+                    <TouchableOpacity
+                      style={styles.checkboxRow}
+                      onPress={() =>
+                        setInstagramStoryOptions((prev) => ({
+                          ...prev,
+                          showDescripcion: !prev.showDescripcion,
+                        }))
+                      }
+                    >
+                      <View
+                        style={[
+                          styles.checkbox,
+                          instagramStoryOptions.showDescripcion &&
+                            styles.checkboxChecked,
+                        ]}
+                      >
+                        {instagramStoryOptions.showDescripcion && (
+                          <ThemedText style={styles.checkmark}>✓</ThemedText>
+                        )}
+                      </View>
+                      <ThemedText style={styles.checkboxLabel}>
+                        Mostrar Descripción
+                      </ThemedText>
+                    </TouchableOpacity>
+
+                    {/* Checkbox Consulta Precio */}
+                    <TouchableOpacity
+                      style={styles.checkboxRow}
+                      onPress={() =>
+                        setInstagramStoryOptions((prev) => ({
+                          ...prev,
+                          showConsultaPrecio: !prev.showConsultaPrecio,
+                        }))
+                      }
+                    >
+                      <View
+                        style={[
+                          styles.checkbox,
+                          instagramStoryOptions.showConsultaPrecio &&
+                            styles.checkboxChecked,
+                        ]}
+                      >
+                        {instagramStoryOptions.showConsultaPrecio && (
+                          <ThemedText style={styles.checkmark}>✓</ThemedText>
+                        )}
+                      </View>
+                      <ThemedText style={styles.checkboxLabel}>
+                        Mostrar "Consultá por el mejor precio!"
+                      </ThemedText>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </View>
+            </ScrollView>
+
+            <View style={styles.modalActions}>
+              <AnimatedButton
+                title="📱 Compartir en Instagram"
+                onPress={shareToInstagram}
+                style={styles.instagramShareButton}
+              />
+            </View>
           </SafeAreaView>
         )}
       </Modal>
@@ -2888,5 +3698,166 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: COLORS.border,
     backgroundColor: COLORS.surface,
+  },
+  // Estilos para modal de Instagram
+  instagramModalContainer: {
+    backgroundColor: COLORS.background,
+    borderRadius: RADIUS.lg,
+    maxWidth: 800,
+    maxHeight: "90%" as any,
+    width: "100%" as const,
+    ...SHADOWS.lg,
+    overflow: "hidden" as const,
+  },
+  instagramPreviewContainer: {
+    padding: SPACING.lg,
+    alignItems: "center" as const,
+  },
+  storyPreview: {
+    width: 300,
+    height: 533, // Proporción 9:16 de Instagram Stories
+    borderRadius: RADIUS.lg,
+    overflow: "hidden" as const,
+    position: "relative" as const,
+    ...SHADOWS.md,
+  },
+  storyBackground: {
+    width: "100%" as const,
+    height: "100%" as const,
+    position: "absolute" as const,
+  },
+  storyContent: {
+    flex: 1,
+    padding: SPACING.lg,
+    justifyContent: "space-between" as const,
+    position: "relative" as const,
+  },
+  storyProductImageContainer: {
+    alignItems: "center" as const,
+    marginTop: SPACING.xl,
+  },
+  storyProductImage: {
+    width: 200,
+    height: 200,
+    borderRadius: RADIUS.lg,
+    backgroundColor: "rgba(255, 255, 255, 0.9)" as any,
+    padding: SPACING.md,
+  },
+  storyCategoryBox: {
+    backgroundColor: "rgba(100, 149, 237, 0.9)" as any, // Azul cornflower semi-transparente
+    paddingVertical: SPACING.xs, // Reducido de SPACING.sm
+    paddingHorizontal: SPACING.md, // Reducido de SPACING.lg
+    borderRadius: RADIUS.md,
+    marginTop: SPACING.sm, // Reducido de SPACING.md
+    marginBottom: SPACING.sm, // Reducido de SPACING.md
+    alignItems: "center" as const,
+    alignSelf: "center" as const,
+    minWidth: 100, // Reducido de 120
+  },
+  storyCategoryText: {
+    color: "#FFFFFF" as const,
+    fontSize: 10, // Reducido de 12
+    fontWeight: "600" as const,
+    textAlign: "center" as const,
+    textTransform: "uppercase" as any,
+    letterSpacing: 0.5,
+  },
+  storyProductInfo: {
+    backgroundColor: "rgba(0, 0, 0, 0.7)" as any,
+    padding: SPACING.md, // Reducido de SPACING.lg
+    borderRadius: RADIUS.lg,
+    alignItems: "center" as const,
+  },
+  storyText: {
+    color: "#FFFFFF" as const,
+    fontSize: 13, // Reducido de 16
+    textAlign: "center" as const,
+    marginBottom: SPACING.xs,
+  },
+  storyTextBold: {
+    color: "#FFFFFF" as const,
+    fontSize: 16, // Reducido de 20
+    fontWeight: "bold" as const,
+    textAlign: "center" as const,
+    marginBottom: SPACING.sm,
+  },
+  storyPrice: {
+    color: "#FFD700" as const, // Dorado para destacar el precio
+    fontSize: 20, // Reducido de 24
+    fontWeight: "bold" as const,
+    textAlign: "center" as const,
+    marginBottom: SPACING.sm,
+  },
+  storyDescription: {
+    color: "#FFFFFF" as const,
+    fontSize: 12, // Reducido de 14
+    textAlign: "center" as const,
+    fontStyle: "italic" as const,
+  },
+  instagramOptions: {
+    padding: SPACING.lg,
+    backgroundColor: COLORS.surface,
+    borderRadius: RADIUS.lg,
+    margin: SPACING.lg,
+  },
+  optionsTitle: {
+    fontSize: 18,
+    fontWeight: "600" as const,
+    color: COLORS.text,
+    marginBottom: SPACING.lg,
+    textAlign: "center" as const,
+  },
+  checkboxContainer: {
+    gap: SPACING.md,
+  },
+  checkboxRow: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    paddingVertical: SPACING.sm,
+  },
+  checkbox: {
+    width: 24,
+    height: 24,
+    borderWidth: 2,
+    borderColor: COLORS.border,
+    borderRadius: RADIUS.sm,
+    marginRight: SPACING.md,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+  },
+  checkboxChecked: {
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
+  },
+  checkmark: {
+    color: "#FFFFFF" as const,
+    fontSize: 16,
+    fontWeight: "bold" as const,
+  },
+  checkboxLabel: {
+    fontSize: 16,
+    color: COLORS.text,
+    flex: 1,
+  },
+  instagramShareButton: {
+    backgroundColor: "#E4405F" as const, // Color oficial de Instagram
+    borderRadius: RADIUS.lg,
+    paddingVertical: SPACING.lg,
+  },
+  storyConsultaBox: {
+    backgroundColor: "rgba(173, 216, 230, 0.9)" as any, // Azul pastel (light blue)
+    paddingVertical: SPACING.xs, // Reducido más
+    paddingHorizontal: SPACING.sm, // Reducido más
+    borderRadius: RADIUS.md,
+    marginTop: SPACING.md,
+    alignItems: "center" as const,
+    alignSelf: "center" as const,
+    minWidth: 180, // Reducido
+  },
+  storyConsultaText: {
+    color: "#2F4F4F" as const, // Gris oscuro para contraste con el pastel
+    fontSize: 11, // Reducido de 13
+    fontWeight: "700" as const,
+    textAlign: "center" as const,
   },
 });
