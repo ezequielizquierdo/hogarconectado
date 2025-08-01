@@ -25,6 +25,7 @@ import { HelloWave } from "@/components/HelloWave";
 import ParallaxScrollView from "@/components/ParallaxScrollView";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
+import Header from "@/components/layout/Header";
 import LabeledDropdown from "@/components/forms/LabeledDropdown";
 import EditableDropdown from "@/components/forms/EditableDropdown";
 import AnimatedInput from "@/components/forms/AnimatedInput";
@@ -1039,31 +1040,11 @@ export default function ProductosScreen() {
       {isWeb && isWideScreen ? (
         // Layout para web con sidebar
         <View style={styles.webLayoutFullHeight}>
-          {/* Header estilo ParallaxScrollView de punta a punta */}
-          <View style={styles.webParallaxHeaderFullWidth}>
-            <View style={styles.webHeaderBackground}>
-              <Image
-                source={require("@/assets/images/background-hogar.jpeg")}
-                style={styles.webBackgroundImage}
-                contentFit="cover"
-              />
-              <View style={styles.webHeaderOverlay}>
-                <View style={styles.webLogoContainer}>
-                  <View style={styles.webLogoCircle}>
-                    <Image
-                      source={require("@/assets/images/logo-transparent.png")}
-                      style={styles.webLogoImage}
-                      contentFit="contain"
-                    />
-                  </View>
-                </View>
-                <View style={styles.webTitleContainer}>
-                  <ThemedText style={styles.webMainTitle}>Productos</ThemedText>
-                  <Text style={styles.webSubtitle}>Gestiona tu inventario</Text>
-                </View>
-              </View>
-            </View>
-          </View>
+          {/* Header reutilizable */}
+          <Header
+            sectionTitle="Productos"
+            sectionSubtitle="Gestiona tu inventario"
+          />
 
           {/* Contenido con sidebar */}
           <View style={styles.webContentWithSidebar}>
@@ -1123,69 +1104,141 @@ export default function ProductosScreen() {
           </View>
         </View>
       ) : (
-        // Layout móvil (original con ParallaxScrollView)
-        <ParallaxScrollView
-          headerBackgroundImage={require("@/assets/images/background-hogar.jpeg")}
-          headerImage={
-            <View style={styles.logoContainer}>
-              <View style={styles.logoCircle}>
-                <Image
-                  source={require("@/assets/images/logo-transparent.png")}
-                  style={styles.logoHeader}
-                  contentFit="contain"
-                />
-              </View>
-            </View>
-          }
-        >
-          <ThemedView style={styles.container}>
-            <FadeInView delay={0}>
-              <ThemedView style={styles.titleContainer}>
-                <ThemedText type="title">Productos</ThemedText>
-                <HelloWave />
-              </ThemedView>
-            </FadeInView>
+        // Layout móvil con Header reutilizable
+        <View style={styles.mobileLayout}>
+          <Header
+            sectionTitle="Productos"
+            sectionSubtitle="Gestiona tu inventario"
+          />
 
-            {/* Layout con sidebar para web, normal para mobile */}
-            {Platform.OS === "web" ? (
-              <View style={styles.webLayout}>
-                {/* Sidebar */}
-                <View style={styles.sidebarContainer}>
-                  <SidebarFilters
-                    categorias={[
-                      { label: "Todas las categorías", value: "" },
-                      ...categorias.map((cat) => ({
-                        label: cat.nombre,
-                        value: cat._id,
-                      })),
-                    ]}
-                    marcas={[
-                      { label: "Todas las marcas", value: "" },
-                      ...marcas.map((marca) => ({
-                        label: marca,
-                        value: marca,
-                      })),
-                    ]}
-                    selectedCategoria={filtroCategoria}
-                    selectedMarca={filtroMarca}
-                    selectedStock={filtroStock}
-                    searchText={searchText}
-                    onCategoriaChange={(value) => setFiltroCategoria(value)}
-                    onMarcaChange={(value) => setFiltroMarca(value)}
-                    onStockChange={(value) => setFiltroStock(value)}
-                    onSearchChange={(value) => setSearchText(value)}
-                    onClearFilters={() => {
-                      setFiltroCategoria("");
-                      setFiltroMarca("");
-                      setFiltroStock("");
-                      setSearchText("");
-                    }}
-                    onAddProduct={() => openModal()}
-                  />
+          <ScrollView
+            style={styles.mobileContent}
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+            }
+          >
+            <ThemedView style={styles.container}>
+              <Header
+                sectionTitle="Productos"
+                sectionSubtitle={`${productos.length} productos encontrados`}
+              />
+
+              {/* Layout con sidebar para web, normal para mobile */}
+              {Platform.OS === "web" ? (
+                <View style={styles.webLayout}>
+                  {/* Sidebar */}
+                  <View style={styles.sidebarContainer}>
+                    <SidebarFilters
+                      categorias={[
+                        { label: "Todas las categorías", value: "" },
+                        ...categorias.map((cat) => ({
+                          label: cat.nombre,
+                          value: cat._id,
+                        })),
+                      ]}
+                      marcas={[
+                        { label: "Todas las marcas", value: "" },
+                        ...marcas.map((marca) => ({
+                          label: marca,
+                          value: marca,
+                        })),
+                      ]}
+                      selectedCategoria={filtroCategoria}
+                      selectedMarca={filtroMarca}
+                      selectedStock={filtroStock}
+                      searchText={searchText}
+                      onCategoriaChange={(value) => setFiltroCategoria(value)}
+                      onMarcaChange={(value) => setFiltroMarca(value)}
+                      onStockChange={(value) => setFiltroStock(value)}
+                      onSearchChange={(value) => setSearchText(value)}
+                      onClearFilters={() => {
+                        setFiltroCategoria("");
+                        setFiltroMarca("");
+                        setFiltroStock("");
+                        setSearchText("");
+                      }}
+                      onAddProduct={() => openModal()}
+                    />
+                  </View>
+
+                  {/* Content area */}
+                  <View style={styles.contentContainer}>
+                    <FadeInView delay={400}>
+                      <ThemedView style={styles.productListContainer}>
+                        {productosFiltrados.length === 0 ? (
+                          <ThemedView style={styles.emptyContainer}>
+                            <ThemedText style={styles.emptyText}>
+                              {productosLoading
+                                ? "Cargando productos..."
+                                : searchText ||
+                                  filtroCategoria ||
+                                  filtroMarca ||
+                                  filtroStock
+                                ? "No se encontraron productos con los filtros aplicados"
+                                : "No hay productos disponibles"}
+                            </ThemedText>
+                          </ThemedView>
+                        ) : (
+                          <View style={styles.webGrid}>
+                            {productosFiltrados.map((producto) =>
+                              renderProducto({ item: producto })
+                            )}
+                          </View>
+                        )}
+                      </ThemedView>
+                    </FadeInView>
+                  </View>
                 </View>
+              ) : (
+                <>
+                  {/* Filtros móvil (mantenemos los dropdowns) */}
+                  <FadeInView delay={300}>
+                    <ThemedView style={styles.searchContainer}>
+                      <View style={styles.filtersRow}>
+                        <LabeledDropdown
+                          label="Categoría"
+                          options={[
+                            { label: "Todas las categorías", value: "" },
+                            ...categorias.map((cat) => ({
+                              label: cat.nombre,
+                              value: cat._id,
+                            })),
+                          ]}
+                          selectedValue={filtroCategoria}
+                          onSelect={(value) => setFiltroCategoria(value)}
+                          placeholder="Filtrar por categoría"
+                        />
 
-                {/* Content area */}
-                <View style={styles.contentContainer}>
+                        <LabeledDropdown
+                          label="Marca"
+                          options={[
+                            { label: "Todas las marcas", value: "" },
+                            ...marcas.map((marca) => ({
+                              label: marca,
+                              value: marca,
+                            })),
+                          ]}
+                          selectedValue={filtroMarca}
+                          onSelect={(value) => setFiltroMarca(value)}
+                          placeholder="Filtrar por marca"
+                        />
+
+                        <LabeledDropdown
+                          label="Stock"
+                          options={[
+                            { label: "Todo el stock", value: "" },
+                            { label: "Disponible", value: "disponible" },
+                            { label: "Agotado", value: "agotado" },
+                          ]}
+                          selectedValue={filtroStock}
+                          onSelect={(value) => setFiltroStock(value)}
+                          placeholder="Filtrar por stock"
+                        />
+                      </View>
+                    </ThemedView>
+                  </FadeInView>
+
+                  {/* Lista de productos móvil */}
                   <FadeInView delay={400}>
                     <ThemedView style={styles.productListContainer}>
                       {productosFiltrados.length === 0 ? (
@@ -1202,7 +1255,7 @@ export default function ProductosScreen() {
                           </ThemedText>
                         </ThemedView>
                       ) : (
-                        <View style={styles.webGrid}>
+                        <View style={styles.mobileList}>
                           {productosFiltrados.map((producto) =>
                             renderProducto({ item: producto })
                           )}
@@ -1210,86 +1263,11 @@ export default function ProductosScreen() {
                       )}
                     </ThemedView>
                   </FadeInView>
-                </View>
-              </View>
-            ) : (
-              <>
-                {/* Filtros móvil (mantenemos los dropdowns) */}
-                <FadeInView delay={300}>
-                  <ThemedView style={styles.searchContainer}>
-                    <View style={styles.filtersRow}>
-                      <LabeledDropdown
-                        label="Categoría"
-                        options={[
-                          { label: "Todas las categorías", value: "" },
-                          ...categorias.map((cat) => ({
-                            label: cat.nombre,
-                            value: cat._id,
-                          })),
-                        ]}
-                        selectedValue={filtroCategoria}
-                        onSelect={(value) => setFiltroCategoria(value)}
-                        placeholder="Filtrar por categoría"
-                      />
-
-                      <LabeledDropdown
-                        label="Marca"
-                        options={[
-                          { label: "Todas las marcas", value: "" },
-                          ...marcas.map((marca) => ({
-                            label: marca,
-                            value: marca,
-                          })),
-                        ]}
-                        selectedValue={filtroMarca}
-                        onSelect={(value) => setFiltroMarca(value)}
-                        placeholder="Filtrar por marca"
-                      />
-
-                      <LabeledDropdown
-                        label="Stock"
-                        options={[
-                          { label: "Todo el stock", value: "" },
-                          { label: "Disponible", value: "disponible" },
-                          { label: "Agotado", value: "agotado" },
-                        ]}
-                        selectedValue={filtroStock}
-                        onSelect={(value) => setFiltroStock(value)}
-                        placeholder="Filtrar por stock"
-                      />
-                    </View>
-                  </ThemedView>
-                </FadeInView>
-
-                {/* Lista de productos móvil */}
-                <FadeInView delay={400}>
-                  <ThemedView style={styles.productListContainer}>
-                    {productosFiltrados.length === 0 ? (
-                      <ThemedView style={styles.emptyContainer}>
-                        <ThemedText style={styles.emptyText}>
-                          {productosLoading
-                            ? "Cargando productos..."
-                            : searchText ||
-                              filtroCategoria ||
-                              filtroMarca ||
-                              filtroStock
-                            ? "No se encontraron productos con los filtros aplicados"
-                            : "No hay productos disponibles"}
-                        </ThemedText>
-                      </ThemedView>
-                    ) : (
-                      <View style={styles.mobileList}>
-                        {productosFiltrados.map((producto) =>
-                          renderProducto({ item: producto })
-                        )}
-                      </View>
-                    )}
-                  </ThemedView>
-                </FadeInView>
-              </>
-            )}
-          </ThemedView>
-        </ParallaxScrollView>
+                </>
+              )}
+            </ThemedView>
+          </ScrollView>
+        </View>
       )}
 
       <Modal
@@ -2782,6 +2760,14 @@ export default function ProductosScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  mobileLayout: {
+    flex: 1,
+    backgroundColor: COLORS.background,
+  },
+  mobileContent: {
+    flex: 1,
+    padding: SPACING.md,
   },
   header: {
     flexDirection: "row",
