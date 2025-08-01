@@ -2,20 +2,22 @@ import { Image } from "expo-image";
 import {
   Platform,
   StyleSheet,
-  TextInput,
   TouchableOpacity,
   Alert,
   Modal,
   ScrollView,
   View,
+  Dimensions,
+  SafeAreaView,
 } from "react-native";
-import { useState } from "react";
+import React, { useState } from "react";
 import * as Clipboard from "expo-clipboard";
 
 import { HelloWave } from "@/components/HelloWave";
 import ParallaxScrollView from "@/components/ParallaxScrollView";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
+import Header from "@/components/layout/Header";
 import LabeledDropdown from "@/components/forms/LabeledDropdown";
 import EditableDropdown from "@/components/forms/EditableDropdown";
 import ModeloDropdown from "@/components/forms/ModeloDropdown";
@@ -44,7 +46,124 @@ interface CalculosResultado {
   valorPorCuota6: number;
 }
 
+// Componente de imagen que maneja conversión automática para web con manejo de errores mejorado
+const SmartImage: React.FC<{
+  source: { uri: string };
+  style: any;
+  onError?: (error: any) => void;
+  onLoad?: () => void;
+}> = ({ source, style, onError, onLoad }) => {
+  const [imageUri, setImageUri] = useState(source.uri);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+
+  React.useEffect(() => {
+    const loadImage = async () => {
+      setLoading(true);
+      setError(false);
+
+      try {
+        // Para web, usar la URL directamente
+        if (Platform.OS === "web") {
+          setImageUri(source.uri);
+        } else {
+          setImageUri(source.uri);
+        }
+      } catch (error) {
+        console.error("Error al procesar imagen:", error);
+        setError(true);
+        setImageUri(source.uri); // Fallback
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadImage();
+  }, [source.uri]);
+
+  const handleImageError = (errorEvent: any) => {
+    console.error("Error al cargar imagen:", errorEvent);
+    setError(true);
+    if (onError) {
+      onError(errorEvent);
+    }
+  };
+
+  const handleImageLoad = () => {
+    setError(false);
+    if (onLoad) {
+      onLoad();
+    }
+  };
+
+  if (loading) {
+    return (
+      <View
+        style={[
+          style,
+          {
+            backgroundColor: COLORS.surface,
+            justifyContent: "center",
+            alignItems: "center",
+            borderRadius: RADIUS.md,
+          },
+        ]}
+      >
+        <ThemedText style={{ fontSize: 28, color: COLORS.textSecondary }}>
+          📷
+        </ThemedText>
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View
+        style={[
+          style,
+          {
+            backgroundColor: COLORS.surface,
+            justifyContent: "center",
+            alignItems: "center",
+            borderRadius: RADIUS.md,
+            borderWidth: 1,
+            borderColor: COLORS.border,
+          },
+        ]}
+      >
+        <ThemedText style={{ fontSize: 20, color: COLORS.textSecondary }}>
+          ❌
+        </ThemedText>
+        <ThemedText
+          style={{
+            fontSize: 10,
+            color: COLORS.textSecondary,
+            textAlign: "center",
+          }}
+        >
+          Error cargando imagen
+        </ThemedText>
+      </View>
+    );
+  }
+
+  return (
+    <Image
+      source={{ uri: imageUri }}
+      style={style}
+      onError={handleImageError}
+      onLoad={handleImageLoad}
+      contentFit="contain"
+    />
+  );
+};
+
 export default function HomeScreen() {
+  // Constantes para layout responsivo
+  const isWeb = Platform.OS === "web";
+  const { width: screenWidth, height: screenHeight } = Dimensions.get("window");
+  const isWideScreen = screenWidth >= 1024;
+
   const {
     categorias,
     loading: categoriasLoading,
@@ -75,6 +194,9 @@ export default function HomeScreen() {
   } = useProductosPorCategoriaYMarca(cotizacion.categoria, cotizacion.marca);
 
   const [mensajeFinal, setMensajeFinal] = useState<string>("");
+  const [mostrarVistaPrevia, setMostrarVistaPrevia] = useState(false);
+  const [productoSeleccionado, setProductoSeleccionado] =
+    useState<Producto | null>(null);
   const [modalVisible, setModalVisible] = useState<boolean>(false);
 
   // Factores de recargo basados en el análisis del Excel
@@ -116,6 +238,22 @@ export default function HomeScreen() {
       return;
     }
 
+    // Buscar el producto que coincida con la cotización
+    const producto = productos.find(
+      (p) =>
+        p.marca.toLowerCase() === cotizacion.marca.toLowerCase() &&
+        p.modelo.toLowerCase() === cotizacion.modelo.toLowerCase()
+    );
+
+    if (producto) {
+      setProductoSeleccionado(producto);
+    }
+
+    // Mostrar vista previa en diseño web
+    if (isWeb && isWideScreen) {
+      setMostrarVistaPrevia(true);
+    }
+
     // Crear el mensaje con formato para WhatsApp/Instagram
     const mensaje = `🏠 *Hogar Conectado* 
 
@@ -132,17 +270,22 @@ export default function HomeScreen() {
 📞 ¡Consultá por stock y disponibilidad!`;
 
     setMensajeFinal(mensaje);
-    setModalVisible(true);
+
+    // En móvil mostrar modal, en web ya se muestra la vista previa
+    if (!isWeb || !isWideScreen) {
+      setModalVisible(true);
+    }
   };
 
   const copiarAlPortapapeles = async () => {
     if (mensajeFinal) {
       await Clipboard.setStringAsync(mensajeFinal);
-      Alert.alert(
-        "✅ Copiado",
-        "La cotización ha sido copiada al portapapeles"
-      );
+      Alert.alert("Copiado", "La cotización ha sido copiada al portapapeles");
     }
+  };
+
+  const cerrarModal = () => {
+    setModalVisible(false);
   };
 
   const limpiarFormulario = () => {
@@ -154,15 +297,14 @@ export default function HomeScreen() {
       valorReal: "",
       porcentajeAplicado: "10",
     });
-    setMensajeFinal("");
-    setModalVisible(false);
+    setMostrarVistaPrevia(false);
+    setProductoSeleccionado(null);
   };
 
-  // Funciones para manejar cascada de selección
-  const handleCategoriaChange = (categoriaId: string) => {
+  const handleCategoriaChange = (categoria: string) => {
     setCotizacion({
       ...cotizacion,
-      categoria: categoriaId,
+      categoria: categoria,
       marca: "", // Reset marca cuando cambia categoría
       modelo: "", // Reset modelo
       detalle: "", // Reset detalle
@@ -189,179 +331,653 @@ export default function HomeScreen() {
     });
   };
 
-  const cerrarModal = () => {
-    setModalVisible(false);
-  };
-
   const calculos = calcularCotizacion();
 
   return (
-    <ParallaxScrollView
-      headerBackgroundImage={require("@/assets/images/background-hogar.jpeg")}
-      headerImage={
-        <View style={styles.logoContainer}>
-          <View style={styles.logoCircle}>
-            <Image
-              source={require("@/assets/images/logo-transparent.png")}
-              style={styles.logoHeader}
-              contentFit="contain"
-            />
+    <>
+      {isWeb && isWideScreen ? (
+        // Layout para web con vista previa
+        <SafeAreaView style={styles.webLayoutFullHeight}>
+          {/* Header reutilizable */}
+          <Header
+            sectionTitle="Cotizaciones"
+            sectionSubtitle="Calculadora de precios"
+          />
+
+          {/* Contenido principal con 2 columnas */}
+          <View style={styles.webMainContent}>
+            {/* Columna izquierda: Formulario (3/4) */}
+            <View style={styles.webFormColumn}>
+              <ScrollView
+                style={styles.webFormScroll}
+                contentContainerStyle={styles.webFormScrollContent}
+                showsVerticalScrollIndicator={false}
+              >
+                <FadeInView delay={0}>
+                  <ThemedView style={styles.webFormContainer}>
+                    {/* Título del formulario */}
+                    <ThemedView style={styles.webFormTitle}>
+                      <ThemedText type="subtitle">
+                        Datos del Producto
+                      </ThemedText>
+                    </ThemedView>
+
+                    {/* Categoría */}
+                    <LabeledDropdown
+                      label="Categoría"
+                      required
+                      options={categorias.map((cat) => ({
+                        label: cat.nombre,
+                        value: cat._id,
+                      }))}
+                      selectedValue={cotizacion.categoria}
+                      onSelect={handleCategoriaChange}
+                      placeholder="Seleccionar categoría..."
+                      loading={categoriasLoading}
+                      error={categoriasError}
+                    />
+
+                    {/* Marca */}
+                    <EditableDropdown
+                      label="Marca"
+                      required
+                      options={marcas}
+                      selectedValue={cotizacion.marca}
+                      onSelect={handleMarcaChange}
+                      placeholder="Seleccionar o escribir marca..."
+                      loading={marcasLoading}
+                      error={marcasError}
+                      disabled={!cotizacion.categoria}
+                    />
+
+                    {/* Modelo */}
+                    <ModeloDropdown
+                      label="Modelo"
+                      required
+                      productos={productos}
+                      selectedValue={cotizacion.modelo}
+                      onSelect={handleModeloChange}
+                      placeholder="Seleccionar modelo..."
+                      loading={productosLoading}
+                      error={productosError}
+                      disabled={!cotizacion.marca}
+                    />
+
+                    {/* Detalle */}
+                    <ReadOnlyField
+                      label="Detalle del Producto"
+                      icon="📝"
+                      value={cotizacion.detalle}
+                      placeholder="Selecciona un modelo para ver los detalles"
+                    />
+
+                    {/* Valor Real */}
+                    <AnimatedInput
+                      label="Valor Inicial"
+                      icon="💰"
+                      required
+                      value={cotizacion.valorReal}
+                      onChangeText={(text) =>
+                        setCotizacion({ ...cotizacion, valorReal: text })
+                      }
+                      placeholder="Se autocompletará al seleccionar modelo"
+                      keyboardType="numeric"
+                    />
+
+                    {/* Porcentaje */}
+                    <AnimatedInput
+                      label="Porcentaje Aplicado (0-100)"
+                      icon="📊"
+                      required
+                      value={cotizacion.porcentajeAplicado}
+                      onChangeText={(text) =>
+                        setCotizacion({
+                          ...cotizacion,
+                          porcentajeAplicado: text,
+                        })
+                      }
+                      placeholder="Ej: 10"
+                      keyboardType="numeric"
+                    />
+
+                    {/* Botones */}
+                    <ThemedView style={styles.webButtonContainer}>
+                      <AnimatedButton
+                        title="Generar Cotización"
+                        icon="✨"
+                        onPress={generarMensajeFinal}
+                        variant="primary"
+                        size="medium"
+                        disabled={
+                          !cotizacion.categoria ||
+                          !cotizacion.marca ||
+                          !cotizacion.modelo ||
+                          !cotizacion.valorReal ||
+                          !cotizacion.porcentajeAplicado
+                        }
+                      />
+
+                      <AnimatedButton
+                        title="Limpiar"
+                        icon="🧹"
+                        onPress={limpiarFormulario}
+                        variant="secondary"
+                        size="medium"
+                      />
+                    </ThemedView>
+                  </ThemedView>
+                </FadeInView>
+              </ScrollView>
+            </View>
+
+            {/* Columna derecha: Vista previa (1/4) */}
+            <View style={styles.webPreviewColumn}>
+              {mostrarVistaPrevia && calculos ? (
+                <FadeInView delay={300}>
+                  <ThemedView style={styles.webPreviewContainer}>
+                    <ThemedView style={styles.webPreviewHeader}>
+                      <ThemedText type="subtitle">Vista Previa</ThemedText>
+                      <TouchableOpacity
+                        onPress={() => setMostrarVistaPrevia(false)}
+                        style={styles.webPreviewClose}
+                      >
+                        <ThemedText style={styles.closeButtonText}>
+                          ✕
+                        </ThemedText>
+                      </TouchableOpacity>
+                    </ThemedView>
+
+                    {/* Producto seleccionado */}
+                    {productoSeleccionado && (
+                      <ThemedView
+                        style={{
+                          backgroundColor: COLORS.cardBackground,
+                          borderRadius: RADIUS.md,
+                          padding: SPACING.sm,
+                          marginBottom: SPACING.md,
+                          gap: SPACING.sm,
+                        }}
+                      >
+                        {productoSeleccionado.imagenes &&
+                        productoSeleccionado.imagenes.length > 0 ? (
+                          <View
+                            style={{
+                              backgroundColor: "#FFFFFF",
+                              borderRadius: RADIUS.sm,
+                              padding: SPACING.xs,
+                              ...SHADOWS.sm,
+                            }}
+                          >
+                            <Image
+                              source={{ uri: productoSeleccionado.imagenes[0] }}
+                              style={{
+                                width: "100%",
+                                height: 100,
+                                borderRadius: RADIUS.sm,
+                              }}
+                              contentFit="contain"
+                              onError={(error) => {
+                                console.log("Error cargando imagen:", error);
+                              }}
+                            />
+                          </View>
+                        ) : (
+                          <View
+                            style={{
+                              width: "100%",
+                              height: 100,
+                              borderRadius: RADIUS.sm,
+                              backgroundColor: "#FFFFFF",
+                              justifyContent: "center",
+                              alignItems: "center",
+                              borderWidth: 1,
+                              borderColor: COLORS.border,
+                              borderStyle: "dashed",
+                              padding: SPACING.xs,
+                              ...SHADOWS.sm,
+                            }}
+                          >
+                            <ThemedText
+                              style={{
+                                fontSize: 24,
+                                color: COLORS.textSecondary,
+                              }}
+                            >
+                              📷
+                            </ThemedText>
+                          </View>
+                        )}
+                        <ThemedView style={{ gap: SPACING.xs }}>
+                          <ThemedText
+                            type="defaultSemiBold"
+                            style={{
+                              color: COLORS.primary,
+                              fontSize: 14,
+                            }}
+                          >
+                            {productoSeleccionado.marca}
+                          </ThemedText>
+                          <ThemedText
+                            style={{
+                              fontSize: 13,
+                              fontWeight: "600",
+                            }}
+                          >
+                            {productoSeleccionado.modelo}
+                          </ThemedText>
+                          {productoSeleccionado.descripcion && (
+                            <ThemedText
+                              style={{
+                                fontSize: 11,
+                                color: COLORS.textSecondary,
+                                lineHeight: 14,
+                              }}
+                            >
+                              {productoSeleccionado.descripcion}
+                            </ThemedText>
+                          )}
+                        </ThemedView>
+                      </ThemedView>
+                    )}
+
+                    {/* Precios calculados */}
+                    <ThemedView style={styles.webPriceContainer}>
+                      <ThemedText type="subtitle" style={styles.webPriceTitle}>
+                        💰 Precios Calculados
+                      </ThemedText>
+
+                      <ThemedView style={styles.webPriceItem}>
+                        <ThemedText style={styles.webPriceLabel}>
+                          💵 Contado:
+                        </ThemedText>
+                        <ThemedText style={styles.webPriceValue}>
+                          {formatearPrecio(calculos.valorConGanancia)}
+                        </ThemedText>
+                      </ThemedView>
+
+                      <ThemedView style={styles.webPriceItem}>
+                        <ThemedText style={styles.webPriceLabel}>
+                          🗓️ 3 Cuotas:
+                        </ThemedText>
+                        <ThemedText style={styles.webPriceValue}>
+                          {formatearPrecio(calculos.valorPorCuota3)} c/u
+                        </ThemedText>
+                      </ThemedView>
+
+                      <ThemedView style={styles.webPriceItem}>
+                        <ThemedText style={styles.webPriceLabel}>
+                          🗓️ 6 Cuotas:
+                        </ThemedText>
+                        <ThemedText style={styles.webPriceValue}>
+                          {formatearPrecio(calculos.valorPorCuota6)} c/u
+                        </ThemedText>
+                      </ThemedView>
+                    </ThemedView>
+
+                    {/* Botón para copiar */}
+                    <ThemedView style={styles.webPreviewActions}>
+                      <AnimatedButton
+                        title="Copiar al Portapapeles"
+                        icon="📋"
+                        onPress={copiarAlPortapapeles}
+                        variant="accent"
+                        size="medium"
+                      />
+                    </ThemedView>
+                  </ThemedView>
+                </FadeInView>
+              ) : (
+                <ThemedView style={styles.webPreviewPlaceholder}>
+                  <Image
+                    source={require("@/assets/images/logo-transparent.png")}
+                    style={styles.webPreviewLogo}
+                    contentFit="contain"
+                  />
+                  <ThemedText style={styles.webPreviewPlaceholderText}>
+                    📋 Completa el formulario y haz clic en "Generar Cotización"
+                    para ver la vista previa del producto y precios calculados.
+                  </ThemedText>
+                </ThemedView>
+              )}
+            </View>
           </View>
-        </View>
-      }
-    >
-      <FadeInView delay={0}>
-        <ThemedView style={styles.titleContainer}>
-          <ThemedText type="title">Calculadora de Cotizaciones</ThemedText>
-          <HelloWave />
-        </ThemedView>
-      </FadeInView>
+        </SafeAreaView>
+      ) : (
+        // Layout móvil con ParallaxScrollView original
+        <ParallaxScrollView
+          headerBackgroundImage={require("@/assets/images/background-hogar.jpeg")}
+          headerImage={
+            <View style={styles.logoContainer}>
+              <View style={styles.logoCircle}>
+                <Image
+                  source={require("@/assets/images/logo-transparent.png")}
+                  style={styles.logoHeader}
+                  contentFit="contain"
+                />
+              </View>
+            </View>
+          }
+        >
+          <FadeInView delay={0}>
+            <ThemedView style={styles.titleContainer}>
+              <ThemedText type="title">Calculadora de Cotizaciones</ThemedText>
+              <HelloWave />
+            </ThemedView>
+          </FadeInView>
 
-      <FadeInView delay={200}>
-        <ThemedView style={styles.formContainer}>
-          {/* Categoría */}
-          <LabeledDropdown
-            label="Categoría"
-            required
-            options={categorias.map((cat) => ({
-              label: cat.nombre,
-              value: cat._id,
-            }))}
-            selectedValue={cotizacion.categoria}
-            onSelect={handleCategoriaChange}
-            placeholder="Seleccionar categoría..."
-            loading={categoriasLoading}
-            error={categoriasError}
-          />
+          <FadeInView delay={200}>
+            <ThemedView style={styles.formContainer}>
+              {/* Categoría */}
+              <LabeledDropdown
+                label="Categoría"
+                required
+                options={categorias.map((cat) => ({
+                  label: cat.nombre,
+                  value: cat._id,
+                }))}
+                selectedValue={cotizacion.categoria}
+                onSelect={handleCategoriaChange}
+                placeholder="Seleccionar categoría..."
+                loading={categoriasLoading}
+                error={categoriasError}
+              />
 
-          {/* Marca */}
-          <EditableDropdown
-            label="Marca"
-            required
-            options={marcas}
-            selectedValue={cotizacion.marca}
-            onSelect={handleMarcaChange}
-            placeholder="Seleccionar o escribir marca..."
-            loading={marcasLoading}
-            error={marcasError}
-            disabled={!cotizacion.categoria}
-          />
+              {/* Marca */}
+              <EditableDropdown
+                label="Marca"
+                required
+                options={marcas}
+                selectedValue={cotizacion.marca}
+                onSelect={handleMarcaChange}
+                placeholder="Seleccionar o escribir marca..."
+                loading={marcasLoading}
+                error={marcasError}
+                disabled={!cotizacion.categoria}
+              />
 
-          {/* Modelo */}
-          <ModeloDropdown
-            label="Modelo"
-            required
-            productos={productos}
-            selectedValue={cotizacion.modelo}
-            onSelect={handleModeloChange}
-            placeholder="Seleccionar modelo..."
-            loading={productosLoading}
-            error={productosError}
-            disabled={!cotizacion.marca}
-          />
+              {/* Modelo */}
+              <ModeloDropdown
+                label="Modelo"
+                required
+                productos={productos}
+                selectedValue={cotizacion.modelo}
+                onSelect={handleModeloChange}
+                placeholder="Seleccionar modelo..."
+                loading={productosLoading}
+                error={productosError}
+                disabled={!cotizacion.marca}
+              />
 
-          {/* Detalle */}
-          <ReadOnlyField
-            label="Detalle del Producto"
-            icon="📝"
-            value={cotizacion.detalle}
-            placeholder="Selecciona un modelo para ver los detalles"
-          />
+              {/* Detalle */}
+              <ReadOnlyField
+                label="Detalle del Producto"
+                icon="📝"
+                value={cotizacion.detalle}
+                placeholder="Selecciona un modelo para ver los detalles"
+              />
 
-          {/* Valor Real */}
-          <AnimatedInput
-            label="Valor Inicial"
-            icon="💰"
-            required
-            value={cotizacion.valorReal}
-            onChangeText={(text) =>
-              setCotizacion({ ...cotizacion, valorReal: text })
-            }
-            placeholder="Se autocompletará al seleccionar modelo"
-            keyboardType="numeric"
-          />
+              {/* Valor Real */}
+              <AnimatedInput
+                label="Valor Inicial"
+                icon="💰"
+                required
+                value={cotizacion.valorReal}
+                onChangeText={(text) =>
+                  setCotizacion({ ...cotizacion, valorReal: text })
+                }
+                placeholder="Se autocompletará al seleccionar modelo"
+                keyboardType="numeric"
+              />
 
-          {/* Porcentaje */}
-          <AnimatedInput
-            label="Porcentaje Aplicado (0-100)"
-            icon="📊"
-            required
-            value={cotizacion.porcentajeAplicado}
-            onChangeText={(text) =>
-              setCotizacion({ ...cotizacion, porcentajeAplicado: text })
-            }
-            placeholder="Ej: 10"
-            keyboardType="numeric"
-          />
+              {/* Porcentaje */}
+              <AnimatedInput
+                label="Porcentaje Aplicado (0-100)"
+                icon="📊"
+                required
+                value={cotizacion.porcentajeAplicado}
+                onChangeText={(text) =>
+                  setCotizacion({ ...cotizacion, porcentajeAplicado: text })
+                }
+                placeholder="Ej: 10"
+                keyboardType="numeric"
+              />
 
-          {/* Botones */}
-          <ThemedView style={styles.buttonContainer}>
-            <AnimatedButton
-              title="Generar Cotización"
-              icon="✨"
-              onPress={generarMensajeFinal}
-              variant="primary"
-              size="large"
-            />
-
-            <AnimatedButton
-              title="Limpiar"
-              icon="🗑️"
-              onPress={limpiarFormulario}
-              variant="secondary"
-              size="medium"
-              style={{ marginTop: SPACING.sm }}
-            />
-          </ThemedView>
-        </ThemedView>
-      </FadeInView>
-
-      {/* Modal para mostrar la cotización */}
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={modalVisible}
-        onRequestClose={cerrarModal}
-      >
-        <ThemedView style={styles.modalOverlay}>
-          <ThemedView style={styles.modalContainer}>
-            <ScrollView showsVerticalScrollIndicator={false}>
-              <ThemedView style={styles.modalHeader}>
-                <ThemedText type="subtitle" style={styles.modalTitle}>
-                  ✨ Cotización Generada
-                </ThemedText>
-                <TouchableOpacity
-                  style={styles.closeButton}
-                  onPress={cerrarModal}
-                >
-                  <ThemedText style={styles.closeButtonText}>✕</ThemedText>
-                </TouchableOpacity>
-              </ThemedView>
-
-              <ThemedView style={styles.modalMessageContainer}>
-                <ThemedText style={styles.modalMessageText}>
-                  {mensajeFinal}
-                </ThemedText>
-              </ThemedView>
-
-              <ThemedView style={styles.modalButtonContainer}>
+              {/* Botones */}
+              <ThemedView style={styles.buttonContainer}>
                 <AnimatedButton
-                  title="Copiar al Portapapeles"
-                  icon="📋"
-                  onPress={copiarAlPortapapeles}
-                  variant="accent"
+                  title="Generar Cotización"
+                  icon="✨"
+                  onPress={generarMensajeFinal}
+                  variant="primary"
                   size="large"
+                  disabled={
+                    !cotizacion.categoria ||
+                    !cotizacion.marca ||
+                    !cotizacion.modelo ||
+                    !cotizacion.valorReal ||
+                    !cotizacion.porcentajeAplicado
+                  }
+                />
+
+                <AnimatedButton
+                  title="Limpiar"
+                  icon="🗑️"
+                  onPress={limpiarFormulario}
+                  variant="secondary"
+                  size="medium"
+                  style={{ marginTop: SPACING.sm }}
                 />
               </ThemedView>
-            </ScrollView>
-          </ThemedView>
-        </ThemedView>
-      </Modal>
-    </ParallaxScrollView>
+            </ThemedView>
+          </FadeInView>
+
+          {/* Modal para móvil */}
+          <Modal
+            animationType="slide"
+            transparent={true}
+            visible={modalVisible}
+            onRequestClose={cerrarModal}
+          >
+            <ThemedView style={styles.modalOverlay}>
+              <ThemedView style={styles.modalContainer}>
+                <ScrollView showsVerticalScrollIndicator={false}>
+                  <ThemedView style={styles.modalHeader}>
+                    <ThemedText type="subtitle" style={styles.modalTitle}>
+                      ✨ Cotización Generada
+                    </ThemedText>
+                    <TouchableOpacity
+                      style={styles.closeButton}
+                      onPress={cerrarModal}
+                    >
+                      <ThemedText style={styles.closeButtonText}>✕</ThemedText>
+                    </TouchableOpacity>
+                  </ThemedView>
+
+                  <ThemedView style={styles.modalMessageContainer}>
+                    <ThemedText style={styles.modalMessageText}>
+                      {mensajeFinal}
+                    </ThemedText>
+                  </ThemedView>
+
+                  <ThemedView style={styles.modalButtonContainer}>
+                    <AnimatedButton
+                      title="Copiar al Portapapeles"
+                      icon="📋"
+                      onPress={copiarAlPortapapeles}
+                      variant="accent"
+                      size="large"
+                    />
+                  </ThemedView>
+                </ScrollView>
+              </ThemedView>
+            </ThemedView>
+          </Modal>
+        </ParallaxScrollView>
+      )}
+    </>
   );
 }
 
 const styles = StyleSheet.create({
+  // Estilos para layout web
+  webLayoutFullHeight: {
+    flex: 1,
+    backgroundColor: COLORS.background,
+  },
+  webMainContent: {
+    flex: 1,
+    flexDirection: "row",
+    height: "100%",
+  },
+  webFormColumn: {
+    flex: 3,
+    backgroundColor: COLORS.background,
+    borderRightWidth: 1,
+    borderRightColor: COLORS.border,
+  },
+  webFormScroll: {
+    flex: 1,
+  },
+  webFormScrollContent: {
+    padding: SPACING.md,
+    minHeight: "100%",
+  },
+  webFormContainer: {
+    backgroundColor: COLORS.surface,
+    borderRadius: RADIUS.lg,
+    padding: SPACING.lg,
+    ...SHADOWS.md,
+    gap: SPACING.sm,
+  },
+  webFormTitle: {
+    marginBottom: SPACING.sm,
+    paddingBottom: SPACING.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  webButtonContainer: {
+    gap: SPACING.sm,
+    marginTop: SPACING.md,
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+  webPreviewColumn: {
+    flex: 1,
+    backgroundColor: COLORS.cardBackground,
+    padding: SPACING.md,
+  },
+  webPreviewContainer: {
+    backgroundColor: COLORS.surface,
+    borderRadius: RADIUS.lg,
+    padding: SPACING.md,
+    ...SHADOWS.md,
+    maxHeight: 600, // Reemplazar calc() con valor fijo
+    overflow: "hidden",
+  },
+  webPreviewHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: SPACING.lg,
+    paddingBottom: SPACING.md,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  webPreviewClose: {
+    padding: SPACING.xs,
+    borderRadius: RADIUS.sm,
+    backgroundColor: COLORS.cardBackground,
+  },
+  webProductCard: {
+    backgroundColor: COLORS.cardBackground,
+    borderRadius: RADIUS.md,
+    padding: SPACING.sm,
+    marginBottom: SPACING.md,
+    gap: SPACING.sm,
+  },
+  webProductImage: {
+    width: "100%",
+    height: 100,
+    borderRadius: RADIUS.sm,
+  },
+  webProductInfo: {
+    gap: SPACING.xs,
+  },
+  webProductBrand: {
+    color: COLORS.primary,
+    fontSize: 14,
+  },
+  webProductModel: {
+    fontSize: 13,
+    fontWeight: "600",
+  },
+  webProductDesc: {
+    fontSize: 11,
+    color: COLORS.textSecondary,
+    lineHeight: 14,
+  },
+  webProductImagePlaceholder: {
+    backgroundColor: COLORS.surface,
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderStyle: "dashed",
+  },
+  webProductImageIcon: {
+    fontSize: 24,
+    color: COLORS.textSecondary,
+  },
+  webPriceContainer: {
+    gap: SPACING.sm,
+    marginBottom: SPACING.sm,
+  },
+  webPriceTitle: {
+    marginBottom: SPACING.sm,
+  },
+  webPriceItem: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: SPACING.sm,
+    backgroundColor: COLORS.cardBackground,
+    borderRadius: RADIUS.sm,
+  },
+  webPriceLabel: {
+    fontSize: 14,
+    color: COLORS.textSecondary,
+  },
+  webPriceValue: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: COLORS.primary,
+  },
+  webPreviewActions: {
+    gap: SPACING.sm,
+  },
+  webPreviewPlaceholder: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: SPACING.xl,
+    backgroundColor: COLORS.surface,
+    borderRadius: RADIUS.lg,
+    ...SHADOWS.sm,
+    gap: SPACING.lg,
+  },
+  webPreviewLogo: {
+    width: 60,
+    height: 60,
+    opacity: 0.3,
+  },
+  webPreviewPlaceholderText: {
+    textAlign: "center",
+    color: COLORS.textSecondary,
+    fontSize: 14,
+    lineHeight: 20,
+  },
+
+  // Estilos existentes para móvil
   titleContainer: {
     flexDirection: "row",
     alignItems: "center",
@@ -369,70 +985,73 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.lg,
   },
   formContainer: {
+    boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
+    elevation: 8,
     gap: SPACING.sm,
     marginBottom: SPACING.lg,
-    padding: SPACING.md,
-    backgroundColor: COLORS.cardBackground,
-    borderRadius: RADIUS.lg,
-    ...SHADOWS.sm,
-  },
-  inputGroup: {
-    gap: SPACING.xs,
-  },
-  label: {
-    fontSize: 16,
-    fontWeight: "600",
-    marginBottom: SPACING.xs,
-    color: COLORS.text,
-  },
-  input: {
-    borderWidth: 2,
-    borderColor: COLORS.border,
-    borderRadius: RADIUS.md,
-    padding: SPACING.md,
-    fontSize: 16,
+    padding: SPACING.lg,
     backgroundColor: COLORS.surface,
-    color: COLORS.text,
-    ...SHADOWS.sm,
+    borderRadius: RADIUS.lg,
   },
   buttonContainer: {
-    gap: SPACING.md,
-    marginTop: SPACING.md,
+    gap: SPACING.xs,
   },
   logoContainer: {
-    flex: 1,
+    fontSize: 16,
+    lineHeight: 24,
+    textAlign: "center",
     justifyContent: "center",
     alignItems: "center",
-    width: "100%",
-    height: "100%",
+    flex: 1,
   },
   logoCircle: {
+    borderWidth: 2,
+    borderColor: "rgba(255, 255, 255, 0.2)",
+    borderRadius: 40,
+    width: 80,
+    height: 80,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
+  },
+  logoHeader: {
+    gap: SPACING.md,
+    marginBottom: SPACING.xl,
+  },
+  consultationBox: {
+    flex: 1,
+    gap: SPACING.md,
+    padding: SPACING.lg,
+    backgroundColor: "#f8f4ff",
+    borderRadius: RADIUS.lg,
+    borderWidth: 1,
+    borderColor: "#e0d4ff",
+  },
+  consultationTitle: {
     width: 90,
     height: 90,
     borderRadius: 45,
-    backgroundColor: "rgba(255, 255, 255, 0.9)",
-    justifyContent: "center",
-    alignItems: "center",
-    ...SHADOWS.lg,
   },
-  logoHeader: {
+  logoImage: {
     width: 60,
-    height: 38,
+    height: 60,
+    borderRadius: 30,
   },
-  // Estilos del Modal
+
+  // Estilos del modal
   modalOverlay: {
     flex: 1,
-    backgroundColor: COLORS.overlay,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
     justifyContent: "center",
     alignItems: "center",
     padding: SPACING.lg,
   },
   modalContainer: {
     width: "100%",
+    maxWidth: 400,
     maxHeight: "80%",
     backgroundColor: COLORS.surface,
-    borderRadius: RADIUS.xl,
-    padding: 0,
+    borderRadius: RADIUS.lg,
     ...SHADOWS.lg,
   },
   modalHeader: {
@@ -444,37 +1063,24 @@ const styles = StyleSheet.create({
     borderBottomColor: COLORS.border,
   },
   modalTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: COLORS.text,
+    flex: 1,
   },
   closeButton: {
-    width: 35,
-    height: 35,
-    borderRadius: RADIUS.full,
-    backgroundColor: COLORS.error,
-    justifyContent: "center",
-    alignItems: "center",
-    ...SHADOWS.sm,
+    padding: SPACING.xs,
+    borderRadius: RADIUS.sm,
+    backgroundColor: COLORS.cardBackground,
   },
   closeButtonText: {
-    color: COLORS.surface,
     fontSize: 18,
-    fontWeight: "600",
+    color: COLORS.textSecondary,
   },
   modalMessageContainer: {
-    backgroundColor: COLORS.cardBackground,
-    margin: SPACING.lg,
     padding: SPACING.lg,
-    borderRadius: RADIUS.md,
-    borderWidth: 1,
-    borderColor: COLORS.border,
   },
   modalMessageText: {
     fontSize: 14,
     lineHeight: 20,
-    fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace",
-    color: COLORS.text,
+    fontFamily: "monospace",
   },
   modalButtonContainer: {
     padding: SPACING.lg,
