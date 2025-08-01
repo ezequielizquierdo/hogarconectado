@@ -110,11 +110,6 @@ export default function ProductosScreen() {
   // Función para filtrar productos
   const productosFiltrados = productos.filter((producto) => {
     // Filtro por texto de búsqueda (usando debounced text)
-    const categoriaNombre =
-      typeof producto.categoria === "string"
-        ? producto.categoria
-        : producto.categoria.nombre;
-
     const matchesSearch =
       debouncedSearchText === "" ||
       producto.marca
@@ -126,18 +121,8 @@ export default function ProductosScreen() {
       (producto.descripcion &&
         producto.descripcion
           .toLowerCase()
-          .includes(debouncedSearchText.toLowerCase())) ||
-      (categoriaNombre &&
-        categoriaNombre
-          .toLowerCase()
           .includes(debouncedSearchText.toLowerCase()));
 
-    // Si hay texto de búsqueda, solo aplicar filtro de búsqueda
-    if (debouncedSearchText !== "") {
-      return matchesSearch;
-    }
-
-    // Si no hay texto de búsqueda, aplicar los demás filtros
     // Filtro por categoría
     const categoriaId =
       typeof producto.categoria === "string"
@@ -158,7 +143,7 @@ export default function ProductosScreen() {
       (filtroStock === "agotado" &&
         (!producto.stock.disponible || producto.stock.cantidad === 0));
 
-    return matchesCategoria && matchesMarca && matchesStock;
+    return matchesSearch && matchesCategoria && matchesMarca && matchesStock;
   });
 
   // Función para limpiar filtros
@@ -860,7 +845,7 @@ export default function ProductosScreen() {
     const productoConPrecios = convertirAProductoConPrecios(item);
 
     return (
-      <View key={item._id} style={styles.cardContainer}>
+      <View style={styles.cardContainer}>
         <ProductCard
           producto={productoConPrecios}
           onPress={() => {
@@ -922,8 +907,12 @@ export default function ProductosScreen() {
                   </View>
                 </View>
                 <View style={styles.webTitleContainer}>
-                  <ThemedText style={styles.webMainTitle}>Productos</ThemedText>
-                  <Text style={styles.webSubtitle}>Gestiona tu inventario</Text>
+                  <ThemedText style={styles.webMainTitle}>
+                    Productos
+                  </ThemedText>
+                  <Text style={styles.webSubtitle}>
+                    Gestiona tu inventario
+                  </Text>
                 </View>
               </View>
             </View>
@@ -938,11 +927,9 @@ export default function ProductosScreen() {
               selectedCategoria={filtroCategoria}
               selectedMarca={filtroMarca}
               selectedStock={filtroStock}
-              searchText={searchText}
               onCategoriaChange={setFiltroCategoria}
               onMarcaChange={setFiltroMarca}
               onStockChange={setFiltroStock}
-              onSearchChange={setSearchText}
               onClearFilters={clearAllFilters}
               onAddProduct={() => openModal()}
             />
@@ -953,37 +940,45 @@ export default function ProductosScreen() {
                 style={styles.mainScrollView}
                 showsVerticalScrollIndicator={false}
                 refreshControl={
-                  <RefreshControl
-                    refreshing={refreshing}
-                    onRefresh={onRefresh}
-                  />
+                  <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
                 }
               >
-                {/* Lista de productos */}
-                <ThemedView style={styles.webProductsContainer}>
-                  {productosFiltrados.length === 0 ? (
-                    <ThemedView style={styles.emptyContainer}>
-                      <ThemedText style={styles.emptyText}>
-                        {productosLoading
-                          ? "Cargando productos..."
-                          : searchText ||
-                            filtroCategoria ||
-                            filtroMarca ||
-                            filtroStock
-                          ? "No se encontraron productos con los filtros aplicados"
-                          : "No hay productos disponibles"}
-                      </ThemedText>
-                    </ThemedView>
-                  ) : (
-                    <View style={styles.webGrid}>
-                      {productosFiltrados.map((producto) =>
-                        renderProducto({ item: producto })
-                      )}
-                    </View>
-                  )}
-                </ThemedView>
-              </ScrollView>
-            </View>
+              {/* Barra de búsqueda para web */}
+              <View style={styles.webSearchSection}>
+                <View style={styles.webSearchContainer}>
+                  <TextInput
+                    style={styles.webSearchInput}
+                    placeholder="🔍 Buscar productos..."
+                    value={searchText}
+                    onChangeText={setSearchText}
+                    placeholderTextColor={COLORS.textLight}
+                  />
+                </View>
+              </View>{" "}
+              {/* Lista de productos */}
+              <ThemedView style={styles.webProductsContainer}>
+                {productosFiltrados.length === 0 ? (
+                  <ThemedView style={styles.emptyContainer}>
+                    <ThemedText style={styles.emptyText}>
+                      {productosLoading
+                        ? "Cargando productos..."
+                        : searchText ||
+                          filtroCategoria ||
+                          filtroMarca ||
+                          filtroStock
+                        ? "No se encontraron productos con los filtros aplicados"
+                        : "No hay productos disponibles"}
+                    </ThemedText>
+                  </ThemedView>
+                ) : (
+                  <View style={styles.webGrid}>
+                    {productosFiltrados.map((producto) =>
+                      renderProducto({ item: producto })
+                    )}
+                  </View>
+                )}
+              </ThemedView>
+            </ScrollView>
           </View>
         </View>
       ) : (
@@ -1005,153 +1000,125 @@ export default function ProductosScreen() {
           <ThemedView style={styles.container}>
             <FadeInView delay={0}>
               <ThemedView style={styles.titleContainer}>
-                <ThemedText type="title">Productos</ThemedText>
+                <ThemedText type="title">Administrar Productos</ThemedText>
                 <HelloWave />
               </ThemedView>
             </FadeInView>
 
-            {/* Layout con sidebar para web, normal para mobile */}
-            {Platform.OS === "web" ? (
-              <View style={styles.webLayout}>
-                {/* Sidebar */}
-                <View style={styles.sidebarContainer}>
-                  <SidebarFilters
-                    categorias={[
+            {/* Resumen del inventario como link simple */}
+            <FadeInView delay={100}>
+              <TouchableOpacity
+                style={styles.statsSimpleLink}
+                onPress={() => setStatsModalVisible(true)}
+              >
+                <ThemedText style={styles.statsSimpleLinkText}>
+                  📊 Ver Resumen del Inventario
+                </ThemedText>
+              </TouchableOpacity>
+            </FadeInView>
+
+            {/* Botón de agregar producto */}
+            <FadeInView delay={200}>
+              <ThemedView style={styles.actionContainer}>
+                <AnimatedButton
+                  title="➕ Agregar Nuevo Producto"
+                  onPress={() => openModal()}
+                  variant="primary"
+                  style={styles.addButton}
+                />
+              </ThemedView>
+            </FadeInView>
+
+            {/* Filtros y búsqueda */}
+            <FadeInView delay={300}>
+              <ThemedView style={styles.searchContainer}>
+                {/* Dropdowns en una línea */}
+                <View style={styles.filtersRow}>
+                  <LabeledDropdown
+                    label="Categoría"
+                    options={[
                       { label: "Todas las categorías", value: "" },
                       ...categorias.map((cat) => ({
                         label: cat.nombre,
                         value: cat._id,
                       })),
                     ]}
-                    marcas={[
+                    selectedValue={filtroCategoria}
+                    onSelect={(value) => setFiltroCategoria(value)}
+                    placeholder="Filtrar por categoría"
+                  />
+
+                  <LabeledDropdown
+                    label="Marca"
+                    options={[
                       { label: "Todas las marcas", value: "" },
                       ...marcas.map((marca) => ({
                         label: marca,
                         value: marca,
                       })),
                     ]}
-                    selectedCategoria={filtroCategoria}
-                    selectedMarca={filtroMarca}
-                    selectedStock={filtroStock}
-                    searchText={searchText}
-                    onCategoriaChange={(value) => setFiltroCategoria(value)}
-                    onMarcaChange={(value) => setFiltroMarca(value)}
-                    onStockChange={(value) => setFiltroStock(value)}
-                    onSearchChange={(value) => setSearchText(value)}
-                    onClearFilters={() => {
-                      setFiltroCategoria("");
-                      setFiltroMarca("");
-                      setFiltroStock("");
-                      setSearchText("");
-                    }}
-                    onAddProduct={() => openModal()}
+                    selectedValue={filtroMarca}
+                    onSelect={(value) => setFiltroMarca(value)}
+                    placeholder="Filtrar por marca"
+                  />
+
+                  <LabeledDropdown
+                    label="Stock"
+                    options={[
+                      { label: "Todo el stock", value: "" },
+                      { label: "Disponible", value: "disponible" },
+                      { label: "Agotado", value: "agotado" },
+                    ]}
+                    selectedValue={filtroStock}
+                    onSelect={(value) => setFiltroStock(value)}
+                    placeholder="Filtrar por stock"
                   />
                 </View>
 
-                {/* Content area */}
-                <View style={styles.contentContainer}>
-                  <FadeInView delay={400}>
-                    <ThemedView style={styles.productListContainer}>
-                      {productosFiltrados.length === 0 ? (
-                        <ThemedView style={styles.emptyContainer}>
-                          <ThemedText style={styles.emptyText}>
-                            {productosLoading
-                              ? "Cargando productos..."
-                              : searchText ||
-                                filtroCategoria ||
-                                filtroMarca ||
-                                filtroStock
-                              ? "No se encontraron productos con los filtros aplicados"
-                              : "No hay productos disponibles"}
-                          </ThemedText>
-                        </ThemedView>
-                      ) : (
-                        <View style={styles.webGrid}>
-                          {productosFiltrados.map((producto) =>
-                            renderProducto({ item: producto })
-                          )}
-                        </View>
-                      )}
-                    </ThemedView>
-                  </FadeInView>
+                {/* Buscador debajo */}
+                <View style={styles.searchRow}>
+                  <View style={styles.searchInputContainer}>
+                    <TextInput
+                      style={styles.searchInput}
+                      placeholder="🔍 Buscar productos..."
+                      value={searchText}
+                      onChangeText={setSearchText}
+                      placeholderTextColor="#999"
+                    />
+                  </View>
                 </View>
-              </View>
-            ) : (
-              <>
-                {/* Filtros móvil (mantenemos los dropdowns) */}
-                <FadeInView delay={300}>
-                  <ThemedView style={styles.searchContainer}>
-                    <View style={styles.filtersRow}>
-                      <LabeledDropdown
-                        label="Categoría"
-                        options={[
-                          { label: "Todas las categorías", value: "" },
-                          ...categorias.map((cat) => ({
-                            label: cat.nombre,
-                            value: cat._id,
-                          })),
-                        ]}
-                        selectedValue={filtroCategoria}
-                        onSelect={(value) => setFiltroCategoria(value)}
-                        placeholder="Filtrar por categoría"
-                      />
+              </ThemedView>
+            </FadeInView>
 
-                      <LabeledDropdown
-                        label="Marca"
-                        options={[
-                          { label: "Todas las marcas", value: "" },
-                          ...marcas.map((marca) => ({
-                            label: marca,
-                            value: marca,
-                          })),
-                        ]}
-                        selectedValue={filtroMarca}
-                        onSelect={(value) => setFiltroMarca(value)}
-                        placeholder="Filtrar por marca"
-                      />
-
-                      <LabeledDropdown
-                        label="Stock"
-                        options={[
-                          { label: "Todo el stock", value: "" },
-                          { label: "Disponible", value: "disponible" },
-                          { label: "Agotado", value: "agotado" },
-                        ]}
-                        selectedValue={filtroStock}
-                        onSelect={(value) => setFiltroStock(value)}
-                        placeholder="Filtrar por stock"
-                      />
-                    </View>
+            {/* Lista de productos sin FlatList anidado */}
+            <FadeInView delay={400}>
+              <ThemedView style={styles.productListContainer}>
+                {productosFiltrados.length === 0 ? (
+                  <ThemedView style={styles.emptyContainer}>
+                    <ThemedText style={styles.emptyText}>
+                      {productosLoading
+                        ? "Cargando productos..."
+                        : searchText ||
+                          filtroCategoria ||
+                          filtroMarca ||
+                          filtroStock
+                        ? "No se encontraron productos con los filtros aplicados"
+                        : "No hay productos disponibles"}
+                    </ThemedText>
                   </ThemedView>
-                </FadeInView>
-
-                {/* Lista de productos móvil */}
-                <FadeInView delay={400}>
-                  <ThemedView style={styles.productListContainer}>
-                    {productosFiltrados.length === 0 ? (
-                      <ThemedView style={styles.emptyContainer}>
-                        <ThemedText style={styles.emptyText}>
-                          {productosLoading
-                            ? "Cargando productos..."
-                            : searchText ||
-                              filtroCategoria ||
-                              filtroMarca ||
-                              filtroStock
-                            ? "No se encontraron productos con los filtros aplicados"
-                            : "No hay productos disponibles"}
-                        </ThemedText>
-                      </ThemedView>
-                    ) : (
-                      <View style={styles.mobileList}>
-                        {productosFiltrados.map((producto) =>
-                          renderProducto({ item: producto })
-                        )}
-                      </View>
+                ) : (
+                  <View
+                    style={
+                      Platform.OS === "web" ? styles.webGrid : styles.mobileList
+                    }
+                  >
+                    {productosFiltrados.map((producto) =>
+                      renderProducto({ item: producto })
                     )}
-                  </ThemedView>
-                </FadeInView>
-              </>
-            )}
+                  </View>
+                )}
+              </ThemedView>
+            </FadeInView>
           </ThemedView>
         </ParallaxScrollView>
       )}
@@ -1396,373 +1363,174 @@ export default function ProductosScreen() {
       {/* Modal de detalle del producto */}
       <Modal
         visible={detailModalVisible}
-        animationType={Platform.OS === "web" ? "fade" : "slide"}
-        transparent={Platform.OS === "web"}
-        presentationStyle={
-          Platform.OS === "web" ? "overFullScreen" : "pageSheet"
-        }
+        animationType="slide"
+        presentationStyle="pageSheet"
         onRequestClose={() => setDetailModalVisible(false)}
       >
-        {Platform.OS === "web" ? (
-          // Modal web estilo "paper" centrado
-          <View style={styles.webModalOverlay}>
-            <View style={styles.webModalContainer}>
-              <ThemedView style={styles.webModalHeader}>
-                <ThemedText style={styles.webModalTitle}>
-                  Detalle del Producto
-                </ThemedText>
-                <TouchableOpacity
-                  onPress={() => setDetailModalVisible(false)}
-                  style={styles.webModalCloseButton}
-                >
-                  <ThemedText style={styles.webModalCloseText}>✕</ThemedText>
-                </TouchableOpacity>
-              </ThemedView>
+        <SafeAreaView style={styles.modalContainer}>
+          <ThemedView style={styles.modalHeader}>
+            <ThemedText type="subtitle">Detalle del Producto</ThemedText>
+            <TouchableOpacity onPress={() => setDetailModalVisible(false)}>
+              <ThemedText style={styles.cancelButton}>Cerrar</ThemedText>
+            </TouchableOpacity>
+          </ThemedView>
 
-              {selectedProduct && (
-                <ScrollView
-                  style={styles.webModalContent}
-                  contentContainerStyle={styles.webModalContentContainer}
-                  showsVerticalScrollIndicator={false}
-                >
-                  <View style={styles.detailContainer}>
-                    {/* Imagen del producto */}
-                    {selectedProduct.imagenes &&
-                      selectedProduct.imagenes.length > 0 && (
-                        <View style={styles.detailImageContainer}>
-                          <SmartImage
-                            source={{ uri: selectedProduct.imagenes[0] }}
-                            style={[
-                              styles.detailImage,
-                              { aspectRatio: imageAspectRatio },
-                            ]}
-                            onLoad={() => {
-                              // Para SmartImage, usaremos RNImage.getSize para obtener las dimensiones
-                              if (selectedProduct.imagenes?.[0]) {
-                                RNImage.getSize(
-                                  selectedProduct.imagenes[0],
-                                  (width: number, height: number) => {
-                                    setImageAspectRatio(width / height);
-                                  },
-                                  (error: any) => {
-                                    console.error(
-                                      "Error al obtener dimensiones:",
-                                      error
-                                    );
-                                    // Mantener aspect ratio por defecto
-                                    setImageAspectRatio(1);
-                                  }
-                                );
-                              }
-                            }}
-                            onError={(error) =>
-                              console.error(
-                                "Error al cargar imagen del producto:",
-                                error
-                              )
-                            }
-                          />
-                        </View>
-                      )}
-
-                    {/* Información básica */}
-                    <View style={styles.detailSection}>
-                      <ThemedText style={styles.detailTitle}>
-                        {selectedProduct.marca} {selectedProduct.modelo}
-                      </ThemedText>
-
-                      <View style={styles.detailRow}>
-                        <ThemedText style={styles.detailLabel}>ID:</ThemedText>
-                        <ThemedText style={styles.detailValue}>
-                          #{selectedProduct._id.slice(-6)}
-                        </ThemedText>
-                      </View>
-
-                      <View style={styles.detailRow}>
-                        <ThemedText style={styles.detailLabel}>
-                          Marca:
-                        </ThemedText>
-                        <ThemedText style={styles.detailValue}>
-                          {selectedProduct.marca}
-                        </ThemedText>
-                      </View>
-
-                      <View style={styles.detailRow}>
-                        <ThemedText style={styles.detailLabel}>
-                          Modelo:
-                        </ThemedText>
-                        <ThemedText style={styles.detailValue}>
-                          {selectedProduct.modelo}
-                        </ThemedText>
-                      </View>
-
-                      <View style={styles.detailRow}>
-                        <ThemedText style={styles.detailLabel}>
-                          Categoría:
-                        </ThemedText>
-                        <ThemedText style={styles.detailValue}>
-                          {typeof selectedProduct.categoria === "string"
-                            ? selectedProduct.categoria
-                            : selectedProduct.categoria.nombre}
-                        </ThemedText>
-                      </View>
-
-                      {selectedProduct.descripcion && (
-                        <View style={styles.detailRow}>
-                          <ThemedText style={styles.detailLabel}>
-                            Descripción:
-                          </ThemedText>
-                          <ThemedText style={styles.detailValue}>
-                            {selectedProduct.descripcion}
-                          </ThemedText>
-                        </View>
-                      )}
-
-                      <View style={styles.detailRow}>
-                        <ThemedText style={styles.detailLabel}>
-                          Precio Base:
-                        </ThemedText>
-                        <ThemedText
-                          style={[styles.detailValue, styles.priceText]}
-                        >
-                          ${selectedProduct.precioBase.toLocaleString()}
-                        </ThemedText>
-                      </View>
-
-                      <View style={styles.detailRow}>
-                        <ThemedText style={styles.detailLabel}>
-                          Stock:
-                        </ThemedText>
-                        <ThemedText
-                          style={[
-                            styles.detailValue,
-                            selectedProduct.stock.disponible
-                              ? styles.availableText
-                              : styles.unavailableText,
-                          ]}
-                        >
-                          {selectedProduct.stock.cantidad} unidades
-                          {selectedProduct.stock.disponible
-                            ? " ✅ Disponible"
-                            : " ❌ No disponible"}
-                        </ThemedText>
-                      </View>
-                    </View>
-
-                    {/* Botones de acción */}
-                    <View style={styles.detailActionsContainer}>
-                      <TouchableOpacity
-                        style={styles.detailEditButton}
-                        onPress={() => {
-                          setDetailModalVisible(false);
-                          openModal(selectedProduct);
-                        }}
-                      >
-                        <ThemedText style={styles.detailActionIcon}>
-                          ✏️
-                        </ThemedText>
-                        <ThemedText style={styles.detailActionText}>
-                          Editar Producto
-                        </ThemedText>
-                      </TouchableOpacity>
-
-                      <TouchableOpacity
-                        style={styles.detailDeleteButton}
-                        onPress={() => {
-                          setDetailModalVisible(false);
-                          if (selectedProduct) {
-                            handleDelete(selectedProduct);
-                          }
-                        }}
-                      >
-                        <ThemedText style={styles.detailActionIcon}>
-                          🗑️
-                        </ThemedText>
-                        <ThemedText style={styles.detailActionText}>
-                          Eliminar Producto
-                        </ThemedText>
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-                </ScrollView>
-              )}
-            </View>
-          </View>
-        ) : (
-          // Modal móvil estilo nativo
-          <SafeAreaView style={styles.modalContainer}>
-            <ThemedView style={styles.modalHeader}>
-              <ThemedText type="subtitle">Detalle del Producto</ThemedText>
-              <TouchableOpacity onPress={() => setDetailModalVisible(false)}>
-                <ThemedText style={styles.cancelButton}>Cerrar</ThemedText>
-              </TouchableOpacity>
-            </ThemedView>
-
-            {selectedProduct && (
-              <ScrollView
-                style={styles.modalContent}
-                contentContainerStyle={styles.modalContentContainer}
-                showsVerticalScrollIndicator={true}
-              >
-                <View style={styles.detailContainer}>
-                  {/* Imagen del producto */}
-                  {selectedProduct.imagenes &&
-                    selectedProduct.imagenes.length > 0 && (
-                      <View style={styles.detailImageContainer}>
-                        <SmartImage
-                          source={{ uri: selectedProduct.imagenes[0] }}
-                          style={[
-                            styles.detailImage,
-                            { aspectRatio: imageAspectRatio },
-                          ]}
-                          onLoad={() => {
-                            // Para SmartImage, usaremos RNImage.getSize para obtener las dimensiones
-                            if (selectedProduct.imagenes?.[0]) {
-                              RNImage.getSize(
-                                selectedProduct.imagenes[0],
-                                (width: number, height: number) => {
-                                  setImageAspectRatio(width / height);
-                                },
-                                (error: any) => {
-                                  console.error(
-                                    "Error al obtener dimensiones:",
-                                    error
-                                  );
-                                  // Mantener aspect ratio por defecto
-                                  setImageAspectRatio(1);
-                                }
-                              );
-                            }
-                          }}
-                          onError={(error) =>
-                            console.error(
-                              "Error al cargar imagen del producto:",
-                              error
-                            )
-                          }
-                        />
-                      </View>
-                    )}
-
-                  {/* Información básica */}
-                  <View style={styles.detailSection}>
-                    <ThemedText style={styles.detailTitle}>
-                      {selectedProduct.marca} {selectedProduct.modelo}
-                    </ThemedText>
-
-                    <View style={styles.detailRow}>
-                      <ThemedText style={styles.detailLabel}>ID:</ThemedText>
-                      <ThemedText style={styles.detailValue}>
-                        #{selectedProduct._id.slice(-6)}
-                      </ThemedText>
-                    </View>
-
-                    <View style={styles.detailRow}>
-                      <ThemedText style={styles.detailLabel}>Marca:</ThemedText>
-                      <ThemedText style={styles.detailValue}>
-                        {selectedProduct.marca}
-                      </ThemedText>
-                    </View>
-
-                    <View style={styles.detailRow}>
-                      <ThemedText style={styles.detailLabel}>
-                        Modelo:
-                      </ThemedText>
-                      <ThemedText style={styles.detailValue}>
-                        {selectedProduct.modelo}
-                      </ThemedText>
-                    </View>
-
-                    <View style={styles.detailRow}>
-                      <ThemedText style={styles.detailLabel}>
-                        Categoría:
-                      </ThemedText>
-                      <ThemedText style={styles.detailValue}>
-                        {typeof selectedProduct.categoria === "string"
-                          ? selectedProduct.categoria
-                          : selectedProduct.categoria.nombre}
-                      </ThemedText>
-                    </View>
-
-                    {selectedProduct.descripcion && (
-                      <View style={styles.detailRow}>
-                        <ThemedText style={styles.detailLabel}>
-                          Descripción:
-                        </ThemedText>
-                        <ThemedText style={styles.detailValue}>
-                          {selectedProduct.descripcion}
-                        </ThemedText>
-                      </View>
-                    )}
-
-                    <View style={styles.detailRow}>
-                      <ThemedText style={styles.detailLabel}>
-                        Precio Base:
-                      </ThemedText>
-                      <ThemedText
-                        style={[styles.detailValue, styles.priceText]}
-                      >
-                        ${selectedProduct.precioBase.toLocaleString()}
-                      </ThemedText>
-                    </View>
-
-                    <View style={styles.detailRow}>
-                      <ThemedText style={styles.detailLabel}>Stock:</ThemedText>
-                      <ThemedText
+          {selectedProduct && (
+            <ScrollView
+              style={styles.modalContent}
+              contentContainerStyle={styles.modalContentContainer}
+              showsVerticalScrollIndicator={true}
+            >
+              <View style={styles.detailContainer}>
+                {/* Imagen del producto */}
+                {selectedProduct.imagenes &&
+                  selectedProduct.imagenes.length > 0 && (
+                    <View style={styles.detailImageContainer}>
+                      <SmartImage
+                        source={{ uri: selectedProduct.imagenes[0] }}
                         style={[
-                          styles.detailValue,
-                          selectedProduct.stock.disponible
-                            ? styles.availableText
-                            : styles.unavailableText,
+                          styles.detailImage,
+                          { aspectRatio: imageAspectRatio },
                         ]}
-                      >
-                        {selectedProduct.stock.cantidad} unidades
-                        {selectedProduct.stock.disponible
-                          ? " ✅ Disponible"
-                          : " ❌ No disponible"}
-                      </ThemedText>
+                        onLoad={() => {
+                          // Para SmartImage, usaremos RNImage.getSize para obtener las dimensiones
+                          if (selectedProduct.imagenes?.[0]) {
+                            RNImage.getSize(
+                              selectedProduct.imagenes[0],
+                              (width: number, height: number) => {
+                                setImageAspectRatio(width / height);
+                              },
+                              (error: any) => {
+                                console.error(
+                                  "Error al obtener dimensiones:",
+                                  error
+                                );
+                                // Mantener aspect ratio por defecto
+                                setImageAspectRatio(1);
+                              }
+                            );
+                          }
+                        }}
+                        onError={(error) =>
+                          console.error(
+                            "Error al cargar imagen del producto:",
+                            error
+                          )
+                        }
+                      />
                     </View>
+                  )}
+
+                {/* Información básica */}
+                <View style={styles.detailSection}>
+                  <ThemedText style={styles.detailTitle}>
+                    {selectedProduct.marca} {selectedProduct.modelo}
+                  </ThemedText>
+
+                  <View style={styles.detailRow}>
+                    <ThemedText style={styles.detailLabel}>ID:</ThemedText>
+                    <ThemedText style={styles.detailValue}>
+                      #{selectedProduct._id.slice(-6)}
+                    </ThemedText>
                   </View>
 
-                  {/* Botones de acción */}
-                  <View style={styles.detailActionsContainer}>
-                    <TouchableOpacity
-                      style={styles.detailEditButton}
-                      onPress={() => {
-                        setDetailModalVisible(false);
-                        openModal(selectedProduct);
-                      }}
-                    >
-                      <ThemedText style={styles.detailActionIcon}>
-                        ✏️
-                      </ThemedText>
-                      <ThemedText style={styles.detailActionText}>
-                        Editar Producto
-                      </ThemedText>
-                    </TouchableOpacity>
+                  <View style={styles.detailRow}>
+                    <ThemedText style={styles.detailLabel}>Marca:</ThemedText>
+                    <ThemedText style={styles.detailValue}>
+                      {selectedProduct.marca}
+                    </ThemedText>
+                  </View>
 
-                    <TouchableOpacity
-                      style={styles.detailDeleteButton}
-                      onPress={() => {
-                        setDetailModalVisible(false);
-                        if (selectedProduct) {
-                          handleDelete(selectedProduct);
-                        }
-                      }}
+                  <View style={styles.detailRow}>
+                    <ThemedText style={styles.detailLabel}>Modelo:</ThemedText>
+                    <ThemedText style={styles.detailValue}>
+                      {selectedProduct.modelo}
+                    </ThemedText>
+                  </View>
+
+                  <View style={styles.detailRow}>
+                    <ThemedText style={styles.detailLabel}>
+                      Categoría:
+                    </ThemedText>
+                    <ThemedText style={styles.detailValue}>
+                      {typeof selectedProduct.categoria === "string"
+                        ? selectedProduct.categoria
+                        : selectedProduct.categoria.nombre}
+                    </ThemedText>
+                  </View>
+
+                  {selectedProduct.descripcion && (
+                    <View style={styles.detailRow}>
+                      <ThemedText style={styles.detailLabel}>
+                        Descripción:
+                      </ThemedText>
+                      <ThemedText style={styles.detailValue}>
+                        {selectedProduct.descripcion}
+                      </ThemedText>
+                    </View>
+                  )}
+
+                  <View style={styles.detailRow}>
+                    <ThemedText style={styles.detailLabel}>
+                      Precio Base:
+                    </ThemedText>
+                    <ThemedText style={[styles.detailValue, styles.priceText]}>
+                      ${selectedProduct.precioBase.toLocaleString()}
+                    </ThemedText>
+                  </View>
+
+                  <View style={styles.detailRow}>
+                    <ThemedText style={styles.detailLabel}>Stock:</ThemedText>
+                    <ThemedText
+                      style={[
+                        styles.detailValue,
+                        selectedProduct.stock.disponible
+                          ? styles.availableText
+                          : styles.unavailableText,
+                      ]}
                     >
-                      <ThemedText style={styles.detailActionIcon}>
-                        🗑️
-                      </ThemedText>
-                      <ThemedText style={styles.detailActionText}>
-                        Eliminar Producto
-                      </ThemedText>
-                    </TouchableOpacity>
+                      {selectedProduct.stock.cantidad} unidades
+                      {selectedProduct.stock.disponible
+                        ? " ✅ Disponible"
+                        : " ❌ No disponible"}
+                    </ThemedText>
                   </View>
                 </View>
-              </ScrollView>
-            )}
-          </SafeAreaView>
-        )}
+
+                {/* Botones de acción */}
+                <View style={styles.detailActionsContainer}>
+                  <TouchableOpacity
+                    style={styles.detailEditButton}
+                    onPress={() => {
+                      setDetailModalVisible(false);
+                      openModal(selectedProduct);
+                    }}
+                  >
+                    <ThemedText style={styles.detailActionIcon}>✏️</ThemedText>
+                    <ThemedText style={styles.detailActionText}>
+                      Editar Producto
+                    </ThemedText>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.detailDeleteButton}
+                    onPress={() => {
+                      setDetailModalVisible(false);
+                      if (selectedProduct) {
+                        handleDelete(selectedProduct);
+                      }
+                    }}
+                  >
+                    <ThemedText style={styles.detailActionIcon}>🗑️</ThemedText>
+                    <ThemedText style={styles.detailActionText}>
+                      Eliminar Producto
+                    </ThemedText>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </ScrollView>
+          )}
+        </SafeAreaView>
       </Modal>
     </>
   );
@@ -2182,17 +1950,12 @@ const styles = StyleSheet.create({
   imagePreviewContainer: {
     position: "relative",
     alignSelf: "flex-start",
-    padding: SPACING.xs, // Padding alrededor del contenedor
-    backgroundColor: "#FFFFFF", // Fondo blanco
-    borderRadius: RADIUS.lg,
-    ...SHADOWS.md, // Sombra
-    borderWidth: 1,
-    borderColor: COLORS.border,
   },
   imagePreview: {
     width: 120,
     height: 120,
     borderRadius: RADIUS.md,
+    backgroundColor: COLORS.surface,
     resizeMode: "cover",
   },
   removeImageButton: {
@@ -2218,8 +1981,7 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS.md,
     padding: SPACING.lg,
     alignItems: "center",
-    backgroundColor: "#FFFFFF", // Fondo blanco consistente
-    ...SHADOWS.sm, // Sombra sutil
+    backgroundColor: COLORS.cardBackground,
   },
   imagePlaceholderText: {
     fontSize: 16,
@@ -2279,7 +2041,7 @@ const styles = StyleSheet.create({
     height: "100%",
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#F8F9FA", // Fondo gris muy claro para placeholder
+    backgroundColor: COLORS.surface,
     borderRadius: RADIUS.md,
   },
   imagePlaceholderIcon: {
@@ -2362,7 +2124,6 @@ const styles = StyleSheet.create({
   cardContainer: {
     marginBottom: 0, // Quitamos margin porque usamos gap
     width: Platform.OS === "web" ? ("calc(25% - 12px)" as any) : "48%", // 4 columnas en web, 2 en móvil
-    minHeight: Platform.OS === "web" ? 280 : undefined, // Altura mínima en web para consistencia
   },
   // Estilos para modal de detalle
   detailContainer: {
@@ -2370,10 +2131,9 @@ const styles = StyleSheet.create({
   },
   detailImageContainer: {
     width: "100%",
-    height: 300, // Altura fija para consistencia
     borderRadius: RADIUS.lg,
     marginBottom: SPACING.lg,
-    backgroundColor: "#FFFFFF", // Fondo blanco consistente
+    backgroundColor: COLORS.surface,
     justifyContent: "center",
     alignItems: "center",
     padding: SPACING.lg,
@@ -2382,11 +2142,10 @@ const styles = StyleSheet.create({
     borderColor: COLORS.border,
   },
   detailImage: {
-    maxWidth: "100%",
-    maxHeight: "100%",
+    width: "100%",
     resizeMode: "contain", // Mantiene la proporción original de la imagen
     borderRadius: RADIUS.md,
-    flex: 1,
+    maxHeight: 250, // Altura máxima para evitar imágenes demasiado grandes
   },
   detailSection: {
     gap: SPACING.md,
@@ -2473,14 +2232,6 @@ const styles = StyleSheet.create({
     flexDirection: "row" as const,
     height: "100vh" as any,
     backgroundColor: COLORS.background,
-    gap: SPACING.lg,
-  },
-  sidebarContainer: {
-    width: 280,
-    minHeight: "100%",
-  },
-  contentContainer: {
-    flex: 1,
   },
   mainContent: {
     flex: 1,
@@ -2522,6 +2273,9 @@ const styles = StyleSheet.create({
   webAddButton: {
     paddingHorizontal: SPACING.lg,
     paddingVertical: SPACING.sm,
+  },
+  webSearchContainer: {
+    marginTop: SPACING.sm,
   },
   webSearchInput: {
     backgroundColor: COLORS.cardBackground,
@@ -2629,57 +2383,5 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: "row" as const,
     backgroundColor: COLORS.background,
-  },
-  // Estilos para modal web tipo "paper"
-  webModalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)" as any,
-    justifyContent: "center" as const,
-    alignItems: "center" as const,
-    padding: SPACING.lg,
-  },
-  webModalContainer: {
-    backgroundColor: COLORS.background,
-    borderRadius: RADIUS.lg,
-    maxWidth: 600,
-    maxHeight: "90%" as any,
-    width: "100%" as const,
-    ...SHADOWS.lg,
-    overflow: "hidden" as const,
-  },
-  webModalHeader: {
-    flexDirection: "row" as const,
-    justifyContent: "space-between" as const,
-    alignItems: "center" as const,
-    padding: SPACING.lg,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-    backgroundColor: COLORS.surface,
-  },
-  webModalTitle: {
-    fontSize: 20,
-    fontWeight: "600" as const,
-    color: COLORS.text,
-  },
-  webModalCloseButton: {
-    padding: SPACING.sm,
-    backgroundColor: COLORS.error,
-    borderRadius: RADIUS.sm,
-    minWidth: 32,
-    minHeight: 32,
-    alignItems: "center" as const,
-    justifyContent: "center" as const,
-  },
-  webModalCloseText: {
-    color: COLORS.surface,
-    fontSize: 16,
-    fontWeight: "600" as const,
-  },
-  webModalContent: {
-    flex: 1,
-  },
-  webModalContentContainer: {
-    flexGrow: 1,
-    paddingBottom: SPACING.lg,
   },
 });

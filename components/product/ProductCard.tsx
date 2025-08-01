@@ -4,6 +4,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   Dimensions,
+  Platform,
   Image as RNImage,
 } from "react-native";
 import { Image } from "expo-image";
@@ -25,7 +26,7 @@ interface ProductCardProps {
 }
 
 const { width } = Dimensions.get("window");
-const cardWidth = (width - SPACING.lg * 3) / 2;
+const cardWidth = Platform.OS === "web" ? "100%" : (width - SPACING.lg * 3) / 2;
 
 export default function ProductCard({
   producto,
@@ -153,20 +154,21 @@ export default function ProductCard({
 const styles = StyleSheet.create({
   container: {
     width: cardWidth,
-    marginBottom: SPACING.md,
+    marginBottom: Platform.OS === "web" ? 0 : SPACING.md, // Sin margin en web, usamos gap
   },
   card: {
     backgroundColor: COLORS.surface,
     borderRadius: RADIUS.lg,
     ...SHADOWS.md,
     overflow: "hidden",
+    height: Platform.OS === "web" ? "auto" : "auto", // Altura automática para web
   },
   productInfoSection: {
     padding: SPACING.sm,
   },
   imageContainer: {
     width: "100%",
-    height: 120, // Altura fija uniforme para todas las cards
+    height: Platform.OS === "web" ? 140 : 120, // Altura un poco mayor en web
     borderRadius: RADIUS.md,
     overflow: "hidden",
     marginBottom: SPACING.sm,
@@ -174,7 +176,9 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     padding: SPACING.xs, // Padding para separar la imagen de los bordes
-    ...SHADOWS.sm, // Sombra sutil
+    ...SHADOWS.md, // Sombra más pronunciada
+    borderWidth: 1,
+    borderColor: COLORS.border,
   },
   productImage: {
     width: "100%",
@@ -186,7 +190,8 @@ const styles = StyleSheet.create({
     height: "100%",
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: COLORS.cardBackground,
+    backgroundColor: "#F8F9FA", // Fondo gris muy claro para el placeholder
+    borderRadius: RADIUS.sm,
   },
   placeholderText: {
     fontSize: 40,
@@ -208,34 +213,34 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.sm,
   },
   brandText: {
-    fontSize: 12,
+    fontSize: Platform.OS === "web" ? 13 : 12,
     color: COLORS.textSecondary,
     marginBottom: 2,
   },
   marcaText: {
-    fontSize: 16,
+    fontSize: Platform.OS === "web" ? 17 : 16,
     fontWeight: "bold",
     color: COLORS.text,
-    lineHeight: 20,
+    lineHeight: Platform.OS === "web" ? 22 : 20,
     marginBottom: 4,
   },
   modeloText: {
-    fontSize: 14,
+    fontSize: Platform.OS === "web" ? 15 : 14,
     fontWeight: "500",
     color: COLORS.textSecondary,
-    lineHeight: 18,
+    lineHeight: Platform.OS === "web" ? 20 : 18,
     marginBottom: 2,
   },
   descriptionText: {
-    fontSize: 12,
+    fontSize: Platform.OS === "web" ? 13 : 12,
     color: COLORS.textLight,
-    lineHeight: 16,
+    lineHeight: Platform.OS === "web" ? 18 : 16,
   },
   priceContainer: {
     marginBottom: 0,
   },
   price: {
-    fontSize: 16,
+    fontSize: Platform.OS === "web" ? 18 : 16,
     fontWeight: "bold",
     color: COLORS.primary,
   },
