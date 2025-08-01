@@ -204,7 +204,8 @@ export default function HomeScreen() {
   const FACTOR_6_CUOTAS = 1.2138;
 
   const calcularCotizacion = (): CalculosResultado | null => {
-    const valorReal = parseFloat(cotizacion.valorReal);
+    const valorLimpio = limpiarValorMoneda(cotizacion.valorReal);
+    const valorReal = parseFloat(valorLimpio);
     const porcentaje = parseFloat(cotizacion.porcentajeAplicado);
 
     if (isNaN(valorReal) || isNaN(porcentaje)) {
@@ -229,6 +230,26 @@ export default function HomeScreen() {
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
     }).format(precio);
+  };
+
+  const formatearPrecioInput = (valor: string): string => {
+    // Remover todo excepto números
+    const numeroLimpio = valor.replace(/[^\d]/g, "");
+    if (!numeroLimpio) return "";
+
+    // Convertir a número y formatear
+    const numero = parseInt(numeroLimpio);
+    return new Intl.NumberFormat("es-AR", {
+      style: "currency",
+      currency: "ARS",
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(numero);
+  };
+
+  const limpiarValorMoneda = (valorFormateado: string): string => {
+    // Remover símbolo de moneda y espacios, mantener solo números
+    return valorFormateado.replace(/[^\d]/g, "");
   };
 
   const generarMensajeFinal = () => {
@@ -323,12 +344,21 @@ export default function HomeScreen() {
   };
 
   const handleModeloChange = (modelo: string, producto: Producto) => {
+    const precioFormateado = producto.precioBase
+      ? formatearPrecioInput(producto.precioBase.toString())
+      : "";
+
     setCotizacion({
       ...cotizacion,
       modelo: modelo,
       detalle: producto.descripcion || "",
-      valorReal: producto.precioBase?.toString() || "",
+      valorReal: precioFormateado,
     });
+  };
+
+  const handleValorRealChange = (text: string) => {
+    const valorFormateado = formatearPrecioInput(text);
+    setCotizacion({ ...cotizacion, valorReal: valorFormateado });
   };
 
   const calculos = calcularCotizacion();
@@ -406,7 +436,6 @@ export default function HomeScreen() {
                     {/* Detalle */}
                     <ReadOnlyField
                       label="Detalle del Producto"
-                      icon="📝"
                       value={cotizacion.detalle}
                       placeholder="Selecciona un modelo para ver los detalles"
                     />
@@ -414,12 +443,9 @@ export default function HomeScreen() {
                     {/* Valor Real */}
                     <AnimatedInput
                       label="Valor Inicial"
-                      icon="💰"
                       required
                       value={cotizacion.valorReal}
-                      onChangeText={(text) =>
-                        setCotizacion({ ...cotizacion, valorReal: text })
-                      }
+                      onChangeText={handleValorRealChange}
                       placeholder="Se autocompletará al seleccionar modelo"
                       keyboardType="numeric"
                     />
@@ -427,7 +453,6 @@ export default function HomeScreen() {
                     {/* Porcentaje */}
                     <AnimatedInput
                       label="Porcentaje Aplicado (0-100)"
-                      icon="📊"
                       required
                       value={cotizacion.porcentajeAplicado}
                       onChangeText={(text) =>
@@ -711,7 +736,6 @@ export default function HomeScreen() {
               {/* Detalle */}
               <ReadOnlyField
                 label="Detalle del Producto"
-                icon="📝"
                 value={cotizacion.detalle}
                 placeholder="Selecciona un modelo para ver los detalles"
               />
@@ -719,12 +743,9 @@ export default function HomeScreen() {
               {/* Valor Real */}
               <AnimatedInput
                 label="Valor Inicial"
-                icon="💰"
                 required
                 value={cotizacion.valorReal}
-                onChangeText={(text) =>
-                  setCotizacion({ ...cotizacion, valorReal: text })
-                }
+                onChangeText={handleValorRealChange}
                 placeholder="Se autocompletará al seleccionar modelo"
                 keyboardType="numeric"
               />
@@ -732,7 +753,6 @@ export default function HomeScreen() {
               {/* Porcentaje */}
               <AnimatedInput
                 label="Porcentaje Aplicado (0-100)"
-                icon="📊"
                 required
                 value={cotizacion.porcentajeAplicado}
                 onChangeText={(text) =>
