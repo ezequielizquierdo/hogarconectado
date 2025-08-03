@@ -22,10 +22,10 @@ import * as FileSystem from "expo-file-system";
 import * as Sharing from "expo-sharing";
 import { captureRef } from "react-native-view-shot";
 import { HelloWave } from "@/components/HelloWave";
-import ParallaxScrollView from "@/components/ParallaxScrollView";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
 import Header from "@/components/layout/Header";
+import MobileHeader from "@/components/MobileHeader";
 import LabeledDropdown from "@/components/forms/LabeledDropdown";
 import EditableDropdown from "@/components/forms/EditableDropdown";
 import AnimatedInput from "@/components/forms/AnimatedInput";
@@ -97,6 +97,7 @@ export default function ProductosScreen() {
   const [statsModalVisible, setStatsModalVisible] = useState(false);
   const [detailModalVisible, setDetailModalVisible] = useState(false);
   const [instagramModalVisible, setInstagramModalVisible] = useState(false);
+  const [filtersModalVisible, setFiltersModalVisible] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Producto | null>(null);
   const [selectedProductForInstagram, setSelectedProductForInstagram] =
     useState<Producto | null>(null);
@@ -1104,12 +1105,10 @@ export default function ProductosScreen() {
           </View>
         </View>
       ) : (
-        // Layout móvil con Header reutilizable
+        // Layout móvil con header estilo web
         <View style={styles.mobileLayout}>
-          <Header
-            sectionTitle="Productos"
-            sectionSubtitle="Gestiona tu inventario"
-          />
+          {/* Header móvil reutilizable */}
+          <MobileHeader title="Productos" subtitle="Gestiona tu inventario" />
 
           <ScrollView
             style={styles.mobileContent}
@@ -1117,155 +1116,137 @@ export default function ProductosScreen() {
               <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
             }
           >
-            <ThemedView style={styles.container}>
-              <Header
-                sectionTitle="Productos"
-                sectionSubtitle={`${productos.length} productos encontrados`}
-              />
+            <View style={styles.mobileContentWithBackground}>
+              {/* Barra de acciones: Agregar + Filtros en la misma línea */}
+              <View style={styles.mobileActionsBar}>
+                <TouchableOpacity
+                  onPress={() => openModal()}
+                  style={styles.addButtonMobile}
+                >
+                  <ThemedText style={styles.addButtonText}>
+                    + Agregar
+                  </ThemedText>
+                </TouchableOpacity>
 
-              {/* Layout con sidebar para web, normal para mobile */}
-              {Platform.OS === "web" ? (
-                <View style={styles.webLayout}>
-                  {/* Sidebar */}
-                  <View style={styles.sidebarContainer}>
-                    <SidebarFilters
-                      categorias={[
-                        { label: "Todas las categorías", value: "" },
-                        ...categorias.map((cat) => ({
-                          label: cat.nombre,
-                          value: cat._id,
-                        })),
-                      ]}
-                      marcas={[
-                        { label: "Todas las marcas", value: "" },
-                        ...marcas.map((marca) => ({
-                          label: marca,
-                          value: marca,
-                        })),
-                      ]}
-                      selectedCategoria={filtroCategoria}
-                      selectedMarca={filtroMarca}
-                      selectedStock={filtroStock}
-                      searchText={searchText}
-                      onCategoriaChange={(value) => setFiltroCategoria(value)}
-                      onMarcaChange={(value) => setFiltroMarca(value)}
-                      onStockChange={(value) => setFiltroStock(value)}
-                      onSearchChange={(value) => setSearchText(value)}
-                      onClearFilters={() => {
-                        setFiltroCategoria("");
-                        setFiltroMarca("");
-                        setFiltroStock("");
-                        setSearchText("");
-                      }}
-                      onAddProduct={() => openModal()}
-                    />
-                  </View>
+                <TouchableOpacity
+                  style={styles.filtersButtonMobile}
+                  onPress={() => setFiltersModalVisible(true)}
+                >
+                  <ThemedText style={styles.filtersButtonText}>
+                    🔍 Filtros
+                  </ThemedText>
+                  {(filtroCategoria || filtroMarca || filtroStock) && (
+                    <View style={styles.activeFiltersBadge}>
+                      <ThemedText style={styles.badgeText}>
+                        {
+                          [filtroCategoria, filtroMarca, filtroStock].filter(
+                            (f) => f
+                          ).length
+                        }
+                      </ThemedText>
+                    </View>
+                  )}
+                </TouchableOpacity>
 
-                  {/* Content area */}
-                  <View style={styles.contentContainer}>
-                    <FadeInView delay={400}>
-                      <ThemedView style={styles.productListContainer}>
-                        {productosFiltrados.length === 0 ? (
-                          <ThemedView style={styles.emptyContainer}>
-                            <ThemedText style={styles.emptyText}>
-                              {productosLoading
-                                ? "Cargando productos..."
-                                : searchText ||
-                                  filtroCategoria ||
-                                  filtroMarca ||
-                                  filtroStock
-                                ? "No se encontraron productos con los filtros aplicados"
-                                : "No hay productos disponibles"}
-                            </ThemedText>
-                          </ThemedView>
-                        ) : (
-                          <View style={styles.webGrid}>
-                            {productosFiltrados.map((producto) =>
-                              renderProducto({ item: producto })
-                            )}
-                          </View>
-                        )}
-                      </ThemedView>
-                    </FadeInView>
-                  </View>
-                </View>
-              ) : (
-                <>
-                  {/* Filtros móvil (mantenemos los dropdowns) */}
-                  <FadeInView delay={300}>
-                    <ThemedView style={styles.searchContainer}>
-                      <View style={styles.filtersRow}>
-                        <LabeledDropdown
-                          label="Categoría"
-                          options={[
-                            { label: "Todas las categorías", value: "" },
-                            ...categorias.map((cat) => ({
-                              label: cat.nombre,
-                              value: cat._id,
-                            })),
-                          ]}
-                          selectedValue={filtroCategoria}
-                          onSelect={(value) => setFiltroCategoria(value)}
-                          placeholder="Filtrar por categoría"
-                        />
+                {/* Botón limpiar filtros */}
+                {(filtroCategoria || filtroMarca || filtroStock) && (
+                  <TouchableOpacity
+                    style={styles.clearFiltersButtonMobile}
+                    onPress={() => {
+                      setFiltroCategoria("");
+                      setFiltroMarca("");
+                      setFiltroStock("");
+                    }}
+                  >
+                    <ThemedText style={styles.clearFiltersText}>
+                      Limpiar
+                    </ThemedText>
+                  </TouchableOpacity>
+                )}
+              </View>
 
-                        <LabeledDropdown
-                          label="Marca"
-                          options={[
-                            { label: "Todas las marcas", value: "" },
-                            ...marcas.map((marca) => ({
-                              label: marca,
-                              value: marca,
-                            })),
-                          ]}
-                          selectedValue={filtroMarca}
-                          onSelect={(value) => setFiltroMarca(value)}
-                          placeholder="Filtrar por marca"
-                        />
-
-                        <LabeledDropdown
-                          label="Stock"
-                          options={[
-                            { label: "Todo el stock", value: "" },
-                            { label: "Disponible", value: "disponible" },
-                            { label: "Agotado", value: "agotado" },
-                          ]}
-                          selectedValue={filtroStock}
-                          onSelect={(value) => setFiltroStock(value)}
-                          placeholder="Filtrar por stock"
-                        />
-                      </View>
-                    </ThemedView>
-                  </FadeInView>
-
-                  {/* Lista de productos móvil */}
-                  <FadeInView delay={400}>
-                    <ThemedView style={styles.productListContainer}>
-                      {productosFiltrados.length === 0 ? (
-                        <ThemedView style={styles.emptyContainer}>
-                          <ThemedText style={styles.emptyText}>
-                            {productosLoading
-                              ? "Cargando productos..."
-                              : searchText ||
-                                filtroCategoria ||
-                                filtroMarca ||
-                                filtroStock
-                              ? "No se encontraron productos con los filtros aplicados"
-                              : "No hay productos disponibles"}
+              {/* Chips de filtros activos */}
+              {(filtroCategoria || filtroMarca || filtroStock) && (
+                <FadeInView delay={300}>
+                  <View style={styles.activeFiltersChips}>
+                    {filtroCategoria && (
+                      <View style={styles.filterChip}>
+                        <ThemedText style={styles.chipText}>
+                          {categorias.find((c) => c._id === filtroCategoria)
+                            ?.nombre || "Categoría"}
+                        </ThemedText>
+                        <TouchableOpacity
+                          onPress={() => setFiltroCategoria("")}
+                          style={styles.chipRemove}
+                        >
+                          <ThemedText style={styles.chipRemoveText}>
+                            ×
                           </ThemedText>
-                        </ThemedView>
-                      ) : (
-                        <View style={styles.mobileList}>
-                          {productosFiltrados.map((producto) =>
-                            renderProducto({ item: producto })
-                          )}
-                        </View>
-                      )}
-                    </ThemedView>
-                  </FadeInView>
-                </>
+                        </TouchableOpacity>
+                      </View>
+                    )}
+                    {filtroMarca && (
+                      <View style={styles.filterChip}>
+                        <ThemedText style={styles.chipText}>
+                          {filtroMarca}
+                        </ThemedText>
+                        <TouchableOpacity
+                          onPress={() => setFiltroMarca("")}
+                          style={styles.chipRemove}
+                        >
+                          <ThemedText style={styles.chipRemoveText}>
+                            ×
+                          </ThemedText>
+                        </TouchableOpacity>
+                      </View>
+                    )}
+                    {filtroStock && (
+                      <View style={styles.filterChip}>
+                        <ThemedText style={styles.chipText}>
+                          {filtroStock === "disponible"
+                            ? "Disponible"
+                            : "Agotado"}
+                        </ThemedText>
+                        <TouchableOpacity
+                          onPress={() => setFiltroStock("")}
+                          style={styles.chipRemove}
+                        >
+                          <ThemedText style={styles.chipRemoveText}>
+                            ×
+                          </ThemedText>
+                        </TouchableOpacity>
+                      </View>
+                    )}
+                  </View>
+                </FadeInView>
               )}
-            </ThemedView>
+
+              {/* Lista de productos móvil */}
+              <FadeInView delay={400}>
+                <ThemedView style={styles.productListContainer}>
+                  {productosFiltrados.length === 0 ? (
+                    <ThemedView style={styles.emptyContainer}>
+                      <ThemedText style={styles.emptyText}>
+                        {productosLoading
+                          ? "Cargando productos..."
+                          : searchText ||
+                            filtroCategoria ||
+                            filtroMarca ||
+                            filtroStock
+                          ? "No se encontraron productos con los filtros aplicados"
+                          : "No hay productos disponibles"}
+                      </ThemedText>
+                    </ThemedView>
+                  ) : (
+                    <View style={styles.mobileList}>
+                      {productosFiltrados.map((producto) =>
+                        renderProducto({ item: producto })
+                      )}
+                    </View>
+                  )}
+                </ThemedView>
+              </FadeInView>
+            </View>
           </ScrollView>
         </View>
       )}
@@ -2753,6 +2734,98 @@ export default function ProductosScreen() {
           </SafeAreaView>
         )}
       </Modal>
+
+      {/* Modal de filtros móvil */}
+      <Modal
+        visible={filtersModalVisible}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setFiltersModalVisible(false)}
+      >
+        <SafeAreaView style={styles.filtersModalContainer}>
+          <View style={styles.filtersModalHeader}>
+            <ThemedText style={styles.filtersModalTitle}>Filtros</ThemedText>
+            <TouchableOpacity
+              onPress={() => setFiltersModalVisible(false)}
+              style={styles.filtersModalClose}
+            >
+              <ThemedText style={styles.filtersModalCloseText}>×</ThemedText>
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView style={styles.filtersModalContent}>
+            <View style={styles.filtersSection}>
+              <LabeledDropdown
+                label="Categoría"
+                options={[
+                  { label: "Todas las categorías", value: "" },
+                  ...categorias.map((cat) => ({
+                    label: cat.nombre,
+                    value: cat._id,
+                  })),
+                ]}
+                selectedValue={filtroCategoria}
+                onSelect={(value) => setFiltroCategoria(value)}
+                placeholder="Filtrar por categoría"
+              />
+            </View>
+
+            <View style={styles.filtersSection}>
+              <LabeledDropdown
+                label="Marca"
+                options={[
+                  { label: "Todas las marcas", value: "" },
+                  ...marcas.map((marca) => ({
+                    label: marca,
+                    value: marca,
+                  })),
+                ]}
+                selectedValue={filtroMarca}
+                onSelect={(value) => setFiltroMarca(value)}
+                placeholder="Filtrar por marca"
+              />
+            </View>
+
+            <View style={styles.filtersSection}>
+              <LabeledDropdown
+                label="Stock"
+                options={[
+                  { label: "Todo el stock", value: "" },
+                  { label: "Disponible", value: "disponible" },
+                  { label: "Agotado", value: "agotado" },
+                ]}
+                selectedValue={filtroStock}
+                onSelect={(value) => setFiltroStock(value)}
+                placeholder="Filtrar por stock"
+              />
+            </View>
+          </ScrollView>
+
+          <View style={styles.filtersModalActions}>
+            <TouchableOpacity
+              style={styles.clearAllFiltersButton}
+              onPress={() => {
+                setFiltroCategoria("");
+                setFiltroMarca("");
+                setFiltroStock("");
+              }}
+            >
+              <ThemedText style={styles.clearAllFiltersText}>
+                Limpiar todos los filtros
+              </ThemedText>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.applyFiltersButton}
+              onPress={() => setFiltersModalVisible(false)}
+            >
+              <ThemedText style={styles.applyFiltersText}>
+                Aplicar filtros
+              </ThemedText>
+            </TouchableOpacity>
+          </View>
+        </SafeAreaView>
+      </Modal>
     </>
   );
 }
@@ -2768,6 +2841,70 @@ const styles = StyleSheet.create({
   mobileContent: {
     flex: 1,
     padding: SPACING.md,
+  },
+  // Estilos para barra de acciones móvil
+  mobileActionsBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: SPACING.sm,
+    marginBottom: SPACING.md,
+  },
+  filtersButtonMobile: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: COLORS.surface,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
+    borderRadius: RADIUS.md,
+    gap: SPACING.xs,
+  },
+  clearFiltersButtonMobile: {
+    backgroundColor: COLORS.error,
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: SPACING.sm,
+    borderRadius: RADIUS.md,
+  },
+  mobileHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: SPACING.md,
+    paddingTop: SPACING.lg,
+    backgroundColor: COLORS.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  mobileLogo: {
+    width: 120,
+    height: 40,
+  },
+  addButtonMobile: {
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
+    borderRadius: RADIUS.md,
+  },
+  addButtonText: {
+    color: "#FFFFFF",
+    fontWeight: "600",
+    fontSize: 14,
+  },
+  // Estilos para layout móvil con imagen de fondo
+  mobileContentWithBackground: {
+    backgroundColor: COLORS.cardBackground,
+    borderRadius: RADIUS.lg,
+    padding: SPACING.md,
+    marginBottom: SPACING.lg,
+    ...SHADOWS.sm,
+  },
+  mobileHeaderActions: {
+    alignItems: "flex-end",
+    marginBottom: SPACING.md,
   },
   header: {
     flexDirection: "row",
@@ -2977,6 +3114,90 @@ const styles = StyleSheet.create({
   filtersRow: {
     flexDirection: Platform.OS === "web" ? "row" : "column",
     gap: SPACING.sm, // Reducir de SPACING.md a SPACING.sm
+  },
+  // Nuevos estilos para filtros móviles compactos
+  mobileFiltersBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: SPACING.md,
+    gap: SPACING.md,
+  },
+  filtersButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: SPACING.md,
+    borderRadius: RADIUS.md,
+    flex: 1,
+    justifyContent: "center",
+    gap: SPACING.sm,
+  },
+  filtersButtonText: {
+    color: "#FFFFFF",
+    fontWeight: "600",
+    fontSize: 16,
+  },
+  activeFiltersBadge: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 12,
+    width: 20,
+    height: 20,
+    justifyContent: "center",
+    alignItems: "center",
+    marginLeft: SPACING.xs,
+  },
+  badgeText: {
+    color: COLORS.primary,
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  clearFiltersButton: {
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.md,
+    borderRadius: RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  clearFiltersText: {
+    color: COLORS.textSecondary,
+    fontSize: 14,
+    fontWeight: "500",
+  },
+  activeFiltersChips: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    paddingHorizontal: SPACING.lg,
+    paddingBottom: SPACING.md,
+    gap: SPACING.sm,
+  },
+  filterChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: COLORS.primary + "15",
+    borderRadius: RADIUS.sm,
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: SPACING.xs,
+    gap: SPACING.xs,
+  },
+  chipText: {
+    color: COLORS.primary,
+    fontSize: 12,
+    fontWeight: "500",
+  },
+  chipRemove: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: COLORS.primary + "30",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  chipRemoveText: {
+    color: COLORS.primary,
+    fontSize: 12,
+    fontWeight: "700",
   },
   filterDropdown: {
     minWidth: 120,
@@ -3845,5 +4066,77 @@ const styles = StyleSheet.create({
     fontSize: 11, // Reducido de 13
     fontWeight: "700" as const,
     textAlign: "center" as const,
+  },
+  // Estilos para modal de filtros
+  filtersModalContainer: {
+    flex: 1,
+    backgroundColor: COLORS.background,
+  },
+  filtersModalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: SPACING.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+    backgroundColor: COLORS.surface,
+  },
+  filtersModalTitle: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: COLORS.text,
+  },
+  filtersModalClose: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: COLORS.border,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  filtersModalCloseText: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: COLORS.textSecondary,
+  },
+  filtersModalContent: {
+    flex: 1,
+    padding: SPACING.lg,
+  },
+  filtersSection: {
+    marginBottom: SPACING.lg,
+  },
+  filtersModalActions: {
+    flexDirection: "row",
+    padding: SPACING.lg,
+    gap: SPACING.md,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
+    backgroundColor: COLORS.surface,
+  },
+  clearAllFiltersButton: {
+    flex: 1,
+    paddingVertical: SPACING.md,
+    borderRadius: RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    alignItems: "center",
+  },
+  clearAllFiltersText: {
+    color: COLORS.textSecondary,
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  applyFiltersButton: {
+    flex: 1,
+    backgroundColor: COLORS.primary,
+    paddingVertical: SPACING.md,
+    borderRadius: RADIUS.md,
+    alignItems: "center",
+  },
+  applyFiltersText: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "600",
   },
 });

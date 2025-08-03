@@ -15,6 +15,7 @@ import * as Clipboard from "expo-clipboard";
 
 import { HelloWave } from "@/components/HelloWave";
 import ParallaxScrollView from "@/components/ParallaxScrollView";
+import MobileHeader from "@/components/MobileHeader";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
 import Header from "@/components/layout/Header";
@@ -668,128 +669,124 @@ export default function HomeScreen() {
           </View>
         </SafeAreaView>
       ) : (
-        // Layout móvil con ParallaxScrollView original
-        <ParallaxScrollView
-          headerBackgroundImage={require("@/assets/images/background-hogar.jpeg")}
-          headerImage={
-            <View style={styles.logoContainer}>
-              <View style={styles.logoCircle}>
-                <Image
-                  source={require("@/assets/images/logo-transparent.png")}
-                  style={styles.logoHeader}
-                  contentFit="contain"
-                />
-              </View>
-            </View>
-          }
-        >
-          <FadeInView delay={0}>
-            <ThemedView style={styles.titleContainer}>
-              <ThemedText type="title">Calculadora de Cotizaciones</ThemedText>
-              <HelloWave />
-            </ThemedView>
-          </FadeInView>
+        // Layout móvil con nuevo header reutilizable
+        <View style={styles.mobileLayout}>
+          <MobileHeader
+            title="Calculadora"
+            subtitle="Cotizaciones de productos"
+          />
 
-          <FadeInView delay={200}>
-            <ThemedView style={styles.formContainer}>
-              {/* Categoría */}
-              <LabeledDropdown
-                label="Categoría"
-                required
-                options={categorias.map((cat) => ({
-                  label: cat.nombre,
-                  value: cat._id,
-                }))}
-                selectedValue={cotizacion.categoria}
-                onSelect={handleCategoriaChange}
-                placeholder="Seleccionar categoría..."
-                loading={categoriasLoading}
-                error={categoriasError}
-              />
-
-              {/* Marca */}
-              <EditableDropdown
-                label="Marca"
-                required
-                options={marcas}
-                selectedValue={cotizacion.marca}
-                onSelect={handleMarcaChange}
-                placeholder="Seleccionar o escribir marca..."
-                loading={marcasLoading}
-                error={marcasError}
-                disabled={!cotizacion.categoria}
-              />
-
-              {/* Modelo */}
-              <ModeloDropdown
-                label="Modelo"
-                required
-                productos={productos}
-                selectedValue={cotizacion.modelo}
-                onSelect={handleModeloChange}
-                placeholder="Seleccionar modelo..."
-                loading={productosLoading}
-                error={productosError}
-                disabled={!cotizacion.marca}
-              />
-
-              {/* Detalle */}
-              <ReadOnlyField
-                label="Detalle del Producto"
-                value={cotizacion.detalle}
-                placeholder="Selecciona un modelo para ver los detalles"
-              />
-
-              {/* Valor Real */}
-              <AnimatedInput
-                label="Valor Inicial"
-                required
-                value={cotizacion.valorReal}
-                onChangeText={handleValorRealChange}
-                placeholder="Se autocompletará al seleccionar modelo"
-                keyboardType="numeric"
-              />
-
-              {/* Porcentaje */}
-              <AnimatedInput
-                label="Porcentaje Aplicado (0-100)"
-                required
-                value={cotizacion.porcentajeAplicado}
-                onChangeText={(text) =>
-                  setCotizacion({ ...cotizacion, porcentajeAplicado: text })
-                }
-                placeholder="Ej: 10"
-                keyboardType="numeric"
-              />
-
-              {/* Botones */}
-              <ThemedView style={styles.buttonContainer}>
-                <AnimatedButton
-                  title="Generar Cotización"
-                  icon="✨"
-                  onPress={generarMensajeFinal}
-                  variant="primary"
-                  size="large"
-                  disabled={
-                    !cotizacion.categoria ||
-                    !cotizacion.marca ||
-                    !cotizacion.modelo ||
-                    !cotizacion.valorReal ||
-                    !cotizacion.porcentajeAplicado
-                  }
-                />
-
-                <AnimatedButton
-                  title="Limpiar"
-                  icon="🗑️"
-                  onPress={limpiarFormulario}
-                  variant="secondary"
-                  size="medium"
-                  style={{ marginTop: SPACING.sm }}
-                />
+          <ScrollView style={styles.mobileContent}>
+            <FadeInView delay={0}>
+              <ThemedView style={styles.titleContainer}>
+                <ThemedText type="title">
+                  Calculadora de Cotizaciones
+                </ThemedText>
+                <HelloWave />
               </ThemedView>
-            </ThemedView>
-          </FadeInView>
+            </FadeInView>
+
+            <FadeInView delay={200}>
+              <ThemedView style={styles.formContainer}>
+                {/* Categoría */}
+                <LabeledDropdown
+                  label="Categoría"
+                  required
+                  options={categorias.map((cat) => ({
+                    label: cat.nombre,
+                    value: cat._id,
+                  }))}
+                  selectedValue={cotizacion.categoria}
+                  onSelect={handleCategoriaChange}
+                  placeholder="Seleccionar categoría..."
+                  loading={categoriasLoading}
+                  error={categoriasError}
+                />
+
+                {/* Marca */}
+                <EditableDropdown
+                  label="Marca"
+                  required
+                  options={marcas}
+                  selectedValue={cotizacion.marca}
+                  onSelect={handleMarcaChange}
+                  placeholder="Seleccionar o escribir marca..."
+                  loading={marcasLoading}
+                  error={marcasError}
+                  disabled={!cotizacion.categoria}
+                />
+
+                {/* Modelo */}
+                <ModeloDropdown
+                  label="Modelo"
+                  required
+                  productos={productos}
+                  selectedValue={cotizacion.modelo}
+                  onSelect={handleModeloChange}
+                  placeholder="Seleccionar modelo..."
+                  loading={productosLoading}
+                  error={productosError}
+                  disabled={!cotizacion.marca}
+                />
+
+                {/* Detalle */}
+                <ReadOnlyField
+                  label="Detalle del Producto"
+                  value={cotizacion.detalle}
+                  placeholder="Selecciona un modelo para ver los detalles"
+                />
+
+                {/* Valor Real */}
+                <AnimatedInput
+                  label="Valor Inicial"
+                  required
+                  value={cotizacion.valorReal}
+                  onChangeText={handleValorRealChange}
+                  placeholder="Se autocompletará al seleccionar modelo"
+                  keyboardType="numeric"
+                />
+
+                {/* Porcentaje */}
+                <AnimatedInput
+                  label="Porcentaje Aplicado (0-100)"
+                  required
+                  value={cotizacion.porcentajeAplicado}
+                  onChangeText={(text) =>
+                    setCotizacion({ ...cotizacion, porcentajeAplicado: text })
+                  }
+                  placeholder="Ej: 10"
+                  keyboardType="numeric"
+                />
+
+                {/* Botones */}
+                <ThemedView style={styles.buttonContainer}>
+                  <AnimatedButton
+                    title="Generar Cotización"
+                    icon="✨"
+                    onPress={generarMensajeFinal}
+                    variant="primary"
+                    size="large"
+                    disabled={
+                      !cotizacion.categoria ||
+                      !cotizacion.marca ||
+                      !cotizacion.modelo ||
+                      !cotizacion.valorReal ||
+                      !cotizacion.porcentajeAplicado
+                    }
+                  />
+
+                  <AnimatedButton
+                    title="Limpiar"
+                    icon="🗑️"
+                    onPress={limpiarFormulario}
+                    variant="secondary"
+                    size="medium"
+                    style={{ marginTop: SPACING.sm }}
+                  />
+                </ThemedView>
+              </ThemedView>
+            </FadeInView>
+          </ScrollView>
 
           {/* Modal para móvil */}
           <Modal
@@ -832,13 +829,22 @@ export default function HomeScreen() {
               </ThemedView>
             </ThemedView>
           </Modal>
-        </ParallaxScrollView>
+        </View>
       )}
     </>
   );
 }
 
 const styles = StyleSheet.create({
+  // Estilos para layout móvil
+  mobileLayout: {
+    flex: 1,
+    backgroundColor: COLORS.background,
+  },
+  mobileContent: {
+    flex: 1,
+    padding: SPACING.md,
+  },
   // Estilos para layout web
   webLayoutFullHeight: {
     flex: 1,
