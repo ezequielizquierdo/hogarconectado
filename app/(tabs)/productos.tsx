@@ -285,6 +285,32 @@ export default function ProductosScreen() {
     }
   };
 
+  // Función para formatear precio en formato local (punto para miles, coma para decimales)
+  const formatPrecioLocal = (precio: number): string => {
+    return precio.toLocaleString("es-AR", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+  };
+
+  // Función para acortar nombres de categorías largas
+  const getShortCategoryName = (categoryName: string): string => {
+    // Casos específicos primero
+    if (
+      categoryName.toLowerCase().includes("electrodomésticos de cocina") ||
+      categoryName.toLowerCase().includes("electrodomesticos de cocina")
+    ) {
+      return "Electrodomésticos";
+    }
+
+    // Si la categoría es muy larga, tomar solo las primeras dos palabras
+    const words = categoryName.split(" ");
+    if (words.length > 2) {
+      return words.slice(0, 2).join(" ");
+    }
+    return categoryName;
+  };
+
   const openInstagramModal = (producto: Producto) => {
     setSelectedProductForInstagram(producto);
     setInstagramModalVisible(true);
@@ -2131,7 +2157,7 @@ export default function ProductosScreen() {
                     <Image
                       source={require("@/assets/images/back-history.jpeg")}
                       style={styles.storyBackground}
-                      resizeMode="cover"
+                      contentFit="cover"
                     />
 
                     {/* Contenido superpuesto */}
@@ -2145,21 +2171,26 @@ export default function ProductosScreen() {
                                 uri: selectedProductForInstagram.imagenes[0],
                               }}
                               style={styles.storyProductImage}
-                              resizeMode="contain"
+                              contentFit="contain"
                             />
                           </View>
                         )}
 
-                      {/* Box de categoría entre imagen y detalles */}
+                      {/* Contenedor de categoría debajo de la imagen */}
                       {instagramStoryOptions.showCategoria &&
                         selectedProductForInstagram?.categoria && (
-                          <View style={styles.storyCategoryBox}>
-                            <ThemedText style={styles.storyCategoryText}>
-                              {typeof selectedProductForInstagram.categoria ===
-                              "string"
-                                ? selectedProductForInstagram.categoria
-                                : selectedProductForInstagram.categoria.nombre}
-                            </ThemedText>
+                          <View style={styles.storyCategoryContainerBelow}>
+                            <View style={styles.storyCategoryBadgeSmall}>
+                              <ThemedText style={styles.storyCategoryTextSmall}>
+                                {getShortCategoryName(
+                                  typeof selectedProductForInstagram.categoria ===
+                                    "string"
+                                    ? selectedProductForInstagram.categoria
+                                    : selectedProductForInstagram.categoria
+                                        .nombre
+                                )}
+                              </ThemedText>
+                            </View>
                           </View>
                         )}
 
@@ -2183,9 +2214,9 @@ export default function ProductosScreen() {
                           selectedProductForInstagram?.precioBase && (
                             <ThemedText style={styles.storyPrice}>
                               $
-                              {Number(
-                                selectedProductForInstagram.precioBase
-                              ).toFixed(2)}
+                              {formatPrecioLocal(
+                                Number(selectedProductForInstagram.precioBase)
+                              )}
                             </ThemedText>
                           )}
 
@@ -2207,18 +2238,18 @@ export default function ProductosScreen() {
                             </ThemedText>
                           )}
                       </View>
+
+                      {/* Mensaje de consulta precio - Dentro de la imagen de fondo */}
+                      {instagramStoryOptions.showConsultaPrecio && (
+                        <View style={styles.storyConsultaBoxInside}>
+                          <ThemedText style={styles.storyConsultaText}>
+                            💬 Consultá por el mejor precio!
+                          </ThemedText>
+                        </View>
+                      )}
                     </View>
                   </View>
                 </View>
-
-                {/* Mensaje de consulta precio - Fuera del contenedor de detalles */}
-                {instagramStoryOptions.showConsultaPrecio && (
-                  <View style={styles.storyConsultaBox}>
-                    <ThemedText style={styles.storyConsultaText}>
-                      💬 Consultá por el mejor precio!
-                    </ThemedText>
-                  </View>
-                )}
 
                 {/* Opciones de personalización */}
                 <View style={styles.instagramOptions}>
@@ -2406,11 +2437,14 @@ export default function ProductosScreen() {
               </ScrollView>
 
               <View style={styles.webModalActions}>
-                <AnimatedButton
-                  title="📱 Compartir en Instagram"
-                  onPress={shareToInstagram}
+                <TouchableOpacity
                   style={styles.instagramShareButton}
-                />
+                  onPress={shareToInstagram}
+                >
+                  <ThemedText style={styles.instagramButtonText}>
+                    📱 Compartir en Instagram
+                  </ThemedText>
+                </TouchableOpacity>
               </View>
             </View>
           </View>
@@ -2440,7 +2474,7 @@ export default function ProductosScreen() {
                   <Image
                     source={require("@/assets/images/back-history.jpeg")}
                     style={styles.storyBackground}
-                    resizeMode="cover"
+                    contentFit="cover"
                   />
 
                   {/* Contenido superpuesto */}
@@ -2455,23 +2489,27 @@ export default function ProductosScreen() {
                             }}
                             style={[
                               styles.storyProductImage,
-                              { width: 150, height: 150 },
+                              { width: 180, height: 180 }, // Aumentado de 150 a 180
                             ]}
-                            resizeMode="contain"
+                            contentFit="contain"
                           />
                         </View>
                       )}
 
-                    {/* Box de categoría entre imagen y detalles */}
+                    {/* Contenedor de categoría debajo de la imagen */}
                     {instagramStoryOptions.showCategoria &&
                       selectedProductForInstagram?.categoria && (
-                        <View style={styles.storyCategoryBox}>
-                          <ThemedText style={styles.storyCategoryText}>
-                            {typeof selectedProductForInstagram.categoria ===
-                            "string"
-                              ? selectedProductForInstagram.categoria
-                              : selectedProductForInstagram.categoria.nombre}
-                          </ThemedText>
+                        <View style={styles.storyCategoryContainerBelow}>
+                          <View style={styles.storyCategoryBadgeSmall}>
+                            <ThemedText style={styles.storyCategoryTextSmall}>
+                              {getShortCategoryName(
+                                typeof selectedProductForInstagram.categoria ===
+                                  "string"
+                                  ? selectedProductForInstagram.categoria
+                                  : selectedProductForInstagram.categoria.nombre
+                              )}
+                            </ThemedText>
+                          </View>
                         </View>
                       )}
 
@@ -2495,9 +2533,9 @@ export default function ProductosScreen() {
                         selectedProductForInstagram?.precioBase && (
                           <ThemedText style={styles.storyPrice}>
                             $
-                            {Number(
-                              selectedProductForInstagram.precioBase
-                            ).toFixed(2)}
+                            {formatPrecioLocal(
+                              Number(selectedProductForInstagram.precioBase)
+                            )}
                           </ThemedText>
                         )}
 
@@ -2519,18 +2557,17 @@ export default function ProductosScreen() {
                           </ThemedText>
                         )}
                     </View>
+
+                    {/* Mensaje de consulta precio - Dentro de la imagen de fondo */}
+                    {instagramStoryOptions.showConsultaPrecio && (
+                      <View style={styles.storyConsultaBoxInside}>
+                        <ThemedText style={styles.storyConsultaText}>
+                          💬 Consultá por el mejor precio!
+                        </ThemedText>
+                      </View>
+                    )}
                   </View>
                 </View>
-
-                {/* Mensaje de consulta precio - Fuera del contenedor de detalles */}
-                {instagramStoryOptions.showConsultaPrecio && (
-                  <View style={styles.storyConsultaBox}>
-                    <ThemedText style={styles.storyConsultaText}>
-                      💬 Consultá por el mejor precio!
-                    </ThemedText>
-                  </View>
-                )}
-
                 {/* Opciones de personalización para móvil */}
                 <View style={styles.instagramOptions}>
                   <ThemedText style={styles.optionsTitle}>
@@ -2725,11 +2762,14 @@ export default function ProductosScreen() {
             </ScrollView>
 
             <View style={styles.modalActions}>
-              <AnimatedButton
-                title="📱 Compartir en Instagram"
-                onPress={shareToInstagram}
+              <TouchableOpacity
                 style={styles.instagramShareButton}
-              />
+                onPress={shareToInstagram}
+              >
+                <ThemedText style={styles.instagramButtonText}>
+                  📱 Compartir en Instagram
+                </ThemedText>
+              </TouchableOpacity>
             </View>
           </SafeAreaView>
         )}
@@ -3411,7 +3451,6 @@ const styles = StyleSheet.create({
     width: 120,
     height: 120,
     borderRadius: RADIUS.md,
-    resizeMode: "cover",
   },
   removeImageButton: {
     position: "absolute",
@@ -3490,7 +3529,6 @@ const styles = StyleSheet.create({
     width: "100%",
     height: "100%",
     borderRadius: RADIUS.md,
-    resizeMode: "cover", // Cubre todo el contenedor manteniendo proporción
   },
   productImagePlaceholder: {
     width: "100%",
@@ -3602,7 +3640,6 @@ const styles = StyleSheet.create({
   detailImage: {
     maxWidth: "100%",
     maxHeight: "100%",
-    resizeMode: "contain", // Mantiene la proporción original de la imagen
     borderRadius: RADIUS.md,
     flex: 1,
   },
@@ -3935,20 +3972,63 @@ const styles = StyleSheet.create({
   },
   storyContent: {
     flex: 1,
-    padding: SPACING.lg,
+    padding: SPACING.md, // Reducido de SPACING.lg para menos padding
     justifyContent: "space-between" as const,
     position: "relative" as const,
   },
   storyProductImageContainer: {
     alignItems: "center" as const,
-    marginTop: SPACING.xl,
+    marginTop: SPACING.md, // Reducido de SPACING.xl
   },
   storyProductImage: {
-    width: 200,
-    height: 200,
+    width: 250, // Aumentado de 200 a 250
+    height: 250, // Aumentado de 200 a 250
     borderRadius: RADIUS.lg,
     backgroundColor: "rgba(255, 255, 255, 0.9)" as any,
-    padding: SPACING.md,
+    padding: SPACING.sm, // Reducido de SPACING.md para menos padding interno
+  },
+  // Estilos para contenedor mejorado de categoría
+  storyCategoryContainer: {
+    alignItems: "center" as const,
+    marginBottom: SPACING.sm,
+  },
+  storyCategoryBadge: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    backgroundColor: "rgba(255, 255, 255, 0.95)" as any,
+    borderWidth: 2,
+    borderColor: "rgba(100, 149, 237, 1)" as any,
+    borderRadius: RADIUS.lg,
+    paddingVertical: SPACING.xs,
+    paddingHorizontal: SPACING.md,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+    gap: SPACING.xs,
+  },
+  storyCategoryIcon: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: "rgba(100, 149, 237, 0.2)" as any,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+  },
+  storyCategoryIconText: {
+    fontSize: 12,
+  },
+  // Estilo para categoría arriba de la imagen (legacy)
+  storyCategoryBoxTop: {
+    backgroundColor: "rgba(100, 149, 237, 0.9)" as any,
+    paddingVertical: SPACING.xs,
+    paddingHorizontal: SPACING.md,
+    borderRadius: RADIUS.md,
+    marginBottom: SPACING.sm,
+    alignItems: "center" as const,
+    alignSelf: "center" as const,
+    minWidth: 100,
   },
   storyCategoryBox: {
     backgroundColor: "rgba(100, 149, 237, 0.9)" as any, // Azul cornflower semi-transparente
@@ -3962,12 +4042,12 @@ const styles = StyleSheet.create({
     minWidth: 100, // Reducido de 120
   },
   storyCategoryText: {
-    color: "#FFFFFF" as const,
-    fontSize: 10, // Reducido de 12
-    fontWeight: "600" as const,
+    color: "rgba(100, 149, 237, 1)" as any, // Azul que coincide con el borde
+    fontSize: 12, // Aumentado para mejor legibilidad
+    fontWeight: "700" as const, // Más bold
     textAlign: "center" as const,
     textTransform: "uppercase" as any,
-    letterSpacing: 0.5,
+    letterSpacing: 0.8,
   },
   storyProductInfo: {
     backgroundColor: "rgba(0, 0, 0, 0.7)" as any,
@@ -4050,6 +4130,15 @@ const styles = StyleSheet.create({
     backgroundColor: "#E4405F" as const, // Color oficial de Instagram
     borderRadius: RADIUS.lg,
     paddingVertical: SPACING.lg,
+    paddingHorizontal: SPACING.lg,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+  },
+  instagramButtonText: {
+    color: "#FFFFFF" as const,
+    fontSize: 16,
+    fontWeight: "600" as const,
+    textAlign: "center" as const,
   },
   storyConsultaBox: {
     backgroundColor: "rgba(173, 216, 230, 0.9)" as any, // Azul pastel (light blue)
@@ -4060,6 +4149,16 @@ const styles = StyleSheet.create({
     alignItems: "center" as const,
     alignSelf: "center" as const,
     minWidth: 180, // Reducido
+  },
+  storyConsultaBoxInside: {
+    backgroundColor: "rgba(173, 216, 230, 0.9)" as any, // Azul pastel (light blue)
+    paddingVertical: SPACING.xs,
+    paddingHorizontal: SPACING.sm,
+    borderRadius: RADIUS.md,
+    marginTop: SPACING.sm, // Menos margen cuando está dentro
+    alignItems: "center" as const,
+    alignSelf: "center" as const,
+    minWidth: 180,
   },
   storyConsultaText: {
     color: "#2F4F4F" as const, // Gris oscuro para contraste con el pastel
@@ -4138,5 +4237,45 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontSize: 16,
     fontWeight: "600",
+  },
+  // Estilos para contenedor de categoría pequeño debajo de la imagen
+  storyCategoryContainerBelow: {
+    alignItems: "center" as const,
+    marginTop: SPACING.xs,
+  },
+  storyCategoryBadgeSmall: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    backgroundColor: "rgba(255, 255, 255, 0.95)" as any,
+    borderWidth: 1.5,
+    borderColor: "rgba(100, 149, 237, 1)" as any,
+    borderRadius: RADIUS.md,
+    paddingVertical: SPACING.xs / 2,
+    paddingHorizontal: SPACING.sm,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.15,
+    shadowRadius: 2,
+    elevation: 3,
+    gap: SPACING.xs / 2,
+  },
+  storyCategoryIconSmall: {
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: "rgba(100, 149, 237, 0.2)" as any,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+  },
+  storyCategoryIconTextSmall: {
+    fontSize: 9,
+  },
+  storyCategoryTextSmall: {
+    color: "rgba(100, 149, 237, 1)" as any,
+    fontSize: 10,
+    fontWeight: "600" as const,
+    textAlign: "center" as const,
+    textTransform: "uppercase" as any,
+    letterSpacing: 0.5,
   },
 });

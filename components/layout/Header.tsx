@@ -1,5 +1,5 @@
 import React from "react";
-import { View, StyleSheet, Text } from "react-native";
+import { View, StyleSheet, Text, Platform } from "react-native";
 import { Image } from "expo-image";
 import { ThemedText } from "@/components/ThemedText";
 import { COLORS, SPACING, RADIUS } from "@/constants/theme";
@@ -85,13 +85,19 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255, 255, 255, 0.9)",
     justifyContent: "center",
     alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
+    ...(Platform.OS === "web"
+      ? {
+          boxShadow: "0px 2px 3.84px rgba(0, 0, 0, 0.25)",
+        }
+      : {
+          shadowColor: "#000",
+          shadowOffset: {
+            width: 0,
+            height: 2,
+          },
+          shadowOpacity: 0.25,
+          shadowRadius: 3.84,
+        }),
     elevation: 5,
   },
   logoImage: {
@@ -102,9 +108,15 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontSize: 20,
     fontWeight: "600",
-    textShadowColor: "rgba(0, 0, 0, 0.75)",
-    textShadowOffset: { width: -1, height: 1 },
-    textShadowRadius: 10,
+    ...(Platform.OS === "web"
+      ? {
+          textShadow: "-1px 1px 10px rgba(0, 0, 0, 0.75)",
+        }
+      : {
+          textShadowColor: "rgba(0, 0, 0, 0.75)",
+          textShadowOffset: { width: -1, height: 1 },
+          textShadowRadius: 10,
+        }),
   },
   sectionContainer: {
     alignItems: "flex-end",
@@ -113,16 +125,28 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: "bold",
     color: "#FFFFFF",
-    textShadowColor: "rgba(0, 0, 0, 0.75)",
-    textShadowOffset: { width: -1, height: 1 },
-    textShadowRadius: 10,
+    ...(Platform.OS === "web"
+      ? {
+          textShadow: "-1px 1px 10px rgba(0, 0, 0, 0.75)",
+        }
+      : {
+          textShadowColor: "rgba(0, 0, 0, 0.75)",
+          textShadowOffset: { width: -1, height: 1 },
+          textShadowRadius: 10,
+        }),
   },
   sectionSubtitle: {
     fontSize: 14,
     color: "#E0E0E0",
     marginTop: 4,
-    textShadowColor: "rgba(0, 0, 0, 0.75)",
-    textShadowOffset: { width: -1, height: 1 },
-    textShadowRadius: 10,
+    ...(Platform.OS === "web"
+      ? {
+          textShadow: "-1px 1px 10px rgba(0, 0, 0, 0.75)",
+        }
+      : {
+          textShadowColor: "rgba(0, 0, 0, 0.75)",
+          textShadowOffset: { width: -1, height: 1 },
+          textShadowRadius: 10,
+        }),
   },
 });
