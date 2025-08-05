@@ -17,6 +17,7 @@ import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
 import { HelloWave } from "@/components/HelloWave";
 import Header from "@/components/layout/Header";
+import MobileHeader from "@/components/MobileHeader";
 import AnimatedButton from "@/components/ui/AnimatedButton";
 import FadeInView from "@/components/ui/FadeInView";
 import { COLORS, RADIUS, SHADOWS, SPACING } from "@/constants/theme";
@@ -226,82 +227,82 @@ export default function ContactoScreen() {
           </View>
         </SafeAreaView>
       ) : (
-        // Layout móvil original
-        <ParallaxScrollView
-          headerBackgroundImage={require("@/assets/images/background-hogar.jpeg")}
-          headerImage={
-            <View style={styles.logoContainer}>
-              <View style={styles.logoCircle}>
-                <Image
-                  source={require("@/assets/images/logo-transparent.png")}
-                  style={styles.logoHeader}
-                  contentFit="contain"
-                />
-              </View>
-            </View>
-          }
-        >
-          <FadeInView delay={0}>
-            <ThemedView style={styles.titleContainer}>
-              <ThemedText type="title">📞 Contacto</ThemedText>
-              <HelloWave />
-            </ThemedView>
-          </FadeInView>
+        // Layout móvil con MobileHeader como en productos
+        <View style={styles.mobileLayout}>
+          {/* Header móvil reutilizable */}
+          <MobileHeader
+            title="Contacto"
+            subtitle="Información de contacto y medios de pago"
+          />
 
-          <FadeInView delay={200}>
-            <ThemedView style={styles.contentContainer}>
-              {contactData.map((contact, index) => (
-                <FadeInView key={index} delay={400 + index * 100}>
-                  <ThemedView style={styles.contactCard}>
-                    <ThemedText style={styles.contactTitle}>
-                      {contact.icon} {contact.title}
-                    </ThemedText>
-                    <ThemedText style={styles.contactInfo}>
-                      {contact.info}
-                    </ThemedText>
-                    {contact.action && (
-                      <TouchableOpacity
-                        style={styles.contactAction}
-                        onPress={() =>
-                          handleContactAction(contact.actionType, contact.info)
-                        }
-                      >
-                        <ThemedText style={styles.contactActionText}>
-                          {contact.action}
-                        </ThemedText>
-                      </TouchableOpacity>
-                    )}
-                  </ThemedView>
-                </FadeInView>
-              ))}
-
-              {/* Información bancaria en móvil */}
-              <FadeInView delay={800}>
-                <ThemedView style={styles.bankingCard}>
-                  <ThemedText style={styles.contactTitle}>
-                    {bankingData.icon} {bankingData.title}
-                  </ThemedText>
-                  <ThemedText style={styles.contactInfo}>
-                    {bankingData.info}
-                  </ThemedText>
-                  <TouchableOpacity
-                    style={styles.bankingAction}
-                    onPress={() =>
-                      handleContactAction(
-                        bankingData.actionType,
-                        bankingData.info
-                      )
-                    }
-                  >
-                    <ThemedText style={styles.bankingActionText}>
-                      📋 {bankingData.action}
-                    </ThemedText>
-                  </TouchableOpacity>
+          <ScrollView style={styles.mobileContent}>
+            <View style={styles.mobileContentWithBackground}>
+              <FadeInView delay={0}>
+                <ThemedView style={styles.titleContainer}>
+                  <ThemedText type="title">📞 Contacto</ThemedText>
+                  <HelloWave />
                 </ThemedView>
               </FadeInView>
-            </ThemedView>
-          </FadeInView>
-        </ParallaxScrollView>
+
+              <FadeInView delay={200}>
+                <ThemedView style={styles.contentContainer}>
+                  {contactData.map((contact, index) => (
+                    <FadeInView key={index} delay={400 + index * 100}>
+                      <ThemedView style={styles.contactCard}>
+                        <ThemedText style={styles.contactTitle}>
+                          {contact.icon} {contact.title}
+                        </ThemedText>
+                        <ThemedText style={styles.contactInfo}>
+                          {contact.info}
+                        </ThemedText>
+                        {contact.action && (
+                          <TouchableOpacity
+                            style={styles.contactAction}
+                            onPress={() =>
+                              handleContactAction(
+                                contact.actionType,
+                                contact.info
+                              )
+                            }
+                          >
+                            <ThemedText style={styles.contactActionText}>
+                              {contact.action}
+                            </ThemedText>
+                          </TouchableOpacity>
+                        )}
+                      </ThemedView>
+                    </FadeInView>
+                  ))}
+
+                  {/* Información bancaria en móvil */}
+                  <FadeInView delay={800}>
+                    <ThemedView style={styles.bankingCard}>
+                      <ThemedText style={styles.contactTitle}>
+                        {bankingData.icon} {bankingData.title}
+                      </ThemedText>
+                      <ThemedText style={styles.contactInfo}>
+                        {bankingData.info}
+                      </ThemedText>
+                      <TouchableOpacity
+                        style={styles.bankingAction}
+                        onPress={() =>
+                          handleContactAction(
+                            bankingData.actionType,
+                            bankingData.info
+                          )
+                        }
+                      >
+                        <ThemedText style={styles.bankingActionText}>
+                          📋 {bankingData.action}
+                        </ThemedText>
+                      </TouchableOpacity>
+                    </ThemedView>
+                  </FadeInView>
+                </ThemedView>
+              </FadeInView>
+            </View>
+          </ScrollView>
+        </View>
       )}
     </>
   );
@@ -598,5 +599,20 @@ const styles = StyleSheet.create({
   logoHeader: {
     width: 60,
     height: 38,
+  },
+  // Estilos para layout móvil
+  mobileLayout: {
+    flex: 1,
+    backgroundColor: COLORS.background,
+  },
+  mobileContent: {
+    flex: 1,
+    padding: SPACING.md,
+  },
+  mobileContentWithBackground: {
+    backgroundColor: COLORS.cardBackground,
+    borderRadius: RADIUS.lg,
+    padding: SPACING.md,
+    marginBottom: SPACING.lg,
   },
 });

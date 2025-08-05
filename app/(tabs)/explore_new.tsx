@@ -17,6 +17,7 @@ import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
 import { HelloWave } from "@/components/HelloWave";
 import Header from "@/components/layout/Header";
+import MobileHeader from "@/components/MobileHeader";
 import LabeledDropdown from "@/components/forms/LabeledDropdown";
 import EditableDropdown from "@/components/forms/EditableDropdown";
 import ModeloDropdown from "@/components/forms/ModeloDropdown";
@@ -372,123 +373,122 @@ export default function ConsultaStockScreen() {
           </View>
         </SafeAreaView>
       ) : (
-        // Layout móvil con ParallaxScrollView original
-        <ParallaxScrollView
-          headerBackgroundImage={require("@/assets/images/background-hogar.jpeg")}
-          headerImage={
-            <View style={styles.logoContainer}>
-              <View style={styles.logoCircle}>
-                <Image
-                  source={require("@/assets/images/logo-transparent.png")}
-                  style={styles.logoHeader}
-                  contentFit="contain"
-                />
-              </View>
+        // Layout móvil con MobileHeader como en productos
+        <View style={styles.mobileLayout}>
+          {/* Header móvil reutilizable */}
+          <MobileHeader
+            title="Consulta Stock"
+            subtitle="Verificar disponibilidad de productos"
+          />
+
+          <ScrollView style={styles.mobileContent}>
+            <View style={styles.mobileContentWithBackground}>
+              <FadeInView delay={0}>
+                <ThemedView style={styles.titleContainer}>
+                  <ThemedText type="title">📦 Consulta de Stock</ThemedText>
+                  <HelloWave />
+                </ThemedView>
+              </FadeInView>
+
+              <FadeInView delay={200}>
+                <ThemedView style={styles.formContainer}>
+                  <LabeledDropdown
+                    label="Categoría"
+                    required
+                    options={categorias.map((cat) => ({
+                      label: cat.nombre,
+                      value: cat._id,
+                    }))}
+                    selectedValue={categoria}
+                    onSelect={handleCategoriaChange}
+                    placeholder="Seleccionar categoría..."
+                    loading={categoriasLoading}
+                    error={categoriasError}
+                  />
+
+                  <EditableDropdown
+                    label="Marca"
+                    required
+                    options={marcas}
+                    selectedValue={marca}
+                    onSelect={handleMarcaChange}
+                    placeholder="Seleccionar o escribir marca..."
+                    loading={marcasLoading}
+                    error={marcasError}
+                    disabled={!categoria}
+                  />
+
+                  <ModeloDropdown
+                    label="Modelo"
+                    required
+                    productos={productos}
+                    selectedValue={modelo}
+                    onSelect={handleModeloChange}
+                    placeholder="Seleccionar modelo..."
+                    loading={productosLoading}
+                    error={productosError}
+                    disabled={!marca}
+                  />
+                </ThemedView>
+              </FadeInView>
+
+              <FadeInView delay={400}>
+                <ThemedView style={styles.buttonContainer}>
+                  <AnimatedButton
+                    title="✨ Generar Mensaje"
+                    onPress={generarConsulta}
+                    variant="primary"
+                    size="large"
+                    disabled={!categoria || !marca || !modelo}
+                  />
+                </ThemedView>
+              </FadeInView>
+
+              {/* Modal para móvil */}
+              <Modal
+                animationType="slide"
+                transparent={true}
+                visible={modalVisible}
+                onRequestClose={cerrarModal}
+              >
+                <ThemedView style={styles.modalOverlay}>
+                  <ThemedView style={styles.modalContainer}>
+                    <ScrollView showsVerticalScrollIndicator={false}>
+                      <ThemedView style={styles.modalHeader}>
+                        <ThemedText type="subtitle" style={styles.modalTitle}>
+                          📦 Consulta Generada
+                        </ThemedText>
+                        <TouchableOpacity
+                          style={styles.closeButton}
+                          onPress={cerrarModal}
+                        >
+                          <ThemedText style={styles.closeButtonText}>
+                            ✕
+                          </ThemedText>
+                        </TouchableOpacity>
+                      </ThemedView>
+
+                      <ThemedView style={styles.modalMessageContainer}>
+                        <ThemedText style={styles.modalMessageText}>
+                          {mensajeGenerado}
+                        </ThemedText>
+                      </ThemedView>
+
+                      <ThemedView style={styles.modalButtonContainer}>
+                        <AnimatedButton
+                          title="📋 Copiar Consulta"
+                          onPress={copiarConsulta}
+                          variant="accent"
+                          size="large"
+                        />
+                      </ThemedView>
+                    </ScrollView>
+                  </ThemedView>
+                </ThemedView>
+              </Modal>
             </View>
-          }
-        >
-          <FadeInView delay={0}>
-            <ThemedView style={styles.titleContainer}>
-              <ThemedText type="title">📦 Consulta de Stock</ThemedText>
-              <HelloWave />
-            </ThemedView>
-          </FadeInView>
-
-          <FadeInView delay={200}>
-            <ThemedView style={styles.formContainer}>
-              <LabeledDropdown
-                label="Categoría"
-                required
-                options={categorias.map((cat) => ({
-                  label: cat.nombre,
-                  value: cat._id,
-                }))}
-                selectedValue={categoria}
-                onSelect={handleCategoriaChange}
-                placeholder="Seleccionar categoría..."
-                loading={categoriasLoading}
-                error={categoriasError}
-              />
-
-              <EditableDropdown
-                label="Marca"
-                required
-                options={marcas}
-                selectedValue={marca}
-                onSelect={handleMarcaChange}
-                placeholder="Seleccionar o escribir marca..."
-                loading={marcasLoading}
-                error={marcasError}
-                disabled={!categoria}
-              />
-
-              <ModeloDropdown
-                label="Modelo"
-                required
-                productos={productos}
-                selectedValue={modelo}
-                onSelect={handleModeloChange}
-                placeholder="Seleccionar modelo..."
-                loading={productosLoading}
-                error={productosError}
-                disabled={!marca}
-              />
-            </ThemedView>
-          </FadeInView>
-
-          <FadeInView delay={400}>
-            <ThemedView style={styles.buttonContainer}>
-              <AnimatedButton
-                title="✨ Generar Mensaje"
-                onPress={generarConsulta}
-                variant="primary"
-                size="large"
-                disabled={!categoria || !marca || !modelo}
-              />
-            </ThemedView>
-          </FadeInView>
-
-          {/* Modal para móvil */}
-          <Modal
-            animationType="slide"
-            transparent={true}
-            visible={modalVisible}
-            onRequestClose={cerrarModal}
-          >
-            <ThemedView style={styles.modalOverlay}>
-              <ThemedView style={styles.modalContainer}>
-                <ScrollView showsVerticalScrollIndicator={false}>
-                  <ThemedView style={styles.modalHeader}>
-                    <ThemedText type="subtitle" style={styles.modalTitle}>
-                      📦 Consulta Generada
-                    </ThemedText>
-                    <TouchableOpacity
-                      style={styles.closeButton}
-                      onPress={cerrarModal}
-                    >
-                      <ThemedText style={styles.closeButtonText}>✕</ThemedText>
-                    </TouchableOpacity>
-                  </ThemedView>
-
-                  <ThemedView style={styles.modalMessageContainer}>
-                    <ThemedText style={styles.modalMessageText}>
-                      {mensajeGenerado}
-                    </ThemedText>
-                  </ThemedView>
-
-                  <ThemedView style={styles.modalButtonContainer}>
-                    <AnimatedButton
-                      title="📋 Copiar Consulta"
-                      onPress={copiarConsulta}
-                      variant="accent"
-                      size="large"
-                    />
-                  </ThemedView>
-                </ScrollView>
-              </ThemedView>
-            </ThemedView>
-          </Modal>
-        </ParallaxScrollView>
+          </ScrollView>
+        </View>
       )}
     </>
   );
@@ -741,5 +741,20 @@ const styles = StyleSheet.create({
   modalButtonContainer: {
     padding: SPACING.lg,
     paddingTop: 0,
+  },
+  // Estilos para layout móvil
+  mobileLayout: {
+    flex: 1,
+    backgroundColor: COLORS.background,
+  },
+  mobileContent: {
+    flex: 1,
+    padding: SPACING.md,
+  },
+  mobileContentWithBackground: {
+    backgroundColor: COLORS.cardBackground,
+    borderRadius: RADIUS.lg,
+    padding: SPACING.md,
+    marginBottom: SPACING.lg,
   },
 });
