@@ -14,7 +14,7 @@ export default function MobileHeader({ title, subtitle }: MobileHeaderProps) {
     <View style={styles.headerContainer}>
       {/* Imagen de fondo */}
       <Image
-        source={require("@/assets/images/background-hogar.jpeg")}
+        source={require("../assets/images/background-hogar.jpeg")}
         style={styles.backgroundImage}
         contentFit="cover"
       />
@@ -25,7 +25,7 @@ export default function MobileHeader({ title, subtitle }: MobileHeaderProps) {
         <View style={styles.logoContainer}>
           <View style={styles.logoCircle}>
             <Image
-              source={require("@/assets/images/logo-transparent.png")}
+              source={require("../assets/images/logo-transparent-circle.png")}
               style={styles.logo}
               contentFit="contain"
             />
@@ -88,22 +88,35 @@ const styles = StyleSheet.create({
   sectionInfo: {
     flex: 1,
     justifyContent: "center",
+    alignItems: "flex-end",
   },
   sectionTitle: {
     fontSize: 24,
     fontWeight: "bold",
     color: "#FFFFFF",
-    textShadowColor: "rgba(0, 0, 0, 0.5)",
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 3,
+    ...(Platform.OS === "web"
+      ? {
+          textShadow: "1px 1px 3px rgba(0, 0, 0, 0.5)",
+        }
+      : {
+          textShadowColor: "rgba(0, 0, 0, 0.5)",
+          textShadowOffset: { width: 1, height: 1 },
+          textShadowRadius: 3,
+        }),
     marginBottom: 2,
   },
   sectionSubtitle: {
     fontSize: 16,
     color: "#FFFFFF",
-    textShadowColor: "rgba(0, 0, 0, 0.5)",
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 2,
+    ...(Platform.OS === "web"
+      ? {
+          textShadow: "1px 1px 2px rgba(0, 0, 0, 0.5)",
+        }
+      : {
+          textShadowColor: "rgba(0, 0, 0, 0.5)",
+          textShadowOffset: { width: 1, height: 1 },
+          textShadowRadius: 2,
+        }),
     opacity: 0.9,
   },
 });

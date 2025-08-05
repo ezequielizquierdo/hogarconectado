@@ -33,6 +33,7 @@ import AnimatedButton from "@/components/ui/AnimatedButton";
 import FadeInView from "@/components/ui/FadeInView";
 import ProductCard from "@/components/product/ProductCard";
 import { SidebarFilters } from "@/components/filters";
+import Pagination from "@/components/Pagination";
 import { useCategorias } from "@/hooks/useCategorias";
 import { useProductos } from "@/hooks/useProductos";
 import { useMarcas } from "@/hooks/useMarcas";
@@ -86,7 +87,18 @@ const initialForm: ProductoForm = {
 
 export default function ProductosScreen() {
   const { categorias, loading: categoriasLoading } = useCategorias();
-  const { productos, loading: productosLoading, recargar } = useProductos();
+  const {
+    productos,
+    loading: productosLoading,
+    pagination,
+    filtros,
+    buscar,
+    filtrarPorCategoria,
+    cambiarPagina,
+    recargar,
+    limpiarFiltros,
+    setFiltros,
+  } = useProductos({ limite: 20 }); // 20 productos por página
   const {
     marcas,
     loading: marcasLoading,
@@ -121,15 +133,30 @@ export default function ProductosScreen() {
   const instagramViewRef = useRef<View>(null);
   const instagramViewRefMobile = useRef<View>(null);
 
-  // Estados para búsqueda y filtros
-  const [searchText, setSearchText] = useState("");
-  const [filtroCategoria, setFiltroCategoria] = useState("");
-  const [filtroMarca, setFiltroMarca] = useState("");
-  const [filtroStock, setFiltroStock] = useState(""); // "disponible", "agotado", ""
+  // Estados para búsqueda y filtros locales (mantenemos para sincronizar con UI)
+  const [searchText, setSearchText] = useState(filtros.buscar || "");
+  const [filtroCategoria, setFiltroCategoria] = useState(
+    filtros.categoria || ""
+  );
+  const [filtroMarca, setFiltroMarca] = useState(filtros.marca || "");
+  const [filtroStock, setFiltroStock] = useState(
+    filtros.disponible === true
+      ? "disponible"
+      : filtros.disponible === false
+      ? "agotado"
+      : ""
+  ); // "disponible", "agotado", ""
   const [vistaDetallada, setVistaDetallada] = useState(false);
 
   // Debounce search text para evitar búsquedas excesivas
-  const debouncedSearchText = useDebounce(searchText, 300);
+  const debouncedSearchText = useDebounce(searchText, 500);
+
+  // Efecto para sincronizar búsqueda con backend
+  useEffect(() => {
+    if (debouncedSearchText !== (filtros.buscar || "")) {
+      buscar(debouncedSearchText);
+    }
+  }, [debouncedSearchText]);
 
   // Rate limiting: agregar delay entre operaciones
   const delay = (ms: number) =>
@@ -149,71 +176,51 @@ export default function ProductosScreen() {
     }
   };
 
-  // Función para filtrar productos
-  const productosFiltrados = productos.filter((producto) => {
-    // Filtro por texto de búsqueda (usando debounced text)
-    const categoriaNombre =
-      typeof producto.categoria === "string"
-        ? producto.categoria
-        : producto.categoria.nombre;
+  // Los productos ya vienen filtrados del backend, no necesitamos filtrar localmente
+  const productosFiltrados = productos;
 
-    const matchesSearch =
-      debouncedSearchText === "" ||
-      producto.marca
-        .toLowerCase()
-        .includes(debouncedSearchText.toLowerCase()) ||
-      producto.modelo
-        .toLowerCase()
-        .includes(debouncedSearchText.toLowerCase()) ||
-      (producto.descripcion &&
-        producto.descripcion
-          .toLowerCase()
-          .includes(debouncedSearchText.toLowerCase())) ||
-      (categoriaNombre &&
-        categoriaNombre
-          .toLowerCase()
-          .includes(debouncedSearchText.toLowerCase()));
-
-    // Si hay texto de búsqueda, solo aplicar filtro de búsqueda
-    if (debouncedSearchText !== "") {
-      return matchesSearch;
-    }
-
-    // Si no hay texto de búsqueda, aplicar los demás filtros
-    // Filtro por categoría
-    const categoriaId =
-      typeof producto.categoria === "string"
-        ? producto.categoria
-        : producto.categoria._id;
-    const matchesCategoria =
-      filtroCategoria === "" || categoriaId === filtroCategoria;
-
-    // Filtro por marca
-    const matchesMarca = filtroMarca === "" || producto.marca === filtroMarca;
-
-    // Filtro por stock
-    const matchesStock =
-      filtroStock === "" ||
-      (filtroStock === "disponible" &&
-        producto.stock.disponible &&
-        producto.stock.cantidad > 0) ||
-      (filtroStock === "agotado" &&
-        (!producto.stock.disponible || producto.stock.cantidad === 0));
-
-    return matchesCategoria && matchesMarca && matchesStock;
-  });
-
-  // Función para limpiar filtros
-  const limpiarFiltros = () => {
+  // Función para limpiar filtros (ahora usa el backend)
+  const clearAllFilters = () => {
     setSearchText("");
     setFiltroCategoria("");
     setFiltroMarca("");
     setFiltroStock("");
+    limpiarFiltros(); // Llamar al método del hook
   };
 
-  // Estadísticas del inventario
+  // Funciones para actualizar filtros (sincronizadas con backend)
+  const handleCategoriaChange = (categoria: string) => {
+    setFiltroCategoria(categoria);
+    setFiltros({
+      ...filtros,
+      categoria: categoria || undefined,
+      pagina: 1, // Reiniciar a primera página
+    });
+  };
+
+  const handleMarcaChange = (marca: string) => {
+    setFiltroMarca(marca);
+    setFiltros({
+      ...filtros,
+      marca: marca || undefined,
+      pagina: 1, // Reiniciar a primera página
+    });
+  };
+
+  const handleStockChange = (stock: string) => {
+    setFiltroStock(stock);
+    const disponible =
+      stock === "disponible" ? true : stock === "agotado" ? false : undefined;
+    setFiltros({
+      ...filtros,
+      disponible,
+      pagina: 1, // Reiniciar a primera página
+    });
+  };
+
+  // Estadísticas del inventario (basadas en todos los productos, no solo la página actual)
   const estadisticas = {
-    total: productos.length,
+    total: pagination?.total || productos.length,
     disponibles: productos.filter(
       (p) => p.stock.disponible && p.stock.cantidad > 0
     ).length,
@@ -1043,14 +1050,6 @@ export default function ProductosScreen() {
   const { width } = Dimensions.get("window");
   const isWideScreen = width > 768;
 
-  // Función para limpiar todos los filtros
-  const clearAllFilters = () => {
-    setFiltroCategoria("");
-    setFiltroMarca("");
-    setFiltroStock("");
-    setSearchText("");
-  };
-
   // Preparar datos para el sidebar
   const categoriaOptions = categorias.map((cat) => ({
     label: cat.nombre,
@@ -1083,9 +1082,9 @@ export default function ProductosScreen() {
               selectedMarca={filtroMarca}
               selectedStock={filtroStock}
               searchText={searchText}
-              onCategoriaChange={setFiltroCategoria}
-              onMarcaChange={setFiltroMarca}
-              onStockChange={setFiltroStock}
+              onCategoriaChange={handleCategoriaChange}
+              onMarcaChange={handleMarcaChange}
+              onStockChange={handleStockChange}
               onSearchChange={setSearchText}
               onClearFilters={clearAllFilters}
               onAddProduct={() => openModal()}
@@ -1125,6 +1124,15 @@ export default function ProductosScreen() {
                       )}
                     </View>
                   )}
+
+                  {/* Componente de paginación */}
+                  {pagination && (
+                    <Pagination
+                      pagination={pagination}
+                      onPageChange={cambiarPagina}
+                      loading={productosLoading}
+                    />
+                  )}
                 </ThemedView>
               </ScrollView>
             </View>
@@ -1143,7 +1151,7 @@ export default function ProductosScreen() {
             }
           >
             <View style={styles.mobileContentWithBackground}>
-              {/* Barra de acciones: Agregar + Filtros en la misma línea */}
+              {/* Barra de acciones: Agregar + Filtrar en la misma línea */}
               <View style={styles.mobileActionsBar}>
                 <TouchableOpacity
                   onPress={() => openModal()}
@@ -1155,12 +1163,10 @@ export default function ProductosScreen() {
                 </TouchableOpacity>
 
                 <TouchableOpacity
-                  style={styles.filtersButtonMobile}
+                  style={styles.filterButtonMobile}
                   onPress={() => setFiltersModalVisible(true)}
                 >
-                  <ThemedText style={styles.filtersButtonText}>
-                    🔍 Filtros
-                  </ThemedText>
+                  <ThemedText style={styles.addButtonText}>Filtrar</ThemedText>
                   {(filtroCategoria || filtroMarca || filtroStock) && (
                     <View style={styles.activeFiltersBadge}>
                       <ThemedText style={styles.badgeText}>
@@ -1173,23 +1179,30 @@ export default function ProductosScreen() {
                     </View>
                   )}
                 </TouchableOpacity>
-
-                {/* Botón limpiar filtros */}
-                {(filtroCategoria || filtroMarca || filtroStock) && (
-                  <TouchableOpacity
-                    style={styles.clearFiltersButtonMobile}
-                    onPress={() => {
-                      setFiltroCategoria("");
-                      setFiltroMarca("");
-                      setFiltroStock("");
-                    }}
-                  >
-                    <ThemedText style={styles.clearFiltersText}>
-                      Limpiar
-                    </ThemedText>
-                  </TouchableOpacity>
-                )}
               </View>
+
+              {/* Input de búsqueda */}
+              <View style={styles.searchContainer}>
+                <AnimatedInput
+                  label=""
+                  placeholder="Buscar productos..."
+                  value={searchText}
+                  onChangeText={setSearchText}
+                  style={styles.searchInput}
+                />
+              </View>
+
+              {/* Botón limpiar filtros */}
+              {(filtroCategoria || filtroMarca || filtroStock) && (
+                <TouchableOpacity
+                  style={styles.clearFiltersButtonMobile}
+                  onPress={clearAllFilters}
+                >
+                  <ThemedText style={styles.clearFiltersText}>
+                    Limpiar filtros
+                  </ThemedText>
+                </TouchableOpacity>
+              )}
 
               {/* Chips de filtros activos */}
               {(filtroCategoria || filtroMarca || filtroStock) && (
@@ -1202,7 +1215,7 @@ export default function ProductosScreen() {
                             ?.nombre || "Categoría"}
                         </ThemedText>
                         <TouchableOpacity
-                          onPress={() => setFiltroCategoria("")}
+                          onPress={() => handleCategoriaChange("")}
                           style={styles.chipRemove}
                         >
                           <ThemedText style={styles.chipRemoveText}>
@@ -1217,7 +1230,7 @@ export default function ProductosScreen() {
                           {filtroMarca}
                         </ThemedText>
                         <TouchableOpacity
-                          onPress={() => setFiltroMarca("")}
+                          onPress={() => handleMarcaChange("")}
                           style={styles.chipRemove}
                         >
                           <ThemedText style={styles.chipRemoveText}>
@@ -1234,7 +1247,7 @@ export default function ProductosScreen() {
                             : "Agotado"}
                         </ThemedText>
                         <TouchableOpacity
-                          onPress={() => setFiltroStock("")}
+                          onPress={() => handleStockChange("")}
                           style={styles.chipRemove}
                         >
                           <ThemedText style={styles.chipRemoveText}>
@@ -1272,6 +1285,17 @@ export default function ProductosScreen() {
                   )}
                 </ThemedView>
               </FadeInView>
+
+              {/* Componente de paginación móvil */}
+              {pagination && (
+                <FadeInView delay={500}>
+                  <Pagination
+                    pagination={pagination}
+                    onPageChange={cambiarPagina}
+                    loading={productosLoading}
+                  />
+                </FadeInView>
+              )}
             </View>
           </ScrollView>
         </View>
@@ -2805,7 +2829,7 @@ export default function ProductosScreen() {
                   })),
                 ]}
                 selectedValue={filtroCategoria}
-                onSelect={(value) => setFiltroCategoria(value)}
+                onSelect={(value) => handleCategoriaChange(value)}
                 placeholder="Filtrar por categoría"
               />
             </View>
@@ -2821,7 +2845,7 @@ export default function ProductosScreen() {
                   })),
                 ]}
                 selectedValue={filtroMarca}
-                onSelect={(value) => setFiltroMarca(value)}
+                onSelect={(value) => handleMarcaChange(value)}
                 placeholder="Filtrar por marca"
               />
             </View>
@@ -2835,7 +2859,7 @@ export default function ProductosScreen() {
                   { label: "Agotado", value: "agotado" },
                 ]}
                 selectedValue={filtroStock}
-                onSelect={(value) => setFiltroStock(value)}
+                onSelect={(value) => handleStockChange(value)}
                 placeholder="Filtrar por stock"
               />
             </View>
@@ -2844,11 +2868,7 @@ export default function ProductosScreen() {
           <View style={styles.filtersModalActions}>
             <TouchableOpacity
               style={styles.clearAllFiltersButton}
-              onPress={() => {
-                setFiltroCategoria("");
-                setFiltroMarca("");
-                setFiltroStock("");
-              }}
+              onPress={clearAllFilters}
             >
               <ThemedText style={styles.clearAllFiltersText}>
                 Limpiar todos los filtros
@@ -2887,7 +2907,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: SPACING.sm,
-    marginBottom: SPACING.md,
+    marginBottom: SPACING.sm, // Reducido de SPACING.md a SPACING.sm para equilibrar con el espacio hacia la grilla
   },
   filtersButtonMobile: {
     flex: 1,
@@ -2901,6 +2921,31 @@ const styles = StyleSheet.create({
     paddingVertical: SPACING.sm,
     borderRadius: RADIUS.md,
     gap: SPACING.xs,
+  },
+  filterButtonMobile: {
+    flex: 1,
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
+    borderRadius: RADIUS.md,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: SPACING.xs,
+  },
+  searchContainer: {
+    marginBottom: SPACING.sm, // Mantener solo el margen inferior
+  },
+  searchInput: {
+    backgroundColor: COLORS.surface,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: RADIUS.md,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
+    fontSize: 16,
+    color: COLORS.text,
+    width: "100%",
   },
   clearFiltersButtonMobile: {
     backgroundColor: COLORS.error,
@@ -3130,26 +3175,6 @@ const styles = StyleSheet.create({
   },
   unavailableColor: {
     color: COLORS.error,
-  },
-  searchContainer: {
-    paddingHorizontal: SPACING.lg,
-    paddingBottom: SPACING.md,
-  },
-  searchRow: {
-    marginBottom: SPACING.sm,
-  },
-  searchInputContainer: {
-    flex: 1,
-  },
-  searchInput: {
-    backgroundColor: COLORS.surface,
-    borderRadius: RADIUS.md,
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm,
-    fontSize: 16,
-    color: COLORS.text,
-    borderWidth: 1,
-    borderColor: COLORS.border,
   },
   filtersRow: {
     flexDirection: Platform.OS === "web" ? "row" : "column",

@@ -29,7 +29,7 @@ export const COLORS = {
     info: '#b8e6ff',          // Azul cielo suave
 
     // Sombras
-    shadow: 'rgba(168, 181, 255, 0.15)', // Sombra azul lavanda suave
+    boxShadow: 'rgba(168, 181, 255, 0.15)', // Sombra azul lavanda suave
     shadowDark: 'rgba(168, 181, 255, 0.25)', // Sombra más intensa
 
     // Modal y overlays
@@ -67,11 +67,11 @@ export const RADIUS = {
 // Sombras predefinidas
 export const SHADOWS = {
     sm: {
-        boxShadow: `0 1px 3px ${COLORS.shadow}`,
+        boxShadow: `0 1px 3px ${COLORS.boxShadow}`,
         elevation: 2,
     },
     md: {
-        boxShadow: `0 2px 6px ${COLORS.shadow}`,
+        boxShadow: `0 2px 6px ${COLORS.boxShadow}`,
         elevation: 4,
     },
     lg: {

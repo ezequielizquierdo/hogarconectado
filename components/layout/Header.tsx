@@ -12,26 +12,27 @@ interface HeaderProps {
 export default function Header({ sectionTitle, sectionSubtitle }: HeaderProps) {
   return (
     <View style={styles.headerContainer}>
-      <View style={styles.headerBackground}>
+      <View style={styles.headerBackground} data-testid="header-background">
         <Image
           source={require("@/assets/images/background-hogar.jpeg")}
           style={styles.backgroundImage}
           contentFit="cover"
+          data-testid="header-background-image"
         />
         <View style={styles.headerOverlay}>
           {/* Logo y marca a la izquierda */}
-          <View style={styles.brandContainer}>
-            <View style={styles.logoContainer}>
-              <View style={styles.logoCircle}>
-                <Image
-                  source={require("@/assets/images/logo-transparent.png")}
-                  style={styles.logoImage}
-                  contentFit="contain"
-                />
-              </View>
-            </View>
-            <Text style={styles.brandText}>hogar conectado</Text>
+          {/* <View style={styles.brandContainer}> */}
+          <View style={styles.logoContainer}>
+            {/* <View style={styles.logoCircle}> */}
+            <Image
+              source={require("@/assets/images/logotipo.png")}
+              style={styles.logoImage}
+              contentFit="contain"
+            />
+            {/* </View> */}
           </View>
+          {/* <Text style={styles.brandText}>hogar conectado</Text> */}
+          {/* </View> */}
 
           {/* Información de la sección a la derecha */}
           <View style={styles.sectionContainer}>
