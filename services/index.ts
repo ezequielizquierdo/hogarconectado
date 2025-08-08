@@ -1,8 +1,10 @@
 // Exportar servicios
+export { default as apiClient } from './apiClient';
 export { default as categoriasService } from './categoriasService';
 export { default as productosService } from './productosService';
 export { default as cotizacionesService } from './cotizacionesService';
-export { default as apiClient } from './apiClient';
+export { default as warmupService } from './warmupService';
+export * from './types';
 
 // Exportar tipos
 export * from './types';

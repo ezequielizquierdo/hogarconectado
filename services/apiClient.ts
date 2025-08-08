@@ -25,18 +25,25 @@ const getBaseURL = () => {
             // Fallback para web
             return 'http://localhost:3000/api';
         } else {
-            // Para móvil, usar la IP local
-            return 'http://192.168.1.13:3000/api';
+            // Para simulador/dispositivo móvil en desarrollo
+            if (Platform.OS === 'ios') {
+                // IP correcta para desarrollo local
+                return 'http://192.168.1.13:3000/api';
+            } else {
+                // Para Android emulator
+                return 'http://10.0.2.2:3000/api';
+            }
         }
     } else {
-        return 'https://tu-backend-produccion.com/api';
+        // Producción - usar backend de Render
+        return 'https://hogarconectado-backend.onrender.com/api';
     }
 }; const API_BASE_URL = getBaseURL();
 
 // Crear instancia de axios
 const apiClient = axios.create({
     baseURL: API_BASE_URL,
-    timeout: 10000,
+    timeout: 30000, // Aumentado de 10s a 30s para cold start
     headers: {
         'Content-Type': 'application/json',
     },
@@ -89,6 +96,23 @@ apiClient.interceptors.response.use(
             await delay(retryDelay);
 
             return apiClient(originalRequest);
+        }
+
+        // Retry automático para errores de red (cold start)
+        if (
+            (error.code === 'ECONNABORTED' ||
+                error.code === 'NETWORK_ERROR' ||
+                error.message?.includes('Network Error') ||
+                error.message?.includes('timeout')) &&
+            !originalRequest._retryCount
+        ) {
+            originalRequest._retryCount = (originalRequest._retryCount || 0) + 1;
+
+            if (originalRequest._retryCount <= 2) { // Máximo 2 reintentos
+                console.log(`Network error detected. Retry ${originalRequest._retryCount}/2`);
+                await delay(2000); // Esperar 2 segundos antes del retry
+                return apiClient(originalRequest);
+            }
         }
 
         if (error.response?.status === 401) {

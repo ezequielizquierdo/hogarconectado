@@ -6,11 +6,12 @@ import {
 import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import "react-native-reanimated";
 
 import { useColorScheme } from "@/hooks/useColorScheme";
 import SplashScreen from "@/components/ui/SplashScreen";
+import { warmupService } from "@/services";
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
@@ -18,6 +19,20 @@ export default function RootLayout() {
     SpaceMono: require("../assets/fonts/SpaceMono-Regular.ttf"),
   });
   const [showSplash, setShowSplash] = useState(true);
+
+  // Warm-up del backend al iniciar la app
+  useEffect(() => {
+    const initializeApp = async () => {
+      try {
+        // Iniciar warm-up del backend en paralelo con la carga de fuentes
+        await warmupService.warmupBackend();
+      } catch (error) {
+        console.log("Warm-up error (no crítico):", error);
+      }
+    };
+
+    initializeApp();
+  }, []);
 
   const handleSplashComplete = () => {
     setShowSplash(false);

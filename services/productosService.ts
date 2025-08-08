@@ -23,7 +23,13 @@ class ProductosService {
             if (filtros.pagina) params.append('pagina', filtros.pagina.toString());
             if (filtros.buscar) params.append('buscar', filtros.buscar);
 
-            const response = await apiClient.get<ApiListResponse<Producto>>(`/productos?${params.toString()}`);
+            const url = `/productos?${params.toString()}`;
+            console.log('🌐 API Request URL:', url);
+
+            const response = await apiClient.get<ApiListResponse<Producto>>(url);
+
+            console.log('📦 API Response - productos:', response.data.data.length);
+            console.log('📄 API Response - pagination:', response.data.pagination);
 
             return {
                 productos: response.data.data,

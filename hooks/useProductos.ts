@@ -37,8 +37,13 @@ export const useProductos = (filtrosIniciales: ProductoFiltros = {}) => {
             setError(null);
 
             const filtrosFinales = nuevosFiltros || filtros;
+            console.log('🔍 useProductos - Filtros enviados:', filtrosFinales);
+
             const { productos: data, pagination: paginationData } =
                 await productosService.obtenerProductos(filtrosFinales);
+
+            console.log('📊 useProductos - Productos recibidos:', data.length);
+            console.log('📄 useProductos - Paginación:', paginationData);
 
             setProductos(data);
             setPagination(paginationData);
@@ -48,7 +53,14 @@ export const useProductos = (filtrosIniciales: ProductoFiltros = {}) => {
             }
         } catch (err) {
             const errorMessage = handleApiError(err);
-            setError(errorMessage);
+
+            // Mensaje más descriptivo para errores de red
+            let friendlyMessage = errorMessage;
+            if (errorMessage.includes('Network Error') || errorMessage.includes('timeout')) {
+                friendlyMessage = 'El servidor está despertando, esto puede tomar unos segundos. Reintentando automáticamente...';
+            }
+
+            setError(friendlyMessage);
             console.error('Error cargando productos:', err);
         } finally {
             setLoading(false);

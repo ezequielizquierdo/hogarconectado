@@ -9,9 +9,12 @@ import {
   View,
   Dimensions,
   SafeAreaView,
+  Text,
 } from "react-native";
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import * as Clipboard from "expo-clipboard";
+import { captureRef } from "react-native-view-shot";
+import * as Sharing from "expo-sharing";
 
 import { HelloWave } from "@/components/HelloWave";
 import ParallaxScrollView from "@/components/ParallaxScrollView";
@@ -199,6 +202,10 @@ export default function HomeScreen() {
   const [productoSeleccionado, setProductoSeleccionado] =
     useState<Producto | null>(null);
   const [modalVisible, setModalVisible] = useState<boolean>(false);
+  const [imagenGenerada, setImagenGenerada] = useState<string | null>(null);
+
+  // Referencia para capturar la vista de cotización
+  const cotizacionViewRef = useRef<View>(null);
 
   // Factores de recargo basados en el análisis del Excel
   const FACTOR_3_CUOTAS = 1.1298;
@@ -293,6 +300,23 @@ export default function HomeScreen() {
 
     setMensajeFinal(mensaje);
 
+    // Generar imagen automáticamente
+    setTimeout(async () => {
+      try {
+        if (cotizacionViewRef.current) {
+          const uri = await captureRef(cotizacionViewRef.current, {
+            format: "png",
+            quality: 1.0,
+            width: 1080,
+            height: 1920,
+          });
+          setImagenGenerada(uri);
+        }
+      } catch (error) {
+        console.error("Error al generar imagen automáticamente:", error);
+      }
+    }, 500); // Esperar un poco para que se renderice la vista
+
     // En móvil mostrar modal, en web ya se muestra la vista previa
     if (!isWeb || !isWideScreen) {
       setModalVisible(true);
@@ -306,8 +330,63 @@ export default function HomeScreen() {
     }
   };
 
+  const generarYCompartirImagen = async () => {
+    try {
+      if (!cotizacionViewRef.current) {
+        Alert.alert(
+          "Error",
+          "No se pudo capturar la vista para generar la imagen"
+        );
+        return;
+      }
+
+      // Capturar la vista como imagen
+      const uri = await captureRef(cotizacionViewRef.current, {
+        format: "png",
+        quality: 1.0,
+        width: 1080,
+        height: 1920,
+      });
+
+      setImagenGenerada(uri);
+
+      // Verificar si Sharing está disponible
+      if (!(await Sharing.isAvailableAsync())) {
+        Alert.alert(
+          "Error",
+          "El compartir no está disponible en este dispositivo"
+        );
+        return;
+      }
+
+      // Compartir la imagen
+      await Sharing.shareAsync(uri, {
+        mimeType: "image/png",
+        dialogTitle: "Compartir cotización",
+      });
+    } catch (error) {
+      console.error("Error al generar imagen:", error);
+      Alert.alert("Error", "No se pudo generar la imagen");
+    }
+  };
+
+  const copiarImagen = async () => {
+    if (imagenGenerada) {
+      try {
+        await Sharing.shareAsync(imagenGenerada, {
+          mimeType: "image/png",
+          dialogTitle: "Compartir imagen de cotización",
+        });
+      } catch (error) {
+        console.error("Error al copiar imagen:", error);
+        Alert.alert("Error", "No se pudo compartir la imagen");
+      }
+    }
+  };
+
   const cerrarModal = () => {
     setModalVisible(false);
+    setImagenGenerada(null); // Limpiar imagen al cerrar
   };
 
   const limpiarFormulario = () => {
@@ -810,25 +889,124 @@ export default function HomeScreen() {
                     </TouchableOpacity>
                   </ThemedView>
 
-                  <ThemedView style={styles.modalMessageContainer}>
-                    <ThemedText style={styles.modalMessageText}>
-                      {mensajeFinal}
+                  {/* Sección de Cotización de Texto */}
+                  <ThemedView style={styles.modalSection}>
+                    <ThemedText
+                      type="defaultSemiBold"
+                      style={styles.sectionTitle}
+                    >
+                      📋 Cotización de Texto
                     </ThemedText>
+                    <ThemedView style={styles.modalMessageContainer}>
+                      <ThemedText style={styles.modalMessageText}>
+                        {mensajeFinal}
+                      </ThemedText>
+                    </ThemedView>
+                    <ThemedView style={styles.modalButtonContainer}>
+                      <AnimatedButton
+                        title="Copiar Texto"
+                        icon="📋"
+                        onPress={copiarAlPortapapeles}
+                        variant="accent"
+                        size="medium"
+                      />
+                    </ThemedView>
                   </ThemedView>
 
-                  <ThemedView style={styles.modalButtonContainer}>
-                    <AnimatedButton
-                      title="Copiar al Portapapeles"
-                      icon="📋"
-                      onPress={copiarAlPortapapeles}
-                      variant="accent"
-                      size="large"
-                    />
+                  {/* Sección de Imagen */}
+                  <ThemedView style={styles.modalSection}>
+                    <ThemedText
+                      type="defaultSemiBold"
+                      style={styles.sectionTitle}
+                    >
+                      🖼️ Imagen de Cotización
+                    </ThemedText>
+                    {imagenGenerada ? (
+                      <ThemedView style={styles.imagePreviewContainer}>
+                        <Image
+                          source={{ uri: imagenGenerada }}
+                          style={styles.imagePreview}
+                          contentFit="contain"
+                        />
+                        <ThemedView style={styles.modalButtonContainer}>
+                          <AnimatedButton
+                            title="Compartir Imagen"
+                            icon="📤"
+                            onPress={copiarImagen}
+                            variant="primary"
+                            size="medium"
+                          />
+                        </ThemedView>
+                      </ThemedView>
+                    ) : (
+                      <ThemedView style={styles.imageLoadingContainer}>
+                        <ThemedText style={styles.imageLoadingText}>
+                          Generando imagen...
+                        </ThemedText>
+                      </ThemedView>
+                    )}
                   </ThemedView>
                 </ScrollView>
               </ThemedView>
             </ThemedView>
           </Modal>
+
+          {/* Vista invisible para capturar imagen */}
+          <View ref={cotizacionViewRef} style={styles.captureView}>
+            <View style={styles.captureContainer}>
+              {/* Header de la imagen */}
+              <View style={styles.captureHeader}>
+                <Text style={styles.captureBrand}>🏠 HOGAR CONECTADO</Text>
+                <Text style={styles.captureTitle}>COTIZACIÓN</Text>
+              </View>
+
+              {/* Contenido de la cotización */}
+              <View style={styles.captureContent}>
+                <Text style={styles.captureCategory}>
+                  📦 {cotizacion.categoria.toUpperCase()}
+                </Text>
+                <Text style={styles.captureProduct}>
+                  🏷️ {cotizacion.marca.toUpperCase()} -{" "}
+                  {cotizacion.modelo.toUpperCase()}
+                </Text>
+                {cotizacion.detalle && (
+                  <Text style={styles.captureDetail}>
+                    ✏️ {cotizacion.detalle.toUpperCase()}
+                  </Text>
+                )}
+
+                <View style={styles.capturePrices}>
+                  <Text style={styles.capturePricesTitle}>💰 PRECIOS:</Text>
+                  {(() => {
+                    const calculos = calcularCotizacion();
+                    if (calculos) {
+                      return (
+                        <>
+                          <Text style={styles.capturePrice}>
+                            💵 Contado:{" "}
+                            {formatearPrecio(calculos.valorConGanancia)}
+                          </Text>
+                          <Text style={styles.capturePrice}>
+                            🗓️ 3 Cuotas:{" "}
+                            {formatearPrecio(calculos.valorPorCuota3)} c/u
+                          </Text>
+                          <Text style={styles.capturePrice}>
+                            🗓️ 6 Cuotas:{" "}
+                            {formatearPrecio(calculos.valorPorCuota6)} c/u
+                          </Text>
+                        </>
+                      );
+                    }
+                    return null;
+                  })()}
+                </View>
+
+                <Text style={styles.captureContact}>
+                  📞 ¡Consultá por stock y disponibilidad!
+                </Text>
+              </View>
+            </View>
+          </View>
         </View>
       )}
     </>
@@ -1111,5 +1289,106 @@ const styles = StyleSheet.create({
   modalButtonContainer: {
     padding: SPACING.lg,
     paddingTop: 0,
+  },
+  modalSection: {
+    marginBottom: SPACING.md,
+  },
+  sectionTitle: {
+    paddingHorizontal: SPACING.lg,
+    paddingTop: SPACING.md,
+    paddingBottom: SPACING.sm,
+    fontSize: 16,
+    color: COLORS.text,
+  },
+  imagePreviewContainer: {
+    padding: SPACING.lg,
+    alignItems: "center",
+  },
+  imagePreview: {
+    width: 200,
+    height: 280,
+    borderRadius: RADIUS.md,
+    backgroundColor: COLORS.cardBackground,
+    marginBottom: SPACING.md,
+  },
+  imageLoadingContainer: {
+    padding: SPACING.lg,
+    alignItems: "center",
+    justifyContent: "center",
+    height: 150,
+  },
+  imageLoadingText: {
+    color: COLORS.textSecondary,
+    fontStyle: "italic",
+  },
+  // Estilos para captura de imagen
+  captureView: {
+    position: "absolute",
+    left: -9999, // Ocultar fuera de la pantalla
+    top: -9999,
+    width: 1080,
+    height: 1920,
+  },
+  captureContainer: {
+    width: 1080,
+    height: 1920,
+    backgroundColor: "#ffffff",
+    padding: 60,
+    justifyContent: "center",
+  },
+  captureHeader: {
+    alignItems: "center",
+    marginBottom: 80,
+  },
+  captureBrand: {
+    fontSize: 48,
+    fontWeight: "bold",
+    color: "#4a5568",
+    marginBottom: 20,
+  },
+  captureTitle: {
+    fontSize: 36,
+    fontWeight: "bold",
+    color: "#a8b5ff",
+  },
+  captureContent: {
+    gap: 40,
+  },
+  captureCategory: {
+    fontSize: 32,
+    fontWeight: "600",
+    color: "#4a5568",
+  },
+  captureProduct: {
+    fontSize: 28,
+    fontWeight: "600",
+    color: "#4a5568",
+  },
+  captureDetail: {
+    fontSize: 24,
+    color: "#718096",
+  },
+  capturePrices: {
+    gap: 20,
+    backgroundColor: "#f8faff",
+    padding: 40,
+    borderRadius: 20,
+  },
+  capturePricesTitle: {
+    fontSize: 32,
+    fontWeight: "bold",
+    color: "#4a5568",
+    marginBottom: 20,
+  },
+  capturePrice: {
+    fontSize: 28,
+    fontWeight: "600",
+    color: "#4a5568",
+  },
+  captureContact: {
+    fontSize: 24,
+    fontWeight: "600",
+    color: "#a8b5ff",
+    textAlign: "center",
   },
 });

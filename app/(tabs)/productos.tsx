@@ -34,6 +34,7 @@ import FadeInView from "@/components/ui/FadeInView";
 import ProductCard from "@/components/product/ProductCard";
 import { SidebarFilters } from "@/components/filters";
 import Pagination from "@/components/Pagination";
+import BackendStatusBanner from "@/components/BackendStatusBanner";
 import { useCategorias } from "@/hooks/useCategorias";
 import { useProductos } from "@/hooks/useProductos";
 import { useMarcas } from "@/hooks/useMarcas";
@@ -1143,6 +1144,9 @@ export default function ProductosScreen() {
         <View style={styles.mobileLayout}>
           {/* Header móvil reutilizable */}
           <MobileHeader title="Productos" subtitle="Gestiona tu inventario" />
+
+          {/* Banner de estado del backend */}
+          <BackendStatusBanner />
 
           <ScrollView
             style={styles.mobileContent}
