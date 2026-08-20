@@ -30,7 +30,7 @@ interface SidebarFiltersProps {
   onStockChange: (value: string) => void;
   onSearchChange: (value: string) => void;
   onClearFilters: () => void;
-  onAddProduct: () => void;
+  onAddProduct?: () => void;
 }
 
 const SidebarFilters: React.FC<SidebarFiltersProps> = ({
@@ -132,14 +132,14 @@ const SidebarFilters: React.FC<SidebarFiltersProps> = ({
         showsVerticalScrollIndicator={false}
       >
         {/* Botón de agregar producto prominente */}
-        <View style={styles.addProductSection}>
+        {onAddProduct && <View style={styles.addProductSection}>
           <AnimatedButton
             title="➕ Agregar Producto"
             onPress={onAddProduct}
             variant="primary"
             style={styles.addProductButton}
           />
-        </View>
+        </View>}
 
         {/* Sección de búsqueda */}
         <View style={styles.searchSection}>

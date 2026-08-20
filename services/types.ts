@@ -1,5 +1,21 @@
 // Tipos para las entidades del backend
 
+export type UserRole = 'admin' | 'editor' | 'consulta';
+export type UserStatus = 'pendiente' | 'activo' | 'bloqueado';
+
+export interface Usuario {
+    _id: string;
+    googleId: string;
+    email: string;
+    nombre: string;
+    foto?: string;
+    rol: UserRole;
+    estado: UserStatus;
+    ultimoAcceso?: string;
+    createdAt: string;
+    updatedAt: string;
+}
+
 export interface Categoria {
     _id: string;
     nombre: string;
@@ -24,6 +40,7 @@ export interface Producto {
     };
     tags: string[];
     imagenes: string[];
+    imagenPublicIds?: string[];
     activo: boolean;
     createdAt: string;
     updatedAt: string;

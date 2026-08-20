@@ -18,7 +18,6 @@ import {
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
 import * as DocumentPicker from "expo-document-picker";
-import * as FileSystem from "expo-file-system";
 import * as Sharing from "expo-sharing";
 import { captureRef } from "react-native-view-shot";
 import { HelloWave } from "@/components/HelloWave";
@@ -40,8 +39,10 @@ import { useProductos } from "@/hooks/useProductos";
 import { useMarcas } from "@/hooks/useMarcas";
 import useDebounce from "@/hooks/useDebounce";
 import { productosService } from "@/services";
+import { uploadService, UploadedImage } from "@/services/uploadService";
 import { Producto, ProductoConPrecios } from "@/services/types";
 import { COLORS, SPACING, RADIUS, SHADOWS } from "@/constants/theme";
+import { useAuth } from "@/contexts/AuthContext";
 
 // Funciones de utilidad
 const formatPrice = (price: number | string): string => {
@@ -73,6 +74,7 @@ interface ProductoForm {
   stockCantidad: string;
   stockDisponible: string;
   imagen: string;
+  imagenPublicId: string;
 }
 
 const initialForm: ProductoForm = {
@@ -84,9 +86,13 @@ const initialForm: ProductoForm = {
   stockCantidad: "",
   stockDisponible: "true",
   imagen: "",
+  imagenPublicId: "",
 };
 
 export default function ProductosScreen() {
+  const { can } = useAuth();
+  const canEdit = can("editor", "admin");
+  const canDelete = can("admin");
   const { categorias, loading: categoriasLoading } = useCategorias();
   const {
     productos,
@@ -235,6 +241,10 @@ export default function ProductosScreen() {
   };
 
   const openModal = (producto?: Producto) => {
+    if (!canEdit) {
+      Alert.alert("Sin permiso", "Tu usuario tiene acceso de consulta.");
+      return;
+    }
     if (producto) {
       setEditingProduct(producto);
       const categoriaId =
@@ -254,6 +264,7 @@ export default function ProductosScreen() {
           producto.imagenes && producto.imagenes.length > 0
             ? producto.imagenes[0]
             : "",
+        imagenPublicId: producto.imagenPublicIds?.[0] || "",
       });
     } else {
       setEditingProduct(null);
@@ -372,6 +383,10 @@ export default function ProductosScreen() {
   };
 
   const handleSave = async () => {
+    if (!canEdit) {
+      Alert.alert("Sin permiso", "No podés modificar productos.");
+      return;
+    }
     if (!form.marca || !form.modelo || !form.categoria || !form.precioBase) {
       Alert.alert("Error", "Por favor completa los campos obligatorios");
       return;
@@ -388,13 +403,20 @@ export default function ProductosScreen() {
     }
 
     setSaving(true);
+    let imagenSubida: UploadedImage | null = null;
     try {
       // Preparar la imagen
       let imagenesArray: string[] = [];
+      let imagenPublicIds: string[] = [];
       if (form.imagen) {
-        console.log("Imagen URL:", form.imagen);
-        imagenesArray = [form.imagen];
-        console.log("Imagen agregada al producto:", form.imagen);
+        if (form.imagen.startsWith("http://") || form.imagen.startsWith("https://")) {
+          imagenesArray = [form.imagen];
+          if (form.imagenPublicId) imagenPublicIds = [form.imagenPublicId];
+        } else {
+          imagenSubida = await uploadService.subirImagen(form.imagen);
+          imagenesArray = [imagenSubida.url];
+          imagenPublicIds = [imagenSubida.publicId];
+        }
       }
 
       // Convertir precio a número (parsePrice maneja formato español)
@@ -417,6 +439,7 @@ export default function ProductosScreen() {
         },
         tags: [],
         imagenes: imagenesArray,
+        imagenPublicIds,
         activo: true,
       };
 
@@ -445,6 +468,7 @@ export default function ProductosScreen() {
       await delay(300);
       await recargarMarcas(); // Recargar marcas para incluir la nueva marca si se agregó una
     } catch (error: any) {
+      if (imagenSubida?.publicId) await uploadService.eliminarImagen(imagenSubida.publicId).catch(() => undefined);
       console.error("Error al guardar producto:", error);
 
       // Log más detallado del error
@@ -463,7 +487,30 @@ export default function ProductosScreen() {
     }
   };
 
-  const handleDelete = (producto: Producto) => {
+  const handleDelete = async (producto: Producto) => {
+    if (!canDelete) {
+      Alert.alert("Sin permiso", "Solo un administrador puede eliminar productos.");
+      return;
+    }
+
+    const eliminar = async () => {
+      try {
+        await productosService.eliminarProducto(producto._id);
+        if (Platform.OS !== "web") Alert.alert("Éxito", "Producto eliminado correctamente");
+        await delay(500);
+        await recargar();
+      } catch (error) {
+        console.error("Error al eliminar producto:", error);
+        Alert.alert("Error", "No se pudo eliminar el producto");
+      }
+    };
+
+    if (Platform.OS === "web") {
+      const confirmado = window.confirm(`¿Estás seguro de que querés eliminar "${producto.marca} ${producto.modelo}"?`);
+      if (confirmado) await eliminar();
+      return;
+    }
+
     Alert.alert(
       "Confirmar eliminación",
       `¿Estás seguro de que quieres eliminar "${producto.marca} ${producto.modelo}"?`,
@@ -472,19 +519,7 @@ export default function ProductosScreen() {
         {
           text: "Eliminar",
           style: "destructive",
-          onPress: async () => {
-            try {
-              await productosService.eliminarProducto(producto._id);
-              Alert.alert("Éxito", "Producto eliminado correctamente");
-
-              // Agregar delay antes de recargar para evitar rate limiting
-              await delay(500);
-              await recargar();
-            } catch (error) {
-              console.error("Error al eliminar producto:", error);
-              Alert.alert("Error", "No se pudo eliminar el producto");
-            }
-          },
+          onPress: eliminar,
         },
       ]
     );
@@ -732,105 +767,6 @@ export default function ProductosScreen() {
     );
   };
 
-  // Función para subir imagen al backend
-  const uploadImageToBackend = async (
-    imageUri: string
-  ): Promise<string | null> => {
-    try {
-      console.log("Subiendo imagen al backend:", imageUri);
-
-      // Si es una URL de internet, devolverla directamente
-      if (imageUri.startsWith("http://") || imageUri.startsWith("https://")) {
-        return imageUri;
-      }
-
-      // Para archivos locales, convertir a base64
-      const base64 = await FileSystem.readAsStringAsync(imageUri, {
-        encoding: FileSystem.EncodingType.Base64,
-      });
-
-      // Determinar el tipo de imagen
-      const extension = imageUri.split(".").pop()?.toLowerCase() || "jpg";
-      const mimeType = extension === "png" ? "image/png" : "image/jpeg";
-
-      // Crear data URL para uso directo en web (evita problemas de CORS)
-      const dataUrl = `data:${mimeType};base64,${base64}`;
-      console.log("Data URL creada:", dataUrl.substring(0, 100) + "...");
-
-      // En web, usar directamente el data URL para evitar problemas de CORS
-      if (Platform.OS === "web") {
-        console.log("Plataforma web detectada, usando data URL directamente");
-        return dataUrl;
-      }
-
-      // En móvil, intentar subir al servidor
-      const getBackendURL = () => {
-        return "http://192.168.1.13:3000";
-      };
-
-      const backendURL = getBackendURL();
-      console.log("Subiendo al servidor móvil:", backendURL);
-
-      const requestBody = {
-        imageData: dataUrl,
-        filename: `product_${Date.now()}.${extension}`,
-      };
-
-      const response = await fetch(`${backendURL}/api/upload/base64`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(requestBody),
-      });
-
-      console.log("Respuesta del servidor:", {
-        status: response.status,
-        statusText: response.statusText,
-        ok: response.ok,
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error("Error response body:", errorText);
-        // En móvil, si falla el servidor, usar el data URL como fallback
-        console.log("Servidor falló, usando data URL como fallback");
-        return dataUrl;
-      }
-
-      const data = await response.json();
-      console.log("Imagen subida exitosamente:", data);
-
-      // Construir URL completa si es relativa
-      let fullUrl = data.url || data.data?.url;
-      if (fullUrl && fullUrl.startsWith("/")) {
-        fullUrl = `${backendURL}${fullUrl}`;
-      }
-
-      console.log("URL final de la imagen:", fullUrl);
-      return fullUrl || dataUrl;
-    } catch (error) {
-      console.error("Error al subir imagen:", error);
-
-      // Como último fallback, crear data URL si es posible
-      try {
-        if (imageUri && !imageUri.startsWith("data:")) {
-          const base64 = await FileSystem.readAsStringAsync(imageUri, {
-            encoding: FileSystem.EncodingType.Base64,
-          });
-          const extension = imageUri.split(".").pop()?.toLowerCase() || "jpg";
-          const mimeType = extension === "png" ? "image/png" : "image/jpeg";
-          const fallbackDataUrl = `data:${mimeType};base64,${base64}`;
-          console.log("Usando data URL como fallback final");
-          return fallbackDataUrl;
-        }
-      } catch (fallbackError) {
-        console.error("Error al crear fallback:", fallbackError);
-      }
-
-      return null;
-    }
-  };
 
   const selectImageFromGallery = async () => {
     const hasPermissions = await requestPermissions();
@@ -848,16 +784,7 @@ export default function ProductosScreen() {
         const imageUri = result.assets[0].uri;
         console.log("Imagen seleccionada de galería:", imageUri);
 
-        // Subir imagen al backend automáticamente
-        const uploadedUrl = await uploadImageToBackend(imageUri);
-        console.log("URL recibida del upload (galería):", uploadedUrl);
-        if (uploadedUrl) {
-          console.log("Guardando URL en form:", uploadedUrl);
-          setForm({ ...form, imagen: uploadedUrl });
-          Alert.alert("Éxito", "Imagen subida correctamente");
-        } else {
-          console.error("No se recibió URL válida del upload");
-        }
+        setForm({ ...form, imagen: imageUri, imagenPublicId: "" });
       }
     } catch (error) {
       console.error("Error al seleccionar imagen:", error);
@@ -891,12 +818,7 @@ export default function ProductosScreen() {
         const imageUri = result.assets[0].uri;
         console.log("Imagen tomada con cámara:", imageUri);
 
-        // Subir imagen al backend automáticamente
-        const uploadedUrl = await uploadImageToBackend(imageUri);
-        if (uploadedUrl) {
-          setForm({ ...form, imagen: uploadedUrl });
-          Alert.alert("Éxito", "Imagen subida correctamente");
-        }
+        setForm({ ...form, imagen: imageUri, imagenPublicId: "" });
       }
     } catch (error) {
       console.error("Error al tomar foto:", error);
@@ -923,12 +845,7 @@ export default function ProductosScreen() {
         const imageUri = result.assets[0].uri;
         console.log("Archivo seleccionado:", imageUri);
 
-        // Subir imagen al backend automáticamente
-        const uploadedUrl = await uploadImageToBackend(imageUri);
-        if (uploadedUrl) {
-          setForm({ ...form, imagen: uploadedUrl });
-          Alert.alert("Éxito", "Imagen subida correctamente");
-        }
+        setForm({ ...form, imagen: imageUri, imagenPublicId: "" });
       }
     } catch (error) {
       console.error("Error al seleccionar archivo:", error);
@@ -937,6 +854,11 @@ export default function ProductosScreen() {
   };
 
   const showImagePicker = () => {
+    if (Platform.OS === "web") {
+      selectImageFromFiles();
+      return;
+    }
+
     const options = [
       {
         text: "Ingresar URL",
@@ -945,17 +867,10 @@ export default function ProductosScreen() {
       { text: "Galería", onPress: selectImageFromGallery },
     ];
 
-    if (Platform.OS !== "web") {
-      options.push({
-        text: "Cámara",
-        onPress: selectImageFromCamera,
-      });
-    } else {
-      options.push({
-        text: "Archivos",
-        onPress: selectImageFromFiles,
-      });
-    }
+    options.push({
+      text: "Cámara",
+      onPress: selectImageFromCamera,
+    });
 
     options.push({ text: "Cancelar", onPress: () => {} });
 
@@ -982,7 +897,7 @@ export default function ProductosScreen() {
                   cleanUrl.startsWith("https") ||
                   cleanUrl.startsWith("data:")
                 ) {
-                  setForm({ ...form, imagen: cleanUrl });
+                  setForm({ ...form, imagen: cleanUrl, imagenPublicId: "" });
                 } else {
                   Alert.alert(
                     "Error",
@@ -1006,7 +921,7 @@ export default function ProductosScreen() {
   };
 
   const removeImage = () => {
-    setForm({ ...form, imagen: "" });
+    setForm({ ...form, imagen: "", imagenPublicId: "" });
   };
 
   // Convertir productos a ProductoConPrecios para las cards (simplificado)
@@ -1038,10 +953,10 @@ export default function ProductosScreen() {
             setSelectedProduct(item);
             setDetailModalVisible(true);
           }}
-          showAdminButtons={true}
-          onEdit={() => openModal(item)}
-          onDelete={() => handleDelete(item)}
-          onInstagramStory={() => openInstagramModal(item)}
+          showAdminButtons={canEdit}
+          onEdit={canEdit ? () => openModal(item) : undefined}
+          onDelete={canDelete ? () => handleDelete(item) : undefined}
+          onInstagramStory={canEdit ? () => openInstagramModal(item) : undefined}
         />
       </View>
     );
@@ -1088,7 +1003,7 @@ export default function ProductosScreen() {
               onStockChange={handleStockChange}
               onSearchChange={setSearchText}
               onClearFilters={clearAllFilters}
-              onAddProduct={() => openModal()}
+              onAddProduct={canEdit ? () => openModal() : undefined}
             />
 
             {/* Contenido principal */}
@@ -1157,14 +1072,14 @@ export default function ProductosScreen() {
             <View style={styles.mobileContentWithBackground}>
               {/* Barra de acciones: Agregar + Filtrar en la misma línea */}
               <View style={styles.mobileActionsBar}>
-                <TouchableOpacity
+                {canEdit && <TouchableOpacity
                   onPress={() => openModal()}
                   style={styles.addButtonMobile}
                 >
                   <ThemedText style={styles.addButtonText}>
                     + Agregar
                   </ThemedText>
-                </TouchableOpacity>
+                </TouchableOpacity>}
 
                 <TouchableOpacity
                   style={styles.filterButtonMobile}
@@ -1440,6 +1355,7 @@ export default function ProductosScreen() {
                     {form.imagen &&
                     (form.imagen.startsWith("http") ||
                       form.imagen.startsWith("file") ||
+                      form.imagen.startsWith("blob:") ||
                       form.imagen.startsWith("data:")) ? (
                       <View style={styles.imagePreviewContainer}>
                         <SmartImage
@@ -1498,7 +1414,7 @@ export default function ProductosScreen() {
                           label="URL de imagen (opcional)"
                           value={form.imagen}
                           onChangeText={(text) =>
-                            setForm({ ...form, imagen: text })
+                            setForm({ ...form, imagen: text, imagenPublicId: "" })
                           }
                           placeholder="https://ejemplo.com/imagen.jpg"
                         />
@@ -1640,6 +1556,7 @@ export default function ProductosScreen() {
                   {form.imagen &&
                   (form.imagen.startsWith("http") ||
                     form.imagen.startsWith("file") ||
+                    form.imagen.startsWith("blob:") ||
                     form.imagen.startsWith("data:")) ? (
                     <View style={styles.imagePreviewContainer}>
                       <SmartImage
@@ -1698,7 +1615,7 @@ export default function ProductosScreen() {
                         label="URL de imagen (opcional)"
                         value={form.imagen}
                         onChangeText={(text) =>
-                          setForm({ ...form, imagen: text })
+                          setForm({ ...form, imagen: text, imagenPublicId: "" })
                         }
                         placeholder="https://ejemplo.com/imagen.jpg"
                       />
@@ -1935,7 +1852,7 @@ export default function ProductosScreen() {
 
                     {/* Botones de acción */}
                     <View style={styles.detailActionsContainer}>
-                      <TouchableOpacity
+                      {canEdit && <TouchableOpacity
                         style={styles.detailEditButton}
                         onPress={() => {
                           setDetailModalVisible(false);
@@ -1948,9 +1865,9 @@ export default function ProductosScreen() {
                         <ThemedText style={styles.detailActionText}>
                           Editar Producto
                         </ThemedText>
-                      </TouchableOpacity>
+                      </TouchableOpacity>}
 
-                      <TouchableOpacity
+                      {canDelete && <TouchableOpacity
                         style={styles.detailDeleteButton}
                         onPress={() => {
                           setDetailModalVisible(false);
@@ -1965,7 +1882,7 @@ export default function ProductosScreen() {
                         <ThemedText style={styles.detailActionText}>
                           Eliminar Producto
                         </ThemedText>
-                      </TouchableOpacity>
+                      </TouchableOpacity>}
                     </View>
                   </View>
                 </ScrollView>
@@ -2110,7 +2027,7 @@ export default function ProductosScreen() {
 
                   {/* Botones de acción */}
                   <View style={styles.detailActionsContainer}>
-                    <TouchableOpacity
+                    {canEdit && <TouchableOpacity
                       style={styles.detailEditButton}
                       onPress={() => {
                         setDetailModalVisible(false);
@@ -2123,9 +2040,9 @@ export default function ProductosScreen() {
                       <ThemedText style={styles.detailActionText}>
                         Editar Producto
                       </ThemedText>
-                    </TouchableOpacity>
+                    </TouchableOpacity>}
 
-                    <TouchableOpacity
+                    {canDelete && <TouchableOpacity
                       style={styles.detailDeleteButton}
                       onPress={() => {
                         setDetailModalVisible(false);
@@ -2140,7 +2057,7 @@ export default function ProductosScreen() {
                       <ThemedText style={styles.detailActionText}>
                         Eliminar Producto
                       </ThemedText>
-                    </TouchableOpacity>
+                    </TouchableOpacity>}
                   </View>
                 </View>
               </ScrollView>

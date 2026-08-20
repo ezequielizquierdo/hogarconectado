@@ -8,9 +8,17 @@ const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 // Rate limiting variables
 let lastRequestTime = 0;
 const MIN_REQUEST_INTERVAL = 200; // 200ms entre requests
+let unauthorizedHandler: (() => void) | undefined;
+
+export const setUnauthorizedHandler = (handler?: () => void) => {
+    unauthorizedHandler = handler;
+};
 
 // Configuración base de la API
 const getBaseURL = () => {
+    if (process.env.EXPO_PUBLIC_API_URL) {
+        return process.env.EXPO_PUBLIC_API_URL;
+    }
     if (__DEV__) {
         if (Platform.OS === 'web') {
             // En web, intentar usar la misma origin que la aplicación web para evitar CORS
@@ -118,6 +126,7 @@ apiClient.interceptors.response.use(
         if (error.response?.status === 401) {
             // Token expirado, limpiar storage
             await AsyncStorage.removeItem('auth_token');
+            unauthorizedHandler?.();
         }
 
         return Promise.reject(error);
