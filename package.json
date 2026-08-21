@@ -18,7 +18,7 @@
     "@react-navigation/elements": "^2.3.8",
     "@react-navigation/native": "^7.1.6",
     "@react-oauth/google": "^0.12.2",
-    "axios": "^1.11.0",
+    "axios": "^1.19.0",
     "expo": "~53.0.20",
     "expo-blur": "~14.1.5",
     "expo-clipboard": "^7.1.5",
@@ -47,8 +47,7 @@
     "react-native-screens": "~4.11.1",
     "react-native-view-shot": "^4.0.3",
     "react-native-web": "~0.20.0",
-    "react-native-webview": "13.13.5",
-    "xlsx": "^0.18.5"
+    "react-native-webview": "13.13.5"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
