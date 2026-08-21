@@ -1,11 +1,10 @@
-import React, { useState } from "react";
+import React from "react";
 import {
   View,
   TouchableOpacity,
   StyleSheet,
-  Dimensions,
   Platform,
-  Image as RNImage,
+  useWindowDimensions,
 } from "react-native";
 import { Image } from "expo-image";
 import { ThemedText } from "@/components/ThemedText";
@@ -26,9 +25,6 @@ interface ProductCardProps {
   showAdminButtons?: boolean;
 }
 
-const { width } = Dimensions.get("window");
-const cardWidth = Platform.OS === "web" ? "100%" : (width - SPACING.lg * 3) / 2;
-
 export default function ProductCard({
   producto,
   onPress,
@@ -40,6 +36,9 @@ export default function ProductCard({
   onInstagramStory,
   showAdminButtons = false,
 }: ProductCardProps) {
+  const { width } = useWindowDimensions();
+  const isCompact = Platform.OS !== "web" || width <= 768;
+
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat("es-AR", {
       style: "currency",
@@ -50,74 +49,89 @@ export default function ProductCard({
 
   return (
     <View style={styles.container}>
-      <ThemedView style={styles.card}>
+      <ThemedView style={[styles.card, !isCompact && styles.cardDesktop]}>
         {/* Zona de información del producto - clickeable para ver detalle */}
         <TouchableOpacity
           onPress={onPress}
-          style={styles.productInfoSection}
+          style={[
+            styles.productInfoSection,
+            !isCompact && styles.productInfoSectionDesktop,
+          ]}
           activeOpacity={0.7}
         >
-          {/* Imagen del producto */}
-          <View style={styles.imageContainer}>
-            {producto.imagenes && producto.imagenes.length > 0 ? (
-              <Image
-                source={{ uri: producto.imagenes[0] }}
-                style={styles.productImage}
-                contentFit="contain"
-              />
-            ) : (
-              <View style={styles.placeholderImage}>
-                <ThemedText style={styles.placeholderText}>📱</ThemedText>
-              </View>
-            )}
-          </View>
-
-          {/* Badge de stock */}
           <View
             style={[
-              styles.stockBadge,
-              {
-                backgroundColor: producto.stock.disponible
-                  ? COLORS.success
-                  : COLORS.warning,
-              },
+              styles.mainContent,
+              isCompact ? styles.mainContentCompact : styles.mainContentDesktop,
             ]}
           >
-            <ThemedText style={styles.stockText}>
-              {producto.stock.disponible
-                ? `Stock: ${producto.stock.cantidad}`
-                : "Sin stock"}
-            </ThemedText>
-          </View>
+            <View
+              style={[
+                styles.imageContainer,
+                isCompact
+                  ? styles.imageContainerCompact
+                  : styles.imageContainerDesktop,
+              ]}
+            >
+              {producto.imagenes && producto.imagenes.length > 0 ? (
+                <Image
+                  source={{ uri: producto.imagenes[0] }}
+                  style={styles.productImage}
+                  contentFit="contain"
+                />
+              ) : (
+                <View style={styles.placeholderImage}>
+                  <ThemedText style={styles.placeholderText}>📱</ThemedText>
+                </View>
+              )}
+            </View>
 
-          {/* Información del producto */}
-          <View style={styles.productInfo}>
-            <ThemedText style={styles.brandText}>
-              {typeof producto.categoria === "string"
-                ? producto.categoria
-                : producto.categoria.nombre}
-            </ThemedText>
+            <View style={[styles.detailsColumn, isCompact && styles.detailsColumnCompact]}>
+              <View
+                style={[
+                  styles.stockBadge,
+                  {
+                    backgroundColor: producto.stock.disponible
+                      ? COLORS.success
+                      : COLORS.warning,
+                  },
+                ]}
+              >
+                <ThemedText style={styles.stockText}>
+                  {producto.stock.disponible
+                    ? `Stock: ${producto.stock.cantidad}`
+                    : "Sin stock"}
+                </ThemedText>
+              </View>
 
-            <ThemedText style={styles.marcaText} numberOfLines={1}>
-              {producto.marca}
-            </ThemedText>
+              <View style={styles.productInfo}>
+                <ThemedText style={styles.brandText} numberOfLines={1}>
+                  {typeof producto.categoria === "string"
+                    ? producto.categoria
+                    : producto.categoria.nombre}
+                </ThemedText>
+                <ThemedText style={styles.marcaText} numberOfLines={1}>
+                  {producto.marca}
+                </ThemedText>
+                <ThemedText style={styles.modeloText} numberOfLines={2}>
+                  {producto.modelo}
+                </ThemedText>
+                {isCompact && producto.descripcion && (
+                  <ThemedText style={styles.descriptionText} numberOfLines={2}>
+                    {producto.descripcion}
+                  </ThemedText>
+                )}
+              </View>
 
-            <ThemedText style={styles.modeloText} numberOfLines={2}>
-              {producto.modelo}
-            </ThemedText>
-
-            {producto.descripcion && (
-              <ThemedText style={styles.descriptionText} numberOfLines={1}>
-                {producto.descripcion}
-              </ThemedText>
-            )}
-          </View>
-
-          {/* Precio único */}
-          <View style={styles.priceContainer}>
-            <ThemedText style={styles.price}>
-              {formatPrice(producto.precioBase)}
-            </ThemedText>
+              <View style={styles.priceContainer}>
+                {!isCompact && (
+                  <ThemedText style={styles.priceLabel}>PRECIO CONTADO</ThemedText>
+                )}
+                <ThemedText style={[styles.price, isCompact && styles.priceCompact]}>
+                  {formatPrice(producto.precios.contado)}
+                </ThemedText>
+              </View>
+            </View>
           </View>
         </TouchableOpacity>
 
@@ -165,8 +179,7 @@ export default function ProductCard({
 
 const styles = StyleSheet.create({
   container: {
-    width: cardWidth,
-    marginBottom: Platform.OS === "web" ? 0 : SPACING.md, // Sin margin en web, usamos gap
+    width: "100%",
   },
   card: {
     backgroundColor: COLORS.surface,
@@ -175,12 +188,35 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     height: Platform.OS === "web" ? "auto" : "auto", // Altura automática para web
   },
+  cardDesktop: {
+    minHeight: 360,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+  },
   productInfoSection: {
-    padding: SPACING.sm,
+    padding: SPACING.md,
+  },
+  productInfoSectionDesktop: {
+    flex: 1,
+  },
+  mainContent: {
+    flexDirection: "column",
+  },
+  mainContentCompact: {
+    flexDirection: "row",
+    alignItems: "stretch",
+    gap: SPACING.md,
+  },
+  mainContentDesktop: {
+    flexDirection: "row",
+    alignItems: "stretch",
+    gap: SPACING.lg,
   },
   imageContainer: {
     width: "100%",
-    height: Platform.OS === "web" ? 140 : 120, // Altura un poco mayor en web
+    height: 140,
     borderRadius: RADIUS.md,
     overflow: "hidden",
     marginBottom: SPACING.sm,
@@ -191,6 +227,26 @@ const styles = StyleSheet.create({
     ...SHADOWS.md, // Sombra más pronunciada
     borderWidth: 1,
     borderColor: COLORS.border,
+  },
+  imageContainerCompact: {
+    width: 132,
+    height: 150,
+    flexShrink: 0,
+    marginBottom: 0,
+  },
+  imageContainerDesktop: {
+    width: "44%",
+    height: 290,
+    flexShrink: 0,
+    marginBottom: 0,
+    padding: SPACING.md,
+  },
+  detailsColumn: {
+    flex: 1,
+  },
+  detailsColumnCompact: {
+    minWidth: 0,
+    justifyContent: "center",
   },
   productImage: {
     width: "100%",
@@ -251,10 +307,20 @@ const styles = StyleSheet.create({
   priceContainer: {
     marginBottom: 0,
   },
+  priceLabel: {
+    fontSize: 10,
+    fontWeight: "700",
+    letterSpacing: 0.6,
+    color: COLORS.textSecondary,
+    marginBottom: 3,
+  },
   price: {
     fontSize: Platform.OS === "web" ? 18 : 16,
     fontWeight: "bold",
     color: COLORS.primary,
+  },
+  priceCompact: {
+    fontSize: 20,
   },
   separator: {
     height: 1,

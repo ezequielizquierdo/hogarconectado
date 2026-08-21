@@ -33,6 +33,7 @@ export interface Producto {
     modelo: string;
     descripcion?: string;
     precioBase: number;
+    precioConGanancia?: number;
     especificaciones?: Record<string, any>;
     stock: {
         cantidad: number;

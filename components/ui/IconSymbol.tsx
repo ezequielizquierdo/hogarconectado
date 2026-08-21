@@ -22,6 +22,7 @@ const MAPPING = {
   "chevron.left.forwardslash.chevron.right": "code",
   "chevron.right": "chevron-right",
   "doc.text.fill": "assignment",
+  percent: "calculate",
   "person.fill": "contact-mail",
   "person.2.fill": "group",
   "person.crop.circle.fill": "account-circle",

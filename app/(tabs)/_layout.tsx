@@ -59,9 +59,15 @@ export default function TabLayout() {
       <Tabs.Screen
         name="explore_clean"
         options={{
-          title: "Contacto",
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="calculadora"
+        options={{
+          title: "Calculadora",
           tabBarIcon: ({ color }) => (
-            <IconSymbol size={28} name="person.fill" color={color} />
+            <IconSymbol size={28} name="percent" color={color} />
           ),
         }}
       />

@@ -33,7 +33,6 @@ import FadeInView from "@/components/ui/FadeInView";
 import ProductCard from "@/components/product/ProductCard";
 import { SidebarFilters } from "@/components/filters";
 import Pagination from "@/components/Pagination";
-import BackendStatusBanner from "@/components/BackendStatusBanner";
 import { useCategorias } from "@/hooks/useCategorias";
 import { useProductos } from "@/hooks/useProductos";
 import { useMarcas } from "@/hooks/useMarcas";
@@ -119,7 +118,7 @@ export default function ProductosScreen() {
   const [filtersModalVisible, setFiltersModalVisible] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Producto | null>(null);
   const [selectedProductForInstagram, setSelectedProductForInstagram] =
-    useState<Producto | null>(null);
+    useState<ProductoConPrecios | null>(null);
   const [instagramStoryOptions, setInstagramStoryOptions] = useState({
     showMarca: true,
     showModelo: true,
@@ -307,8 +306,8 @@ export default function ProductosScreen() {
   // Función para formatear precio en formato local (punto para miles, coma para decimales)
   const formatPrecioLocal = (precio: number): string => {
     return precio.toLocaleString("es-AR", {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
     });
   };
 
@@ -330,9 +329,19 @@ export default function ProductosScreen() {
     return categoryName;
   };
 
-  const openInstagramModal = (producto: Producto) => {
-    setSelectedProductForInstagram(producto);
-    setInstagramModalVisible(true);
+  const openInstagramModal = async (producto: Producto) => {
+    try {
+      const productoConPrecios =
+        await productosService.obtenerProductoPorId(producto._id);
+      setSelectedProductForInstagram(productoConPrecios);
+      setInstagramModalVisible(true);
+    } catch (error) {
+      console.error("Error obteniendo el precio contado:", error);
+      Alert.alert(
+        "Error",
+        "No se pudo obtener el precio contado actualizado del producto."
+      );
+    }
   };
 
   const closeInstagramModal = () => {
@@ -930,7 +939,7 @@ export default function ProductosScreen() {
   ): ProductoConPrecios => ({
     ...producto,
     precios: {
-      contado: producto.precioBase,
+      contado: producto.precioConGanancia ?? producto.precioBase,
       tresCuotas: {
         total: producto.precioBase,
         cuota: producto.precioBase / 3,
@@ -946,7 +955,10 @@ export default function ProductosScreen() {
     const productoConPrecios = convertirAProductoConPrecios(item);
 
     return (
-      <View key={item._id} style={styles.cardContainer}>
+      <View
+        key={item._id}
+        style={[styles.cardContainer, { width: getCardWidth() as any }]}
+      >
         <ProductCard
           producto={productoConPrecios}
           onPress={() => {
@@ -965,6 +977,10 @@ export default function ProductosScreen() {
   const isWeb = Platform.OS === "web";
   const { width } = Dimensions.get("window");
   const isWideScreen = width > 768;
+  const getCardWidth = () => {
+    if (!isWideScreen) return "100%";
+    return "calc(50% - 8px)";
+  };
 
   // Preparar datos para el sidebar
   const categoriaOptions = categorias.map((cat) => ({
@@ -1059,9 +1075,6 @@ export default function ProductosScreen() {
         <View style={styles.mobileLayout}>
           {/* Header móvil reutilizable */}
           <MobileHeader title="Productos" subtitle="Gestiona tu inventario" />
-
-          {/* Banner de estado del backend */}
-          <BackendStatusBanner />
 
           <ScrollView
             style={styles.mobileContent}
@@ -2121,30 +2134,17 @@ export default function ProductosScreen() {
                           </View>
                         )}
 
-                      {/* Contenedor de categoría debajo de la imagen */}
-                      {instagramStoryOptions.showCategoria &&
-                        selectedProductForInstagram?.categoria && (
-                          <View style={styles.storyCategoryContainerBelow}>
-                            <View style={styles.storyCategoryBadgeSmall}>
-                              <ThemedText style={styles.storyCategoryTextSmall}>
-                                {getShortCategoryName(
-                                  typeof selectedProductForInstagram.categoria ===
-                                    "string"
-                                    ? selectedProductForInstagram.categoria
-                                    : selectedProductForInstagram.categoria
-                                        .nombre
-                                )}
-                              </ThemedText>
-                            </View>
-                          </View>
-                        )}
-
                       {/* Información del producto */}
                       <View style={styles.storyProductInfo}>
-                        {instagramStoryOptions.showMarca &&
-                          selectedProductForInstagram?.marca && (
-                            <ThemedText style={styles.storyText}>
-                              {selectedProductForInstagram.marca}
+                        {instagramStoryOptions.showCategoria &&
+                          selectedProductForInstagram?.categoria && (
+                            <ThemedText style={styles.storyCategoryTextInPanel}>
+                              {getShortCategoryName(
+                                typeof selectedProductForInstagram.categoria ===
+                                  "string"
+                                  ? selectedProductForInstagram.categoria
+                                  : selectedProductForInstagram.categoria.nombre
+                              )}
                             </ThemedText>
                           )}
 
@@ -2155,14 +2155,28 @@ export default function ProductosScreen() {
                             </ThemedText>
                           )}
 
-                        {instagramStoryOptions.showPrecio &&
-                          selectedProductForInstagram?.precioBase && (
-                            <ThemedText style={styles.storyPrice}>
-                              $
-                              {formatPrecioLocal(
-                                Number(selectedProductForInstagram.precioBase)
-                              )}
+                        {instagramStoryOptions.showMarca &&
+                          selectedProductForInstagram?.marca && (
+                            <ThemedText style={styles.storyText}>
+                              {selectedProductForInstagram.marca}
                             </ThemedText>
+                          )}
+
+                        {instagramStoryOptions.showPrecio &&
+                          selectedProductForInstagram?.precios?.contado != null && (
+                            <>
+                              <ThemedText style={styles.storyPriceLabel}>
+                                PRECIO CONTADO
+                              </ThemedText>
+                              <ThemedText style={styles.storyPrice}>
+                                ${" "}
+                                {formatPrecioLocal(
+                                  Number(
+                                    selectedProductForInstagram.precios.contado
+                                  )
+                                )}
+                              </ThemedText>
+                            </>
                           )}
 
                         {instagramStoryOptions.showStock &&
@@ -2428,42 +2442,27 @@ export default function ProductosScreen() {
                     {selectedProductForInstagram?.imagenes &&
                       selectedProductForInstagram.imagenes.length > 0 && (
                         <View style={styles.storyProductImageContainer}>
-                          <Image
-                            source={{
-                              uri: selectedProductForInstagram.imagenes[0],
-                            }}
-                            style={[
-                              styles.storyProductImage,
-                              { width: 180, height: 180 }, // Aumentado de 150 a 180
-                            ]}
-                            contentFit="contain"
-                          />
-                        </View>
-                      )}
-
-                    {/* Contenedor de categoría debajo de la imagen */}
-                    {instagramStoryOptions.showCategoria &&
-                      selectedProductForInstagram?.categoria && (
-                        <View style={styles.storyCategoryContainerBelow}>
-                          <View style={styles.storyCategoryBadgeSmall}>
-                            <ThemedText style={styles.storyCategoryTextSmall}>
-                              {getShortCategoryName(
-                                typeof selectedProductForInstagram.categoria ===
-                                  "string"
-                                  ? selectedProductForInstagram.categoria
-                                  : selectedProductForInstagram.categoria.nombre
-                              )}
-                            </ThemedText>
-                          </View>
+                            <Image
+                              source={{
+                                uri: selectedProductForInstagram.imagenes[0],
+                              }}
+                              style={styles.storyProductImage}
+                              contentFit="contain"
+                            />
                         </View>
                       )}
 
                     {/* Información del producto */}
                     <View style={styles.storyProductInfo}>
-                      {instagramStoryOptions.showMarca &&
-                        selectedProductForInstagram?.marca && (
-                          <ThemedText style={styles.storyText}>
-                            {selectedProductForInstagram.marca}
+                      {instagramStoryOptions.showCategoria &&
+                        selectedProductForInstagram?.categoria && (
+                          <ThemedText style={styles.storyCategoryTextInPanel}>
+                            {getShortCategoryName(
+                              typeof selectedProductForInstagram.categoria ===
+                                "string"
+                                ? selectedProductForInstagram.categoria
+                                : selectedProductForInstagram.categoria.nombre
+                            )}
                           </ThemedText>
                         )}
 
@@ -2474,14 +2473,28 @@ export default function ProductosScreen() {
                           </ThemedText>
                         )}
 
-                      {instagramStoryOptions.showPrecio &&
-                        selectedProductForInstagram?.precioBase && (
-                          <ThemedText style={styles.storyPrice}>
-                            $
-                            {formatPrecioLocal(
-                              Number(selectedProductForInstagram.precioBase)
-                            )}
+                      {instagramStoryOptions.showMarca &&
+                        selectedProductForInstagram?.marca && (
+                          <ThemedText style={styles.storyText}>
+                            {selectedProductForInstagram.marca}
                           </ThemedText>
+                        )}
+
+                      {instagramStoryOptions.showPrecio &&
+                        selectedProductForInstagram?.precios?.contado != null && (
+                          <>
+                            <ThemedText style={styles.storyPriceLabel}>
+                              PRECIO CONTADO
+                            </ThemedText>
+                            <ThemedText style={styles.storyPrice}>
+                              ${" "}
+                              {formatPrecioLocal(
+                                Number(
+                                  selectedProductForInstagram.precios.contado
+                                )
+                              )}
+                            </ThemedText>
+                          </>
                         )}
 
                       {instagramStoryOptions.showStock && (
@@ -3359,10 +3372,8 @@ const styles = StyleSheet.create({
     gap: SPACING.md, // Espacio uniforme entre cards
   },
   mobileList: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "flex-start", // Cambiar a flex-start para que no haya espacios
-    paddingHorizontal: 0, // Sin padding lateral en móvil
+    flexDirection: "column",
+    gap: SPACING.md,
   },
   scrollContainer: {
     flex: 1,
@@ -3562,9 +3573,8 @@ const styles = StyleSheet.create({
     color: COLORS.warning,
   },
   cardContainer: {
-    marginBottom: 0, // Quitamos margin porque usamos gap
-    width: Platform.OS === "web" ? ("calc(25% - 12px)" as any) : "48%", // 4 columnas en web, 2 en móvil
-    minHeight: Platform.OS === "web" ? 280 : undefined, // Altura mínima en web para consistencia
+    marginBottom: 0,
+    minWidth: 0,
   },
   // Estilos para modal de detalle
   detailContainer: {
@@ -3918,20 +3928,26 @@ const styles = StyleSheet.create({
   },
   storyContent: {
     flex: 1,
-    padding: SPACING.md, // Reducido de SPACING.lg para menos padding
-    justifyContent: "space-between" as const,
+    padding: SPACING.md,
     position: "relative" as const,
   },
   storyProductImageContainer: {
+    flex: 1,
+    width: "100%" as const,
     alignItems: "center" as const,
-    marginTop: SPACING.md, // Reducido de SPACING.xl
+    justifyContent: "center" as const,
+    marginTop: SPACING.xs,
+    marginBottom: SPACING.sm,
+    minHeight: 0,
   },
   storyProductImage: {
-    width: 250, // Aumentado de 200 a 250
-    height: 250, // Aumentado de 200 a 250
+    width: "100%" as const,
+    height: "100%" as const,
+    maxWidth: 280,
+    maxHeight: 360,
     borderRadius: RADIUS.lg,
     backgroundColor: "rgba(255, 255, 255, 0.9)" as any,
-    padding: SPACING.sm, // Reducido de SPACING.md para menos padding interno
+    padding: SPACING.xs,
   },
   // Estilos para contenedor mejorado de categoría
   storyCategoryContainer: {
@@ -3997,9 +4013,20 @@ const styles = StyleSheet.create({
   },
   storyProductInfo: {
     backgroundColor: "rgba(0, 0, 0, 0.7)" as any,
-    padding: SPACING.md, // Reducido de SPACING.lg
+    padding: SPACING.md,
     borderRadius: RADIUS.lg,
     alignItems: "center" as const,
+    width: "100%" as const,
+    flexShrink: 0,
+  },
+  storyCategoryTextInPanel: {
+    color: "#FFFFFF" as const,
+    fontSize: 12,
+    fontWeight: "700" as const,
+    letterSpacing: 0.8,
+    textAlign: "center" as const,
+    textTransform: "uppercase" as const,
+    marginBottom: SPACING.xs,
   },
   storyText: {
     color: "#FFFFFF" as const,
@@ -4020,6 +4047,14 @@ const styles = StyleSheet.create({
     fontWeight: "bold" as const,
     textAlign: "center" as const,
     marginBottom: SPACING.sm,
+  },
+  storyPriceLabel: {
+    color: "#FFFFFF" as const,
+    fontSize: 10,
+    fontWeight: "700" as const,
+    letterSpacing: 1,
+    textAlign: "center" as const,
+    marginTop: SPACING.xs,
   },
   storyDescription: {
     color: "#FFFFFF" as const,
