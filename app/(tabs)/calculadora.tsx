@@ -1,8 +1,9 @@
 import Header from "@/components/layout/Header";
 import MobileHeader from "@/components/MobileHeader";
 import { COLORS, RADIUS, SHADOWS, SPACING } from "@/constants/theme";
+import { useCalculoPrecios } from "@/hooks/useCalculoPrecios";
 import * as Clipboard from "expo-clipboard";
-import React, { useMemo, useState } from "react";
+import React, { useState } from "react";
 import {
   Platform,
   ScrollView,
@@ -13,10 +14,6 @@ import {
   useWindowDimensions,
   View,
 } from "react-native";
-
-const FACTOR_FACTURA = 1.05;
-const FACTOR_3_CUOTAS = 1.076;
-const FACTOR_6_CUOTAS = 1.156;
 
 const formatMoney = (value: number) =>
   new Intl.NumberFormat("es-AR", {
@@ -81,27 +78,14 @@ export default function CalculadoraScreen() {
   const [porcentaje, setPorcentaje] = useState("10");
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
-  const resultados = useMemo(() => {
-    const base = parseMoney(valorInicial);
-    const porcentajeNumero = Number(porcentaje.replace(",", ".")) || 0;
-    const ganancia = base * (porcentajeNumero / 100);
-    const efectivo = base + ganancia;
-    const costoFacturado = base * FACTOR_FACTURA;
-    const facturadoUnPago = costoFacturado * (1 + porcentajeNumero / 100);
-    const total3 = facturadoUnPago * FACTOR_3_CUOTAS;
-    const total6 = facturadoUnPago * FACTOR_6_CUOTAS;
-
-    return {
-      ganancia,
-      efectivo,
-      costoFacturado,
-      facturadoUnPago,
-      total3,
-      cuota3: total3 / 3,
-      total6,
-      cuota6: total6 / 6,
-    };
-  }, [valorInicial, porcentaje]);
+  const base = valorInicial ? parseMoney(valorInicial) : null;
+  const porcentajeNumero = porcentaje
+    ? Number(porcentaje.replace(",", "."))
+    : null;
+  const { data: resultados, loading, error } = useCalculoPrecios(
+    base,
+    porcentajeNumero
+  );
 
   const handleInitialValue = (value: string) => {
     const numericValue = value.replace(/[^\d]/g, "");
@@ -209,6 +193,18 @@ export default function CalculadoraScreen() {
                   Acá aparecerán efectivo, factura y cuotas listos para copiar.
                 </Text>
               </View>
+            ) : loading ? (
+              <View style={styles.emptyState}>
+                <Text style={styles.emptyIcon}>⌛</Text>
+                <Text style={styles.emptyTitle}>Calculando valores</Text>
+                <Text style={styles.emptyText}>Estamos aplicando las fórmulas oficiales.</Text>
+              </View>
+            ) : error || !resultados ? (
+              <View style={styles.emptyState}>
+                <Text style={styles.emptyIcon}>⚠️</Text>
+                <Text style={styles.emptyTitle}>No pudimos calcular</Text>
+                <Text style={styles.emptyText}>{error || "Revisá los valores ingresados."}</Text>
+              </View>
             ) : (
               <View style={styles.resultsGrid}>
                 <ResultCard
@@ -230,7 +226,7 @@ export default function CalculadoraScreen() {
                 <ResultCard
                   title="Facturado en un pago"
                   subtitle="Incluye 5% de costo de factura"
-                  value={resultados.facturadoUnPago}
+                  value={resultados.factura.unPago}
                   accent="accent"
                   copiedKey={copiedKey}
                   valueKey="facturado"
@@ -239,7 +235,7 @@ export default function CalculadoraScreen() {
                 <ResultCard
                   title="Costo facturado"
                   subtitle="Valor inicial + 5%"
-                  value={resultados.costoFacturado}
+                  value={resultados.factura.costoBase}
                   copiedKey={copiedKey}
                   valueKey="costoFacturado"
                   onCopy={copyValue}
@@ -249,7 +245,7 @@ export default function CalculadoraScreen() {
                   <Text style={styles.installmentTitle}>3 cuotas</Text>
                   <ResultCard
                     title="Valor por cuota"
-                    value={resultados.cuota3}
+                    value={resultados.tresCuotas.cuota}
                     accent="primary"
                     copiedKey={copiedKey}
                     valueKey="cuota3"
@@ -257,7 +253,7 @@ export default function CalculadoraScreen() {
                   />
                   <ResultCard
                     title="Total financiado"
-                    value={resultados.total3}
+                    value={resultados.tresCuotas.total}
                     copiedKey={copiedKey}
                     valueKey="total3"
                     onCopy={copyValue}
@@ -268,7 +264,7 @@ export default function CalculadoraScreen() {
                   <Text style={styles.installmentTitle}>6 cuotas</Text>
                   <ResultCard
                     title="Valor por cuota"
-                    value={resultados.cuota6}
+                    value={resultados.seisCuotas.cuota}
                     accent="primary"
                     copiedKey={copiedKey}
                     valueKey="cuota6"
@@ -276,7 +272,7 @@ export default function CalculadoraScreen() {
                   />
                   <ResultCard
                     title="Total financiado"
-                    value={resultados.total6}
+                    value={resultados.seisCuotas.total}
                     copiedKey={copiedKey}
                     valueKey="total6"
                     onCopy={copyValue}

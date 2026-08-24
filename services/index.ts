@@ -3,6 +3,7 @@ export { default as apiClient } from './apiClient';
 export { default as categoriasService } from './categoriasService';
 export { default as productosService } from './productosService';
 export { default as cotizacionesService } from './cotizacionesService';
+export { default as preciosService } from './preciosService';
 export { default as warmupService } from './warmupService';
 export * from './types';
 

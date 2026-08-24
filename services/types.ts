@@ -61,6 +61,25 @@ export interface ProductoConPrecios extends Producto {
     };
 }
 
+export interface CalculoPrecios {
+    precioBase: number;
+    porcentaje: number;
+    ganancia: number;
+    efectivo: number;
+    factura: {
+        costoBase: number;
+        unPago: number;
+    };
+    tresCuotas: {
+        total: number;
+        cuota: number;
+    };
+    seisCuotas: {
+        total: number;
+        cuota: number;
+    };
+}
+
 export interface DatosContacto {
     nombre: string;
     telefono: string;

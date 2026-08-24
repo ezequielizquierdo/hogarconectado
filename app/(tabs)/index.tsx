@@ -32,6 +32,7 @@ import FadeInView from "@/components/ui/FadeInView";
 import { useCategorias } from "@/hooks/useCategorias";
 import { useMarcasPorCategoria } from "@/hooks/useMarcasPorCategoria";
 import { useProductosPorCategoriaYMarca } from "@/hooks/useProductosPorCategoriaYMarca";
+import { useCalculoPrecios } from "@/hooks/useCalculoPrecios";
 import { COLORS, SPACING, RADIUS, SHADOWS } from "@/constants/theme";
 import { Producto } from "@/services/types";
 
@@ -207,29 +208,29 @@ export default function HomeScreen() {
   // Referencia para capturar la vista de cotización
   const cotizacionViewRef = useRef<View>(null);
 
-  // Factores de recargo basados en el análisis del Excel
-  const FACTOR_3_CUOTAS = 1.1298;
-  const FACTOR_6_CUOTAS = 1.2138;
-
-  const calcularCotizacion = (): CalculosResultado | null => {
-    const valorLimpio = limpiarValorMoneda(cotizacion.valorReal);
+  const obtenerEntradasCalculo = () => {
+    const valorLimpio = cotizacion.valorReal.replace(/[^\d]/g, "");
     const valorReal = parseFloat(valorLimpio);
     const porcentaje = parseFloat(cotizacion.porcentajeAplicado);
-
-    if (isNaN(valorReal) || isNaN(porcentaje)) {
-      return null;
-    }
-
-    const valorConGanancia = valorReal * (1 + porcentaje / 100);
-    const valorPorCuota3 = (valorConGanancia * FACTOR_3_CUOTAS) / 3;
-    const valorPorCuota6 = (valorConGanancia * FACTOR_6_CUOTAS) / 6;
-
     return {
-      valorConGanancia,
-      valorPorCuota3,
-      valorPorCuota6,
+      valorReal: Number.isFinite(valorReal) ? valorReal : null,
+      porcentaje: Number.isFinite(porcentaje) ? porcentaje : null,
     };
   };
+
+  const entradasCalculo = obtenerEntradasCalculo();
+  const {
+    data: preciosCalculados,
+    loading: calculandoPrecios,
+    error: errorCalculo,
+  } = useCalculoPrecios(entradasCalculo.valorReal, entradasCalculo.porcentaje);
+  const calculos: CalculosResultado | null = preciosCalculados
+    ? {
+        valorConGanancia: preciosCalculados.efectivo,
+        valorPorCuota3: preciosCalculados.tresCuotas.cuota,
+        valorPorCuota6: preciosCalculados.seisCuotas.cuota,
+      }
+    : null;
 
   const formatearPrecio = (precio: number): string => {
     return new Intl.NumberFormat("es-AR", {
@@ -261,9 +262,11 @@ export default function HomeScreen() {
   };
 
   const generarMensajeFinal = () => {
-    const calculos = calcularCotizacion();
     if (!calculos) {
-      Alert.alert("Error", "Por favor completa todos los campos requeridos");
+      Alert.alert(
+        "No se pudo calcular",
+        errorCalculo || "Completá los valores y esperá a que termine el cálculo."
+      );
       return;
     }
 
@@ -441,8 +444,6 @@ export default function HomeScreen() {
     setCotizacion({ ...cotizacion, valorReal: valorFormateado });
   };
 
-  const calculos = calcularCotizacion();
-
   return (
     <>
       {isWeb && isWideScreen ? (
@@ -558,7 +559,9 @@ export default function HomeScreen() {
                           !cotizacion.marca ||
                           !cotizacion.modelo ||
                           !cotizacion.valorReal ||
-                          !cotizacion.porcentajeAplicado
+                          !cotizacion.porcentajeAplicado ||
+                          calculandoPrecios ||
+                          !calculos
                         }
                       />
 
@@ -850,7 +853,9 @@ export default function HomeScreen() {
                       !cotizacion.marca ||
                       !cotizacion.modelo ||
                       !cotizacion.valorReal ||
-                      !cotizacion.porcentajeAplicado
+                      !cotizacion.porcentajeAplicado ||
+                      calculandoPrecios ||
+                      !calculos
                     }
                   />
 
@@ -978,7 +983,6 @@ export default function HomeScreen() {
                 <View style={styles.capturePrices}>
                   <Text style={styles.capturePricesTitle}>💰 PRECIOS:</Text>
                   {(() => {
-                    const calculos = calcularCotizacion();
                     if (calculos) {
                       return (
                         <>
