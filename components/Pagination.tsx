@@ -3,15 +3,6 @@ import { View, TouchableOpacity, Platform } from "react-native";
 import { ThemedText } from "./ThemedText";
 import { COLORS, SPACING, RADIUS } from "../constants/theme";
 
-interface PaginationProps {
-  currentPage: number;
-  totalPages: number;
-  totalItems: number;
-  itemsPerPage: number;
-  onPageChange: (page: number) => void;
-  loading?: boolean;
-}
-
 interface PaginationMetadata {
   pagina: number;
   limite: number;
@@ -51,8 +42,6 @@ export const Pagination: React.FC<PaginationComponentProps> = ({
   const getPageNumbers = () => {
     const delta = Platform.OS === "web" ? 2 : 1; // Mostrar más páginas en web
     const range = [];
-    const rangeWithDots = [];
-
     // Siempre mostrar primera página
     if (currentPage > delta + 2) {
       range.push(1);

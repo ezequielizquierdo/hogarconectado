@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useCallback, useState, useEffect, useRef } from 'react';
 import { productosService, handleApiError } from '../services';
 import type { Producto, ProductoFiltros } from '../services';
 
@@ -11,12 +11,13 @@ export const useProductos = (filtrosIniciales: ProductoFiltros = {}) => {
     const [error, setError] = useState<string | null>(null);
     const [pagination, setPagination] = useState<any>(null);
     const [filtros, setFiltros] = useState<ProductoFiltros>(filtrosIniciales);
+    const filtrosRef = useRef<ProductoFiltros>(filtrosIniciales);
 
     // Control de rate limiting
     const lastRequestTime = useRef<number>(0);
     const isRequestInProgress = useRef<boolean>(false);
 
-    const cargarProductos = async (nuevosFiltros?: ProductoFiltros) => {
+    const cargarProductos = useCallback(async (nuevosFiltros?: ProductoFiltros) => {
         // Evitar requests simultáneos
         if (isRequestInProgress.current) {
             console.log('Request en progreso, omitiendo...');
@@ -36,7 +37,7 @@ export const useProductos = (filtrosIniciales: ProductoFiltros = {}) => {
             setLoading(true);
             setError(null);
 
-            const filtrosFinales = nuevosFiltros || filtros;
+            const filtrosFinales = nuevosFiltros || filtrosRef.current;
             console.log('🔍 useProductos - Filtros enviados:', filtrosFinales);
 
             const { productos: data, pagination: paginationData } =
@@ -49,6 +50,7 @@ export const useProductos = (filtrosIniciales: ProductoFiltros = {}) => {
             setPagination(paginationData);
 
             if (nuevosFiltros) {
+                filtrosRef.current = filtrosFinales;
                 setFiltros(filtrosFinales);
             }
         } catch (err) {
@@ -66,32 +68,32 @@ export const useProductos = (filtrosIniciales: ProductoFiltros = {}) => {
             setLoading(false);
             isRequestInProgress.current = false;
         }
-    };
+    }, []);
 
     useEffect(() => {
         cargarProductos();
-    }, []);
+    }, [cargarProductos]);
 
-    const buscar = (texto: string) => {
-        cargarProductos({ ...filtros, buscar: texto, pagina: 1 });
-    };
+    const buscar = useCallback((texto: string) => {
+        cargarProductos({ ...filtrosRef.current, buscar: texto, pagina: 1 });
+    }, [cargarProductos]);
 
-    const filtrarPorCategoria = (categoriaId: string) => {
-        cargarProductos({ ...filtros, categoria: categoriaId, pagina: 1 });
-    };
+    const filtrarPorCategoria = useCallback((categoriaId: string) => {
+        cargarProductos({ ...filtrosRef.current, categoria: categoriaId, pagina: 1 });
+    }, [cargarProductos]);
 
-    const cambiarPagina = (nuevaPagina: number) => {
-        cargarProductos({ ...filtros, pagina: nuevaPagina });
-    };
+    const cambiarPagina = useCallback((nuevaPagina: number) => {
+        cargarProductos({ ...filtrosRef.current, pagina: nuevaPagina });
+    }, [cargarProductos]);
 
-    const recargar = () => {
-        cargarProductos(filtros);
-    };
+    const recargar = useCallback(() => {
+        cargarProductos(filtrosRef.current);
+    }, [cargarProductos]);
 
-    const limpiarFiltros = () => {
-        const filtrosLimpios = { limite: filtros.limite };
+    const limpiarFiltros = useCallback(() => {
+        const filtrosLimpios = { limite: filtrosRef.current.limite };
         cargarProductos(filtrosLimpios);
-    };
+    }, [cargarProductos]);
 
     return {
         productos,

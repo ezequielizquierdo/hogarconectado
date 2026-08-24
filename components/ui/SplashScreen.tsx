@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useRef } from "react";
 import { StyleSheet, Dimensions } from "react-native";
 import { Image } from "expo-image";
 import Animated, {
@@ -22,6 +22,11 @@ export default function SplashScreen({
   const logoOpacity = useSharedValue(0);
   const logoScale = useSharedValue(0.3);
   const containerOpacity = useSharedValue(1);
+  const onAnimationCompleteRef = useRef(onAnimationComplete);
+
+  useEffect(() => {
+    onAnimationCompleteRef.current = onAnimationComplete;
+  }, [onAnimationComplete]);
 
   useEffect(() => {
     // Secuencia de animaciones
@@ -38,7 +43,7 @@ export default function SplashScreen({
         2500,
         withTiming(0, { duration: 800 }, (finished) => {
           if (finished) {
-            runOnJS(onAnimationComplete)();
+            runOnJS(onAnimationCompleteRef.current)();
           }
         })
       );
@@ -46,7 +51,7 @@ export default function SplashScreen({
 
     // Pequeño delay inicial para que se vea bien
     setTimeout(startAnimations, 100);
-  }, []);
+  }, [containerOpacity, logoOpacity, logoScale]);
 
   const logoAnimatedStyle = useAnimatedStyle(() => {
     return {

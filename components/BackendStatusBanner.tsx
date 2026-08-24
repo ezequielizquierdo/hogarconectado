@@ -1,5 +1,5 @@
 import React from "react";
-import { View, StyleSheet, TouchableOpacity, Alert } from "react-native";
+import { StyleSheet, TouchableOpacity, Alert } from "react-native";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
 import { useBackendStatus } from "@/hooks/useBackendStatus";
@@ -69,10 +69,17 @@ export default function BackendStatusBanner({
         </ThemedView>
         {!isWarming && (
           <ThemedView style={styles.buttonContainer}>
-            <TouchableOpacity style={styles.button} onPress={forceWarmup}>
+            <TouchableOpacity
+              accessibilityRole="button"
+              accessibilityLabel="Despertar servidor"
+              style={styles.button}
+              onPress={forceWarmup}
+            >
               <ThemedText style={styles.buttonText}>Despertar</ThemedText>
             </TouchableOpacity>
             <TouchableOpacity
+              accessibilityRole="button"
+              accessibilityLabel="Diagnosticar conexión con el servidor"
               style={[styles.button, styles.diagnosticButton]}
               onPress={showDiagnostic}
             >

@@ -6,6 +6,7 @@ import {
   ViewStyle,
   TextStyle,
   View,
+  Platform,
 } from "react-native";
 import { ThemedText } from "@/components/ThemedText";
 import { COLORS, RADIUS, SHADOWS, SPACING } from "@/constants/theme";
@@ -90,7 +91,7 @@ export default function AnimatedButton({
 
     switch (size) {
       case "small":
-        baseStyle.push({ minHeight: 40 });
+        baseStyle.push({ minHeight: Platform.OS === "android" ? 48 : 44 });
         break;
       case "large":
         baseStyle.push({ minHeight: 56 });
@@ -139,6 +140,9 @@ export default function AnimatedButton({
       ]}
     >
       <TouchableOpacity
+        accessibilityRole="button"
+        accessibilityLabel={title}
+        accessibilityState={{ disabled: disabled || loading, busy: loading }}
         onPress={onPress}
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
@@ -148,7 +152,7 @@ export default function AnimatedButton({
       >
         <View style={styles.content}>
           {icon && (
-            <ThemedText style={[styles.icon, getTextStyles()]}>
+            <ThemedText accessibilityElementsHidden style={[styles.icon, getTextStyles()]}>
               {icon}
             </ThemedText>
           )}

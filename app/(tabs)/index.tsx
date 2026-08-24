@@ -17,7 +17,6 @@ import { captureRef } from "react-native-view-shot";
 import * as Sharing from "expo-sharing";
 
 import { HelloWave } from "@/components/HelloWave";
-import ParallaxScrollView from "@/components/ParallaxScrollView";
 import MobileHeader from "@/components/MobileHeader";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
@@ -51,129 +50,16 @@ interface CalculosResultado {
   valorPorCuota6: number;
 }
 
-// Componente de imagen que maneja conversión automática para web con manejo de errores mejorado
-const SmartImage: React.FC<{
-  source: { uri: string };
-  style: any;
-  onError?: (error: any) => void;
-  onLoad?: () => void;
-}> = ({ source, style, onError, onLoad }) => {
-  const [imageUri, setImageUri] = useState(source.uri);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
-
-  React.useEffect(() => {
-    const loadImage = async () => {
-      setLoading(true);
-      setError(false);
-
-      try {
-        // Para web, usar la URL directamente
-        if (Platform.OS === "web") {
-          setImageUri(source.uri);
-        } else {
-          setImageUri(source.uri);
-        }
-      } catch (error) {
-        console.error("Error al procesar imagen:", error);
-        setError(true);
-        setImageUri(source.uri); // Fallback
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadImage();
-  }, [source.uri]);
-
-  const handleImageError = (errorEvent: any) => {
-    console.error("Error al cargar imagen:", errorEvent);
-    setError(true);
-    if (onError) {
-      onError(errorEvent);
-    }
-  };
-
-  const handleImageLoad = () => {
-    setError(false);
-    if (onLoad) {
-      onLoad();
-    }
-  };
-
-  if (loading) {
-    return (
-      <View
-        style={[
-          style,
-          {
-            backgroundColor: COLORS.surface,
-            justifyContent: "center",
-            alignItems: "center",
-            borderRadius: RADIUS.md,
-          },
-        ]}
-      >
-        <ThemedText style={{ fontSize: 28, color: COLORS.textSecondary }}>
-          📷
-        </ThemedText>
-      </View>
-    );
-  }
-
-  if (error) {
-    return (
-      <View
-        style={[
-          style,
-          {
-            backgroundColor: COLORS.surface,
-            justifyContent: "center",
-            alignItems: "center",
-            borderRadius: RADIUS.md,
-            borderWidth: 1,
-            borderColor: COLORS.border,
-          },
-        ]}
-      >
-        <ThemedText style={{ fontSize: 20, color: COLORS.textSecondary }}>
-          ❌
-        </ThemedText>
-        <ThemedText
-          style={{
-            fontSize: 10,
-            color: COLORS.textSecondary,
-            textAlign: "center",
-          }}
-        >
-          Error cargando imagen
-        </ThemedText>
-      </View>
-    );
-  }
-
-  return (
-    <Image
-      source={{ uri: imageUri }}
-      style={style}
-      onError={handleImageError}
-      onLoad={handleImageLoad}
-      contentFit="contain"
-    />
-  );
-};
-
 export default function HomeScreen() {
   // Constantes para layout responsivo
   const isWeb = Platform.OS === "web";
-  const { width: screenWidth, height: screenHeight } = Dimensions.get("window");
+  const { width: screenWidth } = Dimensions.get("window");
   const isWideScreen = screenWidth >= 1024;
 
   const {
     categorias,
     loading: categoriasLoading,
     error: categoriasError,
-    recargar,
   } = useCategorias();
 
   const [cotizacion, setCotizacion] = useState<CotizacionData>({
@@ -256,11 +142,6 @@ export default function HomeScreen() {
     }).format(numero);
   };
 
-  const limpiarValorMoneda = (valorFormateado: string): string => {
-    // Remover símbolo de moneda y espacios, mantener solo números
-    return valorFormateado.replace(/[^\d]/g, "");
-  };
-
   const generarMensajeFinal = () => {
     if (!calculos) {
       Alert.alert(
@@ -330,46 +211,6 @@ export default function HomeScreen() {
     if (mensajeFinal) {
       await Clipboard.setStringAsync(mensajeFinal);
       Alert.alert("Copiado", "La cotización ha sido copiada al portapapeles");
-    }
-  };
-
-  const generarYCompartirImagen = async () => {
-    try {
-      if (!cotizacionViewRef.current) {
-        Alert.alert(
-          "Error",
-          "No se pudo capturar la vista para generar la imagen"
-        );
-        return;
-      }
-
-      // Capturar la vista como imagen
-      const uri = await captureRef(cotizacionViewRef.current, {
-        format: "png",
-        quality: 1.0,
-        width: 1080,
-        height: 1920,
-      });
-
-      setImagenGenerada(uri);
-
-      // Verificar si Sharing está disponible
-      if (!(await Sharing.isAvailableAsync())) {
-        Alert.alert(
-          "Error",
-          "El compartir no está disponible en este dispositivo"
-        );
-        return;
-      }
-
-      // Compartir la imagen
-      await Sharing.shareAsync(uri, {
-        mimeType: "image/png",
-        dialogTitle: "Compartir cotización",
-      });
-    } catch (error) {
-      console.error("Error al generar imagen:", error);
-      Alert.alert("Error", "No se pudo generar la imagen");
     }
   };
 
@@ -586,6 +427,8 @@ export default function HomeScreen() {
                     <ThemedView style={styles.webPreviewHeader}>
                       <ThemedText type="subtitle">Vista Previa</ThemedText>
                       <TouchableOpacity
+                        accessibilityRole="button"
+                        accessibilityLabel="Cerrar vista previa de la cotización"
                         onPress={() => setMostrarVistaPrevia(false)}
                         style={styles.webPreviewClose}
                       >
@@ -742,7 +585,7 @@ export default function HomeScreen() {
                     contentFit="contain"
                   />
                   <ThemedText style={styles.webPreviewPlaceholderText}>
-                    📋 Completa el formulario y haz clic en "Generar Cotización"
+                    📋 Completa el formulario y haz clic en &quot;Generar Cotización&quot;
                     para ver la vista previa del producto y precios calculados.
                   </ThemedText>
                 </ThemedView>
@@ -887,6 +730,8 @@ export default function HomeScreen() {
                       ✨ Cotización Generada
                     </ThemedText>
                     <TouchableOpacity
+                      accessibilityRole="button"
+                      accessibilityLabel="Cerrar cotización generada"
                       style={styles.closeButton}
                       onPress={cerrarModal}
                     >
@@ -1275,6 +1120,10 @@ const styles = StyleSheet.create({
   },
   closeButton: {
     padding: SPACING.xs,
+    minWidth: 44,
+    minHeight: 44,
+    alignItems: "center",
+    justifyContent: "center",
     borderRadius: RADIUS.sm,
     backgroundColor: COLORS.cardBackground,
   },

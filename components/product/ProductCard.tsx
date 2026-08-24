@@ -11,6 +11,7 @@ import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
 import { COLORS, SPACING, RADIUS, SHADOWS } from "@/constants/theme";
 import { ProductoConPrecios } from "@/services/types";
+import { IconActionButton } from "@/components/ui/IconActionButton";
 
 interface ProductCardProps {
   producto: ProductoConPrecios;
@@ -141,33 +142,33 @@ export default function ProductCard({
             <View style={styles.separator} />
             <View style={styles.actionsSection}>
               {onInstagramStory && (
-                <TouchableOpacity
+                <IconActionButton
+                  label={`Crear historia de Instagram de ${producto.marca} ${producto.modelo}`}
+                  icon="photo-camera"
                   onPress={onInstagramStory}
+                  color="#C13584"
                   style={[styles.actionButton, styles.instagramButton]}
-                  activeOpacity={0.7}
-                >
-                  <ThemedText style={styles.actionIcon}>📸</ThemedText>
-                </TouchableOpacity>
+                />
               )}
 
               {onEdit && (
-                <TouchableOpacity
+                <IconActionButton
+                  label={`Editar ${producto.marca} ${producto.modelo}`}
+                  icon="edit"
                   onPress={onEdit}
+                  color={COLORS.text}
                   style={styles.actionButton}
-                  activeOpacity={0.7}
-                >
-                  <ThemedText style={styles.actionIcon}>✏️</ThemedText>
-                </TouchableOpacity>
+                />
               )}
 
               {onDelete && (
-                <TouchableOpacity
+                <IconActionButton
+                  label={`Eliminar ${producto.marca} ${producto.modelo}`}
+                  icon="delete-outline"
                   onPress={onDelete}
+                  color="#B42318"
                   style={[styles.actionButton, styles.deleteButton]}
-                  activeOpacity={0.7}
-                >
-                  <ThemedText style={styles.actionIcon}>🗑️</ThemedText>
-                </TouchableOpacity>
+                />
               )}
             </View>
           </>
@@ -345,8 +346,5 @@ const styles = StyleSheet.create({
   },
   instagramButton: {
     backgroundColor: "#E4405F" + "15", // Color de Instagram muy suave
-  },
-  actionIcon: {
-    fontSize: 20,
   },
 });

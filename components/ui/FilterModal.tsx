@@ -122,7 +122,12 @@ export default function FilterModal({
           {/* Header */}
           <View style={styles.modalHeader}>
             <ThemedText style={styles.modalTitle}>Filtros</ThemedText>
-            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+            <TouchableOpacity
+              accessibilityRole="button"
+              accessibilityLabel="Cerrar filtros"
+              onPress={onClose}
+              style={styles.closeButton}
+            >
               <ThemedText style={styles.closeButtonText}>✕</ThemedText>
             </TouchableOpacity>
           </View>
@@ -149,6 +154,7 @@ export default function FilterModal({
           {/* Footer */}
           <View style={styles.modalFooter}>
             <TouchableOpacity
+              accessibilityRole="button"
               onPress={clearAllFilters}
               style={styles.clearButton}
             >
@@ -157,7 +163,11 @@ export default function FilterModal({
               </ThemedText>
             </TouchableOpacity>
 
-            <TouchableOpacity onPress={applyFilters} style={styles.applyButton}>
+            <TouchableOpacity
+              accessibilityRole="button"
+              onPress={applyFilters}
+              style={styles.applyButton}
+            >
               <ThemedText style={styles.applyButtonText}>
                 Aplicar filtros
               </ThemedText>
@@ -199,6 +209,8 @@ const styles = StyleSheet.create({
   closeButton: {
     width: 32,
     height: 32,
+    minWidth: 44,
+    minHeight: 44,
     borderRadius: 16,
     backgroundColor: COLORS.background,
     justifyContent: "center",

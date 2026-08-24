@@ -12,7 +12,6 @@ import {
 } from "react-native";
 import * as Clipboard from "expo-clipboard";
 import { Image } from "expo-image";
-import ParallaxScrollView from "@/components/ParallaxScrollView";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
 import { HelloWave } from "@/components/HelloWave";
@@ -21,19 +20,18 @@ import MobileHeader from "@/components/MobileHeader";
 import LabeledDropdown from "@/components/forms/LabeledDropdown";
 import EditableDropdown from "@/components/forms/EditableDropdown";
 import ModeloDropdown from "@/components/forms/ModeloDropdown";
-import AnimatedInput from "@/components/forms/AnimatedInput";
 import AnimatedButton from "@/components/ui/AnimatedButton";
 import FadeInView from "@/components/ui/FadeInView";
 import { useCategorias } from "@/hooks/useCategorias";
 import { useMarcasPorCategoria } from "@/hooks/useMarcasPorCategoria";
 import { useProductosPorCategoriaYMarca } from "@/hooks/useProductosPorCategoriaYMarca";
-import { COLORS, GRADIENTS, RADIUS, SHADOWS, SPACING } from "@/constants/theme";
+import { COLORS, RADIUS, SHADOWS, SPACING } from "@/constants/theme";
 import { Producto } from "@/services/types";
 
 export default function ConsultaStockScreen() {
   // Constantes para layout responsivo
   const isWeb = Platform.OS === "web";
-  const { width: screenWidth, height: screenHeight } = Dimensions.get("window");
+  const { width: screenWidth } = Dimensions.get("window");
   const isWideScreen = screenWidth >= 1024;
 
   const {
@@ -132,7 +130,7 @@ export default function ConsultaStockScreen() {
         if (!isWeb || !isWideScreen) {
           setModalVisible(false);
         }
-      } catch (error) {
+      } catch {
         Alert.alert("Error", "No se pudo copiar la consulta");
       }
     }
@@ -253,6 +251,8 @@ export default function ConsultaStockScreen() {
                     <ThemedView style={styles.webPreviewHeader}>
                       <ThemedText type="subtitle">Vista Previa</ThemedText>
                       <TouchableOpacity
+                        accessibilityRole="button"
+                        accessibilityLabel="Cerrar vista previa de la consulta"
                         onPress={() => setMostrarVistaPrevia(false)}
                         style={styles.webPreviewClose}
                       >
@@ -364,7 +364,7 @@ export default function ConsultaStockScreen() {
                     contentFit="contain"
                   />
                   <ThemedText style={styles.webPreviewPlaceholderText}>
-                    📦 Completa el formulario y haz clic en "Generar Mensaje"
+                    📦 Completa el formulario y haz clic en &quot;Generar Mensaje&quot;
                     para ver la vista previa de la consulta de stock.
                   </ThemedText>
                 </ThemedView>
@@ -459,6 +459,8 @@ export default function ConsultaStockScreen() {
                           📦 Consulta Generada
                         </ThemedText>
                         <TouchableOpacity
+                          accessibilityRole="button"
+                          accessibilityLabel="Cerrar consulta generada"
                           style={styles.closeButton}
                           onPress={cerrarModal}
                         >
@@ -717,6 +719,10 @@ const styles = StyleSheet.create({
   },
   closeButton: {
     padding: SPACING.xs,
+    minWidth: 44,
+    minHeight: 44,
+    alignItems: "center",
+    justifyContent: "center",
     borderRadius: RADIUS.sm,
     backgroundColor: COLORS.cardBackground,
   },

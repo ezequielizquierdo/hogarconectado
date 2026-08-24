@@ -2,7 +2,7 @@ import React from "react";
 import { View, StyleSheet, Text, Platform } from "react-native";
 import { Image } from "expo-image";
 import { ThemedText } from "@/components/ThemedText";
-import { COLORS, SPACING, RADIUS } from "@/constants/theme";
+import { SPACING } from "@/constants/theme";
 
 interface HeaderProps {
   sectionTitle: string;

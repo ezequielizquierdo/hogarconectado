@@ -1,8 +1,8 @@
 import React from "react";
-import { View, StyleSheet, Platform, StatusBar } from "react-native";
+import { View, StyleSheet, Platform } from "react-native";
 import { Image } from "expo-image";
 import { ThemedText } from "@/components/ThemedText";
-import { COLORS, SPACING, RADIUS, SHADOWS } from "@/constants/theme";
+import { SPACING, SHADOWS } from "@/constants/theme";
 
 interface MobileHeaderProps {
   title: string;

@@ -1,0 +1,138 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-08-24T00:00:00-03:00",
+  "title": "Design System: Hogar Conectado",
+  "extensions": {
+    "colorMeta": {
+      "lavanda-operativa": {
+        "role": "primary",
+        "displayName": "Lavanda Operativa",
+        "canonical": "#a8b5ff",
+        "tonalRamp": ["#20264f", "#3b457f", "#5e6ab0", "#818fdf", "#a8b5ff", "#c8d0ff", "#e3e7ff", "#f5f6ff"]
+      },
+      "menta-disponible": {
+        "role": "secondary",
+        "displayName": "Menta Disponible",
+        "canonical": "#b8f5d1",
+        "tonalRamp": ["#183e2b", "#2d6548", "#4b9069", "#78bd94", "#b8f5d1", "#d0f9e0", "#e7fcef", "#f6fff9"]
+      },
+      "durazno-cercano": {
+        "role": "tertiary",
+        "displayName": "Durazno Cercano",
+        "canonical": "#ffd6a8",
+        "tonalRamp": ["#4b2b12", "#784a24", "#a66d3e", "#d79a66", "#ffd6a8", "#ffe4c4", "#fff0df", "#fff9f2"]
+      },
+      "fondo-lavanda": {
+        "role": "neutral",
+        "displayName": "Fondo Lavanda",
+        "canonical": "#faf8ff",
+        "tonalRamp": ["#25232b", "#46434f", "#696572", "#908b99", "#b8b3c0", "#d9d5e0", "#ece9f1", "#faf8ff"]
+      },
+      "texto-principal": {
+        "role": "neutral",
+        "displayName": "Texto Principal",
+        "canonical": "#4a5568",
+        "tonalRamp": ["#171b22", "#2c333f", "#4a5568", "#69758a", "#8c97a9", "#b2bac6", "#d7dce3", "#f3f5f7"]
+      }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display", "purpose": "Títulos excepcionales y entradas de sección." },
+      "headline": { "displayName": "Headline", "purpose": "Encabezados principales de pantalla y modal." },
+      "title": { "displayName": "Title", "purpose": "Productos, bloques y resultados." },
+      "body": { "displayName": "Body", "purpose": "Formularios, ayudas y contenido operativo." },
+      "label": { "displayName": "Label", "purpose": "Estados, etiquetas y metadatos." }
+    },
+    "shadows": [
+      { "name": "ambient-small", "value": "0 1px 3px rgba(168, 181, 255, 0.15)", "purpose": "Campos y controles discretos." },
+      { "name": "ambient-medium", "value": "0 2px 6px rgba(168, 181, 255, 0.15)", "purpose": "Botones y cards habituales." },
+      { "name": "ambient-large", "value": "0 4px 12px rgba(168, 181, 255, 0.25)", "purpose": "Modales y superficies temporalmente elevadas." }
+    ],
+    "motion": [
+      { "name": "press-feedback", "value": "scale(0.95) / 100ms", "purpose": "Respuesta táctil breve en botones." },
+      { "name": "focus-transition", "value": "border-color 200ms ease", "purpose": "Transición de foco en campos." }
+    ],
+    "breakpoints": [
+      { "name": "compact", "value": "768px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Acción principal amable y precisa.",
+      "html": "<button class=\"ds-btn-primary\">Agregar producto</button>",
+      "css": ".ds-btn-primary { min-height: 48px; padding: 16px 24px; border: 0; border-radius: 12px; background: #a8b5ff; color: #4a5568; font: 600 16px/1.2 system-ui, sans-serif; box-shadow: 0 2px 6px rgba(168,181,255,.15); transition: transform .1s, background-color .2s, box-shadow .2s; } .ds-btn-primary:hover { background: #8b99e8; } .ds-btn-primary:active { transform: scale(.97); } .ds-btn-primary:focus-visible { outline: 3px solid rgba(139,153,232,.45); outline-offset: 2px; }"
+    },
+    {
+      "name": "Product Card",
+      "kind": "card",
+      "refersTo": "card-product",
+      "description": "Imagen protagonista con datos comerciales escaneables.",
+      "html": "<article class=\"ds-product-card\"><div class=\"ds-product-image\">Imagen</div><div><span class=\"ds-stock\">Stock: 1</span><p class=\"ds-category\">Heladeras</p><h3>Electrolux IM7S523L</h3><strong>$ 1.475.000</strong></div></article>",
+      "css": ".ds-product-card { display: grid; grid-template-columns: minmax(140px,44%) 1fr; gap: 24px; padding: 16px; border: 1px solid #e2e8f0; border-radius: 16px; background: #fff; color: #4a5568; box-shadow: 0 2px 6px rgba(168,181,255,.15); font-family: system-ui,sans-serif; } .ds-product-image { min-height: 180px; display:grid; place-items:center; border:1px solid #e2e8f0; border-radius:12px; background:#f8faff; color:#718096; } .ds-stock { display:inline-block; padding:4px 8px; border-radius:6px; background:#b8f5d1; font-size:12px; font-weight:600; } .ds-category { margin:12px 0 4px; color:#718096; } .ds-product-card h3 { margin:0 0 12px; font-size:18px; } .ds-product-card strong { color:#8b99e8; font-size:20px; } .ds-product-card:focus-within { outline:3px solid rgba(168,181,255,.35); outline-offset:2px; }"
+    },
+    {
+      "name": "Text Input",
+      "kind": "input",
+      "refersTo": "input-default",
+      "description": "Campo etiquetado con foco evidente.",
+      "html": "<label class=\"ds-field\"><span>Modelo</span><input placeholder=\"Modelo del producto\"></label>",
+      "css": ".ds-field { display:grid; gap:4px; color:#4a5568; font:600 16px/1.35 system-ui,sans-serif; } .ds-field input { min-height:56px; padding:0 16px; border:2px solid #e2e8f0; border-radius:12px; background:#fff; color:#4a5568; font:400 16px/1.5 system-ui,sans-serif; box-shadow:0 1px 3px rgba(168,181,255,.15); transition:border-color .2s, box-shadow .2s; } .ds-field input:focus-visible { outline:0; border-color:#a8b5ff; box-shadow:0 0 0 3px rgba(168,181,255,.25); }"
+    },
+    {
+      "name": "Stock Chip",
+      "kind": "chip",
+      "description": "Indicador compacto de disponibilidad.",
+      "html": "<span class=\"ds-stock-chip\">Stock: 4</span>",
+      "css": ".ds-stock-chip { display:inline-flex; align-items:center; min-height:28px; padding:4px 8px; border-radius:6px; background:#b8f5d1; color:#4a5568; font:600 12px/1.2 system-ui,sans-serif; }"
+    },
+    {
+      "name": "Selected Filter",
+      "kind": "chip",
+      "refersTo": "chip-selected",
+      "description": "Filtro activo de categoría o marca.",
+      "html": "<button class=\"ds-filter-selected\">Heladeras</button>",
+      "css": ".ds-filter-selected { min-height:40px; padding:8px 12px; border:0; border-radius:6px; background:#a8b5ff; color:#fff; font:600 14px/1.2 system-ui,sans-serif; } .ds-filter-selected:hover { background:#8b99e8; } .ds-filter-selected:focus-visible { outline:3px solid rgba(139,153,232,.4); outline-offset:2px; }"
+    },
+    {
+      "name": "Bottom Navigation",
+      "kind": "nav",
+      "description": "Destinos principales con icono y etiqueta visible.",
+      "html": "<nav class=\"ds-bottom-nav\"><a href=\"#\">Cotizaciones</a><a class=\"active\" href=\"#\">Productos</a><a href=\"#\">Perfil</a></nav>",
+      "css": ".ds-bottom-nav { display:flex; justify-content:space-around; gap:8px; padding:8px 16px; border-top:1px solid #e2e8f0; background:#fff; font:600 12px/1.2 system-ui,sans-serif; } .ds-bottom-nav a { min-width:72px; min-height:44px; display:grid; place-items:center; border-radius:12px; color:#687076; text-decoration:none; } .ds-bottom-nav a:hover { background:#f8faff; } .ds-bottom-nav a.active { color:#0a7ea4; } .ds-bottom-nav a:focus-visible { outline:3px solid rgba(168,181,255,.4); }"
+    }
+  ],
+  "narrative": {
+    "northStar": "La Vidriera Operativa",
+    "overview": "Hogar Conectado combina la claridad de una herramienta de trabajo con la capacidad de exhibir un producto de manera comercial. El carácter es cálido, ordenado y eficiente, con superficies claras, acentos pastel funcionales y controles amables y precisos.",
+    "keyCharacteristics": [
+      "Imágenes de producto protagonistas y datos comerciales escaneables.",
+      "Capas suaves mediante fondos tonales, bordes claros y sombras ambientales.",
+      "Controles amables y precisos, con etiquetas comprensibles y estados visibles.",
+      "Densidad adaptativa en móvil y escritorio.",
+      "Color funcional antes que ornamental."
+    ],
+    "rules": [
+      { "name": "The Functional Pastel Rule", "body": "Cada pastel tiene una tarea. No usar lavanda, menta o durazno como decoración sin significado.", "section": "colors" },
+      { "name": "The Teal Containment Rule", "body": "El teal de navegación es heredado; no extenderlo hasta decidir su unificación.", "section": "colors" },
+      { "name": "The Scan Before Style Rule", "body": "Marca, modelo, stock y precio deben distinguirse sin leer cada línea completa.", "section": "typography" },
+      { "name": "The Soft Layers Rule", "body": "Empezar con tono y borde; agregar sombra solo cuando aclare jerarquía o interacción.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do utilizar la escala de espaciado compartida y los tokens de constants/theme.ts.",
+      "Do comprobar escritorio, web móvil, iOS y Android según el alcance del cambio.",
+      "Do mantener etiquetas de acción explícitas junto a iconos importantes.",
+      "Do reservar Menta Disponible para estados positivos o disponibilidad.",
+      "Do dar prioridad visual a imagen, modelo y precio contado en el catálogo."
+    ],
+    "donts": [
+      "Don't convertir la aplicación en un panel administrativo genérico, gris y sin identidad.",
+      "Don't imitar un ecommerce saturado de banners, descuentos, badges y llamados simultáneos.",
+      "Don't usar emojis, pasteles o animaciones de forma infantil o meramente decorativa.",
+      "Don't anidar cards dentro de cards cuando espacio, borde o alineación sean suficientes.",
+      "Don't agregar colores hex aislados cuando exista un token semántico equivalente.",
+      "Don't ocultar funciones esenciales detrás de iconos sin etiqueta o targets táctiles pequeños."
+    ]
+  }
+}

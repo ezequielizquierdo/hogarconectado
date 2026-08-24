@@ -5,22 +5,18 @@ import {
   View,
   Alert,
   Modal,
-  TextInput,
   TouchableOpacity,
-  FlatList,
   RefreshControl,
   Platform,
   Dimensions,
   SafeAreaView,
   Image as RNImage,
-  Text,
 } from "react-native";
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
 import * as DocumentPicker from "expo-document-picker";
 import * as Sharing from "expo-sharing";
 import { captureRef } from "react-native-view-shot";
-import { HelloWave } from "@/components/HelloWave";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
 import Header from "@/components/layout/Header";
@@ -32,11 +28,11 @@ import AnimatedButton from "@/components/ui/AnimatedButton";
 import FadeInView from "@/components/ui/FadeInView";
 import ProductCard from "@/components/product/ProductCard";
 import { SidebarFilters } from "@/components/filters";
-import Pagination from "@/components/Pagination";
+import { Pagination } from "@/components/Pagination";
 import { useCategorias } from "@/hooks/useCategorias";
 import { useProductos } from "@/hooks/useProductos";
 import { useMarcas } from "@/hooks/useMarcas";
-import useDebounce from "@/hooks/useDebounce";
+import { useDebounce } from "@/hooks/useDebounce";
 import { productosService } from "@/services";
 import { uploadService, UploadedImage } from "@/services/uploadService";
 import { Producto, ProductoConPrecios } from "@/services/types";
@@ -99,7 +95,6 @@ export default function ProductosScreen() {
     pagination,
     filtros,
     buscar,
-    filtrarPorCategoria,
     cambiarPagina,
     recargar,
     limpiarFiltros,
@@ -152,8 +147,6 @@ export default function ProductosScreen() {
       ? "agotado"
       : ""
   ); // "disponible", "agotado", ""
-  const [vistaDetallada, setVistaDetallada] = useState(false);
-
   // Debounce search text para evitar búsquedas excesivas
   const debouncedSearchText = useDebounce(searchText, 500);
 
@@ -162,7 +155,7 @@ export default function ProductosScreen() {
     if (debouncedSearchText !== (filtros.buscar || "")) {
       buscar(debouncedSearchText);
     }
-  }, [debouncedSearchText]);
+  }, [buscar, debouncedSearchText, filtros.buscar]);
 
   // Rate limiting: agregar delay entre operaciones
   const delay = (ms: number) =>
@@ -1095,6 +1088,8 @@ export default function ProductosScreen() {
                 </TouchableOpacity>}
 
                 <TouchableOpacity
+                  accessibilityRole="button"
+                  accessibilityLabel="Abrir filtros de productos"
                   style={styles.filterButtonMobile}
                   onPress={() => setFiltersModalVisible(true)}
                 >
@@ -1127,6 +1122,8 @@ export default function ProductosScreen() {
               {/* Botón limpiar filtros */}
               {(filtroCategoria || filtroMarca || filtroStock) && (
                 <TouchableOpacity
+                  accessibilityRole="button"
+                  accessibilityLabel="Limpiar todos los filtros"
                   style={styles.clearFiltersButtonMobile}
                   onPress={clearAllFilters}
                 >
@@ -1147,6 +1144,9 @@ export default function ProductosScreen() {
                             ?.nombre || "Categoría"}
                         </ThemedText>
                         <TouchableOpacity
+                          accessibilityRole="button"
+                          accessibilityLabel="Quitar filtro de categoría"
+                          hitSlop={12}
                           onPress={() => handleCategoriaChange("")}
                           style={styles.chipRemove}
                         >
@@ -1162,6 +1162,9 @@ export default function ProductosScreen() {
                           {filtroMarca}
                         </ThemedText>
                         <TouchableOpacity
+                          accessibilityRole="button"
+                          accessibilityLabel="Quitar filtro de marca"
+                          hitSlop={12}
                           onPress={() => handleMarcaChange("")}
                           style={styles.chipRemove}
                         >
@@ -1179,6 +1182,9 @@ export default function ProductosScreen() {
                             : "Agotado"}
                         </ThemedText>
                         <TouchableOpacity
+                          accessibilityRole="button"
+                          accessibilityLabel="Quitar filtro de stock"
+                          hitSlop={12}
                           onPress={() => handleStockChange("")}
                           style={styles.chipRemove}
                         >
@@ -1251,6 +1257,8 @@ export default function ProductosScreen() {
                   {editingProduct ? "Editar Producto" : "Nuevo Producto"}
                 </ThemedText>
                 <TouchableOpacity
+                  accessibilityRole="button"
+                  accessibilityLabel="Cerrar formulario de producto"
                   style={styles.closeButton}
                   onPress={closeModal}
                 >
@@ -1664,6 +1672,8 @@ export default function ProductosScreen() {
                 📊 Resumen del Inventario
               </ThemedText>
               <TouchableOpacity
+                accessibilityRole="button"
+                accessibilityLabel="Cerrar resumen del inventario"
                 style={styles.closeButton}
                 onPress={() => setStatsModalVisible(false)}
               >
@@ -1726,6 +1736,8 @@ export default function ProductosScreen() {
                   Detalle del Producto
                 </ThemedText>
                 <TouchableOpacity
+                  accessibilityRole="button"
+                  accessibilityLabel="Cerrar detalle del producto"
                   onPress={() => setDetailModalVisible(false)}
                   style={styles.webModalCloseButton}
                 >
@@ -2097,6 +2109,8 @@ export default function ProductosScreen() {
                   📸 Crear Historia de Instagram
                 </ThemedText>
                 <TouchableOpacity
+                  accessibilityRole="button"
+                  accessibilityLabel="Cerrar creador de historia de Instagram"
                   style={styles.closeButton}
                   onPress={closeInstagramModal}
                 >
@@ -2218,6 +2232,9 @@ export default function ProductosScreen() {
 
                   <View style={styles.checkboxContainer}>
                     <TouchableOpacity
+                      accessibilityRole="checkbox"
+                      accessibilityLabel="Mostrar marca"
+                      accessibilityState={{ checked: instagramStoryOptions.showMarca }}
                       style={styles.checkboxRow}
                       onPress={() =>
                         setInstagramStoryOptions((prev) => ({
@@ -2243,6 +2260,9 @@ export default function ProductosScreen() {
                     </TouchableOpacity>
 
                     <TouchableOpacity
+                      accessibilityRole="checkbox"
+                      accessibilityLabel="Mostrar modelo"
+                      accessibilityState={{ checked: instagramStoryOptions.showModelo }}
                       style={styles.checkboxRow}
                       onPress={() =>
                         setInstagramStoryOptions((prev) => ({
@@ -2268,6 +2288,9 @@ export default function ProductosScreen() {
                     </TouchableOpacity>
 
                     <TouchableOpacity
+                      accessibilityRole="checkbox"
+                      accessibilityLabel="Mostrar categoría"
+                      accessibilityState={{ checked: instagramStoryOptions.showCategoria }}
                       style={styles.checkboxRow}
                       onPress={() =>
                         setInstagramStoryOptions((prev) => ({
@@ -2293,6 +2316,9 @@ export default function ProductosScreen() {
                     </TouchableOpacity>
 
                     <TouchableOpacity
+                      accessibilityRole="checkbox"
+                      accessibilityLabel="Mostrar precio"
+                      accessibilityState={{ checked: instagramStoryOptions.showPrecio }}
                       style={styles.checkboxRow}
                       onPress={() =>
                         setInstagramStoryOptions((prev) => ({
@@ -2318,6 +2344,9 @@ export default function ProductosScreen() {
                     </TouchableOpacity>
 
                     <TouchableOpacity
+                      accessibilityRole="checkbox"
+                      accessibilityLabel="Mostrar stock"
+                      accessibilityState={{ checked: instagramStoryOptions.showStock }}
                       style={styles.checkboxRow}
                       onPress={() =>
                         setInstagramStoryOptions((prev) => ({
@@ -2343,6 +2372,9 @@ export default function ProductosScreen() {
                     </TouchableOpacity>
 
                     <TouchableOpacity
+                      accessibilityRole="checkbox"
+                      accessibilityLabel="Mostrar descripción"
+                      accessibilityState={{ checked: instagramStoryOptions.showDescripcion }}
                       style={styles.checkboxRow}
                       onPress={() =>
                         setInstagramStoryOptions((prev) => ({
@@ -2368,6 +2400,9 @@ export default function ProductosScreen() {
                     </TouchableOpacity>
 
                     <TouchableOpacity
+                      accessibilityRole="checkbox"
+                      accessibilityLabel="Mostrar mensaje para consultar el mejor precio"
+                      accessibilityState={{ checked: instagramStoryOptions.showConsultaPrecio }}
                       style={styles.checkboxRow}
                       onPress={() =>
                         setInstagramStoryOptions((prev) => ({
@@ -2388,7 +2423,7 @@ export default function ProductosScreen() {
                         )}
                       </View>
                       <ThemedText style={styles.checkboxLabel}>
-                        Mostrar "Consultá por el mejor precio!"
+                        Mostrar &quot;Consultá por el mejor precio!&quot;
                       </ThemedText>
                     </TouchableOpacity>
                   </View>
@@ -2535,6 +2570,9 @@ export default function ProductosScreen() {
                   <View style={styles.checkboxContainer}>
                     {/* Checkbox Marca */}
                     <TouchableOpacity
+                      accessibilityRole="checkbox"
+                      accessibilityLabel="Mostrar marca"
+                      accessibilityState={{ checked: instagramStoryOptions.showMarca }}
                       style={styles.checkboxRow}
                       onPress={() =>
                         setInstagramStoryOptions((prev) => ({
@@ -2561,6 +2599,9 @@ export default function ProductosScreen() {
 
                     {/* Checkbox Modelo */}
                     <TouchableOpacity
+                      accessibilityRole="checkbox"
+                      accessibilityLabel="Mostrar modelo"
+                      accessibilityState={{ checked: instagramStoryOptions.showModelo }}
                       style={styles.checkboxRow}
                       onPress={() =>
                         setInstagramStoryOptions((prev) => ({
@@ -2587,6 +2628,9 @@ export default function ProductosScreen() {
 
                     {/* Checkbox Categoría */}
                     <TouchableOpacity
+                      accessibilityRole="checkbox"
+                      accessibilityLabel="Mostrar categoría"
+                      accessibilityState={{ checked: instagramStoryOptions.showCategoria }}
                       style={styles.checkboxRow}
                       onPress={() =>
                         setInstagramStoryOptions((prev) => ({
@@ -2613,6 +2657,9 @@ export default function ProductosScreen() {
 
                     {/* Checkbox Precio */}
                     <TouchableOpacity
+                      accessibilityRole="checkbox"
+                      accessibilityLabel="Mostrar precio"
+                      accessibilityState={{ checked: instagramStoryOptions.showPrecio }}
                       style={styles.checkboxRow}
                       onPress={() =>
                         setInstagramStoryOptions((prev) => ({
@@ -2639,6 +2686,9 @@ export default function ProductosScreen() {
 
                     {/* Checkbox Stock */}
                     <TouchableOpacity
+                      accessibilityRole="checkbox"
+                      accessibilityLabel="Mostrar stock"
+                      accessibilityState={{ checked: instagramStoryOptions.showStock }}
                       style={styles.checkboxRow}
                       onPress={() =>
                         setInstagramStoryOptions((prev) => ({
@@ -2665,6 +2715,9 @@ export default function ProductosScreen() {
 
                     {/* Checkbox Descripción */}
                     <TouchableOpacity
+                      accessibilityRole="checkbox"
+                      accessibilityLabel="Mostrar descripción"
+                      accessibilityState={{ checked: instagramStoryOptions.showDescripcion }}
                       style={styles.checkboxRow}
                       onPress={() =>
                         setInstagramStoryOptions((prev) => ({
@@ -2691,6 +2744,9 @@ export default function ProductosScreen() {
 
                     {/* Checkbox Consulta Precio */}
                     <TouchableOpacity
+                      accessibilityRole="checkbox"
+                      accessibilityLabel="Mostrar mensaje para consultar el mejor precio"
+                      accessibilityState={{ checked: instagramStoryOptions.showConsultaPrecio }}
                       style={styles.checkboxRow}
                       onPress={() =>
                         setInstagramStoryOptions((prev) => ({
@@ -2711,7 +2767,7 @@ export default function ProductosScreen() {
                         )}
                       </View>
                       <ThemedText style={styles.checkboxLabel}>
-                        Mostrar "Consultá por el mejor precio!"
+                        Mostrar &quot;Consultá por el mejor precio!&quot;
                       </ThemedText>
                     </TouchableOpacity>
                   </View>
@@ -2858,6 +2914,7 @@ const styles = StyleSheet.create({
   },
   filterButtonMobile: {
     flex: 1,
+    minHeight: 48,
     backgroundColor: COLORS.primary,
     paddingHorizontal: SPACING.md,
     paddingVertical: SPACING.sm,
@@ -3548,8 +3605,8 @@ const styles = StyleSheet.create({
     padding: SPACING.sm,
     backgroundColor: COLORS.error,
     borderRadius: RADIUS.sm,
-    minWidth: 32,
-    minHeight: 32,
+    minWidth: 44,
+    minHeight: 44,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -3876,8 +3933,8 @@ const styles = StyleSheet.create({
     padding: SPACING.sm,
     backgroundColor: COLORS.error,
     borderRadius: RADIUS.sm,
-    minWidth: 32,
-    minHeight: 32,
+    minWidth: 44,
+    minHeight: 44,
     alignItems: "center" as const,
     justifyContent: "center" as const,
   },
@@ -4081,6 +4138,7 @@ const styles = StyleSheet.create({
   checkboxRow: {
     flexDirection: "row" as const,
     alignItems: "center" as const,
+    minHeight: 48,
     paddingVertical: SPACING.sm,
   },
   checkbox: {
