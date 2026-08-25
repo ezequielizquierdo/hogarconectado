@@ -269,7 +269,7 @@ Una tarea de interfaz se considera terminada cuando:
 
 ### UX-010 — Historias de Instagram flexibles
 
-**Estado:** Pendiente  
+**Estado:** En validación
 **Objetivo:** generar piezas coherentes donde la imagen mantenga protagonismo y la información elegida sea legible.
 
 **Criterios de aceptación:**
@@ -281,9 +281,18 @@ Una tarea de interfaz se considera terminada cuando:
 - El resultado se verifica en al menos dos tamaños de teléfono.
 - La pieza respeta `DESIGN.md` y no se convierte en un banner saturado.
 
+**Implementación preparada:**
+
+- La imagen utiliza el espacio liberado cuando se desactivan datos y deja de estar limitada por un alto máximo fijo.
+- El panel informativo desaparece por completo cuando ninguno de sus campos visibles contiene información.
+- Categoría, modelo, marca, precio contado, stock, descripción y llamado a consulta conservan controles independientes.
+- Categoría y marca se limitan a una línea, modelo a dos y descripción a tres para evitar desbordes con contenido largo.
+- La exportación captura exactamente el mismo componente que se utiliza como vista previa en cada plataforma.
+- Queda pendiente la comprobación manual en dos anchos de teléfono antes de marcar la tarea como completada.
+
 ### UX-011 — Estados de usuarios y permisos comprensibles
 
-**Estado:** Pendiente  
+**Estado:** En validación
 **Objetivo:** hacer segura y clara la administración de accesos.
 
 **Criterios de aceptación:**
@@ -293,6 +302,15 @@ Una tarea de interfaz se considera terminada cuando:
 - La pantalla informa el efecto de cada rol antes de guardarlo.
 - Los controles no autorizados no se muestran y las operaciones siguen protegidas por el backend.
 - El usuario afectado obtiene un mensaje comprensible al intentar acceder.
+
+**Implementación preparada:**
+
+- Pendiente, activo y bloqueado poseen etiquetas, color semántico y una explicación de su efecto.
+- La pantalla incluye una guía permanente de consulta, editor y administrador antes de presentar las acciones.
+- Aprobar, cambiar rol, bloquear y reactivar requieren confirmación con nombre, rol resultante y consecuencia.
+- Las confirmaciones funcionan mediante diálogo del navegador en web y alerta nativa en dispositivos móviles.
+- Las acciones se bloquean mientras una actualización está en curso y la cuenta propia queda identificada sin controles de riesgo.
+- La protección administrativa permanece en el backend y las sesiones pendientes o bloqueadas reciben mensajes específicos.
 
 ---
 

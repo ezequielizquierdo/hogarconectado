@@ -130,6 +130,14 @@ export default function ProductosScreen() {
     showDescripcion: false,
     showConsultaPrecio: false,
   });
+  const hasInstagramStoryInfo = Boolean(
+    (instagramStoryOptions.showCategoria && selectedProductForInstagram?.categoria) ||
+      (instagramStoryOptions.showModelo && selectedProductForInstagram?.modelo) ||
+      (instagramStoryOptions.showMarca && selectedProductForInstagram?.marca) ||
+      (instagramStoryOptions.showPrecio && selectedProductForInstagram?.precios?.contado != null) ||
+      (instagramStoryOptions.showStock && selectedProductForInstagram?.stock) ||
+      (instagramStoryOptions.showDescripcion && selectedProductForInstagram?.descripcion)
+  );
   const [imageAspectRatio, setImageAspectRatio] = useState<number>(1);
   const [editingProduct, setEditingProduct] = useState<Producto | null>(null);
   const [form, setForm] = useState<ProductoForm>(initialForm);
@@ -2287,10 +2295,10 @@ export default function ProductosScreen() {
                         )}
 
                       {/* Información del producto */}
-                      <View style={styles.storyProductInfo}>
+                      {hasInstagramStoryInfo && <View style={styles.storyProductInfo}>
                         {instagramStoryOptions.showCategoria &&
                           selectedProductForInstagram?.categoria && (
-                            <ThemedText style={styles.storyCategoryTextInPanel}>
+                            <ThemedText numberOfLines={1} style={styles.storyCategoryTextInPanel}>
                               {getShortCategoryName(
                                 typeof selectedProductForInstagram.categoria ===
                                   "string"
@@ -2302,14 +2310,14 @@ export default function ProductosScreen() {
 
                         {instagramStoryOptions.showModelo &&
                           selectedProductForInstagram?.modelo && (
-                            <ThemedText style={styles.storyTextBold}>
+                            <ThemedText numberOfLines={2} style={styles.storyTextBold}>
                               {selectedProductForInstagram.modelo}
                             </ThemedText>
                           )}
 
                         {instagramStoryOptions.showMarca &&
                           selectedProductForInstagram?.marca && (
-                            <ThemedText style={styles.storyText}>
+                            <ThemedText numberOfLines={1} style={styles.storyText}>
                               {selectedProductForInstagram.marca}
                             </ThemedText>
                           )}
@@ -2344,11 +2352,11 @@ export default function ProductosScreen() {
 
                         {instagramStoryOptions.showDescripcion &&
                           selectedProductForInstagram?.descripcion && (
-                            <ThemedText style={styles.storyDescription}>
+                            <ThemedText numberOfLines={3} style={styles.storyDescription}>
                               {selectedProductForInstagram.descripcion}
                             </ThemedText>
                           )}
-                      </View>
+                      </View>}
 
                       {/* Mensaje de consulta precio - Dentro de la imagen de fondo */}
                       {instagramStoryOptions.showConsultaPrecio && (
@@ -2626,10 +2634,10 @@ export default function ProductosScreen() {
                       )}
 
                     {/* Información del producto */}
-                    <View style={styles.storyProductInfo}>
+                    {hasInstagramStoryInfo && <View style={styles.storyProductInfo}>
                       {instagramStoryOptions.showCategoria &&
                         selectedProductForInstagram?.categoria && (
-                          <ThemedText style={styles.storyCategoryTextInPanel}>
+                          <ThemedText numberOfLines={1} style={styles.storyCategoryTextInPanel}>
                             {getShortCategoryName(
                               typeof selectedProductForInstagram.categoria ===
                                 "string"
@@ -2641,14 +2649,14 @@ export default function ProductosScreen() {
 
                       {instagramStoryOptions.showModelo &&
                         selectedProductForInstagram?.modelo && (
-                          <ThemedText style={styles.storyTextBold}>
+                          <ThemedText numberOfLines={2} style={styles.storyTextBold}>
                             {selectedProductForInstagram.modelo}
                           </ThemedText>
                         )}
 
                       {instagramStoryOptions.showMarca &&
                         selectedProductForInstagram?.marca && (
-                          <ThemedText style={styles.storyText}>
+                          <ThemedText numberOfLines={1} style={styles.storyText}>
                             {selectedProductForInstagram.marca}
                           </ThemedText>
                         )}
@@ -2671,7 +2679,7 @@ export default function ProductosScreen() {
                         )}
 
                       {instagramStoryOptions.showStock && (
-                        <ThemedText style={styles.storyText}>
+                        <ThemedText numberOfLines={1} style={styles.storyText}>
                           {selectedProductForInstagram?.stock?.disponible
                             ? `Stock: ${
                                 selectedProductForInstagram.stock.cantidad ||
@@ -2683,11 +2691,11 @@ export default function ProductosScreen() {
 
                       {instagramStoryOptions.showDescripcion &&
                         selectedProductForInstagram?.descripcion && (
-                          <ThemedText style={styles.storyDescription}>
+                          <ThemedText numberOfLines={3} style={styles.storyDescription}>
                             {selectedProductForInstagram.descripcion}
                           </ThemedText>
                         )}
-                    </View>
+                    </View>}
 
                     {/* Mensaje de consulta precio - Dentro de la imagen de fondo */}
                     {instagramStoryOptions.showConsultaPrecio && (
@@ -4207,7 +4215,6 @@ const styles = StyleSheet.create({
     width: "100%" as const,
     height: "100%" as const,
     maxWidth: 280,
-    maxHeight: 360,
     borderRadius: RADIUS.lg,
     backgroundColor: "rgba(255, 255, 255, 0.9)" as any,
     padding: SPACING.xs,
