@@ -62,7 +62,7 @@ Una tarea de interfaz se considera terminada cuando:
 
 ### UX-002 — Catálogo adaptable y escaneable
 
-**Estado:** En validación  
+**Estado:** En validación
 **Objetivo:** convertir el catálogo en una vidriera operativa donde imagen, modelo, precio contado y stock se comprendan de inmediato.
 
 **Historia de usuario:** como vendedor, quiero reconocer productos y sus datos principales de un vistazo para responder rápido durante una consulta.
@@ -202,7 +202,7 @@ Una tarea de interfaz se considera terminada cuando:
 
 ### UX-007 — Calculadora orientada a copia rápida
 
-**Estado:** Pendiente  
+**Estado:** En validación
 **Objetivo:** obtener y reutilizar valores comerciales con el mínimo de pasos.
 
 **Criterios de aceptación:**
@@ -214,9 +214,17 @@ Una tarea de interfaz se considera terminada cuando:
 - La interfaz confirma exactamente qué valor fue copiado.
 - Los cálculos se obtienen de la API y no se replican en el frontend.
 
+**Implementación preparada:**
+
+- Valor inicial y porcentaje poseen formato, límites y errores contextualizados.
+- Los resultados mantienen jerarquías específicas para contado, factura y cuotas.
+- Cada resultado conserva una acción de copia con confirmación temporal y accesible.
+- Se puede copiar un resumen completo con valor inicial, porcentaje, contado, factura y cuotas.
+- La pantalla continúa consumiendo exclusivamente los cálculos oficiales de la API.
+
 ### UX-008 — Flujo de cotización consistente
 
-**Estado:** Pendiente  
+**Estado:** En validación
 **Objetivo:** preparar, revisar y conservar una cotización confiable.
 
 **Criterios de aceptación:**
@@ -228,9 +236,18 @@ Una tarea de interfaz se considera terminada cuando:
 - El resultado diferencia claramente contado, factura y cuotas.
 - Repetir o editar una cotización no altera silenciosamente la versión anterior.
 
+**Implementación preparada:**
+
+- La preparación solicita cliente, teléfono, cantidad y modalidad antes de generar el resultado.
+- La vista previa diferencia contado, factura, cuota, total financiado y total de la condición elegida.
+- Los errores se presentan junto al dato que requiere corrección.
+- La confirmación guarda en MongoDB una nueva cotización con datos del cliente y una instantánea del producto, porcentaje y precios usados.
+- Cualquier cambio posterior invalida la vista previa anterior y obliga a generar una nueva versión antes de guardarla.
+- El backend recalcula y conserva el porcentaje seleccionado con la misma fuente oficial de precios utilizada por la aplicación.
+
 ### UX-009 — Compartir cotizaciones por WhatsApp
 
-**Estado:** Pendiente  
+**Estado:** En validación
 **Objetivo:** producir un mensaje comercial breve y legible sin edición manual obligatoria.
 
 **Criterios de aceptación:**
@@ -240,6 +257,15 @@ Una tarea de interfaz se considera terminada cuando:
 - Antes de compartir existe una vista previa editable o confirmable.
 - En móvil abre el flujo nativo disponible; en escritorio ofrece alternativa de copia o WhatsApp Web.
 - Se prueba con una y varias líneas de producto.
+
+**Implementación preparada:**
+
+- La vista comercial muestra únicamente la modalidad elegida y evita mezclar alternativas no cotizadas.
+- Contado destaca el total; las modalidades financiadas muestran cantidad de cuotas, valor de cuota y total financiado.
+- El mensaje para WhatsApp contiene cliente, producto, cantidad y solo la condición seleccionada, sin campos comerciales alternativos.
+- Existe una vista previa de texto independiente con acciones para copiar y abrir WhatsApp o WhatsApp Web.
+- La columna de escritorio ahora permite desplazamiento y conserva espacio inferior para evitar que el total o las acciones queden cortados.
+- La imagen generada utiliza la misma condición seleccionada que la cotización textual.
 
 ### UX-010 — Historias de Instagram flexibles
 

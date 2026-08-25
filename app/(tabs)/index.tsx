@@ -7,9 +7,10 @@ import {
   Modal,
   ScrollView,
   View,
-  Dimensions,
+  useWindowDimensions,
   SafeAreaView,
   Text,
+  Linking,
 } from "react-native";
 import React, { useState, useRef } from "react";
 import * as Clipboard from "expo-clipboard";
@@ -34,6 +35,7 @@ import { useProductosPorCategoriaYMarca } from "@/hooks/useProductosPorCategoria
 import { useCalculoPrecios } from "@/hooks/useCalculoPrecios";
 import { COLORS, SPACING, RADIUS, SHADOWS } from "@/constants/theme";
 import { Producto } from "@/services/types";
+import { cotizacionesService } from "@/services";
 
 interface CotizacionData {
   categoria: string;
@@ -42,18 +44,25 @@ interface CotizacionData {
   detalle: string;
   valorReal: string;
   porcentajeAplicado: string;
+  cantidad: string;
+  modalidadPago: "contado" | "3-cuotas" | "6-cuotas";
+  clienteNombre: string;
+  clienteTelefono: string;
 }
 
 interface CalculosResultado {
   valorConGanancia: number;
   valorPorCuota3: number;
   valorPorCuota6: number;
+  totalCuotas3: number;
+  totalCuotas6: number;
+  valorFacturado: number;
 }
 
 export default function HomeScreen() {
   // Constantes para layout responsivo
   const isWeb = Platform.OS === "web";
-  const { width: screenWidth } = Dimensions.get("window");
+  const { width: screenWidth, height: screenHeight } = useWindowDimensions();
   const isWideScreen = screenWidth >= 1024;
 
   const {
@@ -70,6 +79,10 @@ export default function HomeScreen() {
     detalle: "",
     valorReal: "",
     porcentajeAplicado: "10",
+    cantidad: "1",
+    modalidadPago: "contado",
+    clienteNombre: "",
+    clienteTelefono: "",
   });
 
   // Hooks para cascada de datos
@@ -91,6 +104,9 @@ export default function HomeScreen() {
     useState<Producto | null>(null);
   const [modalVisible, setModalVisible] = useState<boolean>(false);
   const [imagenGenerada, setImagenGenerada] = useState<string | null>(null);
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+  const [guardandoCotizacion, setGuardandoCotizacion] = useState(false);
+  const [cotizacionGuardadaId, setCotizacionGuardadaId] = useState<string | null>(null);
 
   // Referencia para capturar la vista de cotización
   const cotizacionViewRef = useRef<View>(null);
@@ -116,6 +132,9 @@ export default function HomeScreen() {
         valorConGanancia: preciosCalculados.efectivo,
         valorPorCuota3: preciosCalculados.tresCuotas.cuota,
         valorPorCuota6: preciosCalculados.seisCuotas.cuota,
+        totalCuotas3: preciosCalculados.tresCuotas.total,
+        totalCuotas6: preciosCalculados.seisCuotas.total,
+        valorFacturado: preciosCalculados.factura.unPago,
       }
     : null;
 
@@ -143,7 +162,53 @@ export default function HomeScreen() {
     }).format(numero);
   };
 
+  const categoriaNombre =
+    categorias.find((categoria) => categoria._id === cotizacion.categoria)?.nombre || "";
+  const cantidadSeleccionada = Math.max(1, Number.parseInt(cotizacion.cantidad, 10) || 1);
+  const modalidadLabel = cotizacion.modalidadPago === "3-cuotas"
+    ? "3 cuotas"
+    : cotizacion.modalidadPago === "6-cuotas"
+      ? "6 cuotas"
+      : "Contado";
+  const precioUnitarioSeleccionado = calculos
+    ? cotizacion.modalidadPago === "3-cuotas"
+      ? calculos.totalCuotas3
+      : cotizacion.modalidadPago === "6-cuotas"
+        ? calculos.totalCuotas6
+        : calculos.valorConGanancia
+    : 0;
+  const totalSeleccionado = precioUnitarioSeleccionado * cantidadSeleccionada;
+  const cuotaSeleccionada = calculos
+    ? cotizacion.modalidadPago === "3-cuotas"
+      ? calculos.valorPorCuota3 * cantidadSeleccionada
+      : cotizacion.modalidadPago === "6-cuotas"
+        ? calculos.valorPorCuota6 * cantidadSeleccionada
+        : null
+    : null;
+
+  const resumenCondicionElegida = calculos
+    ? cotizacion.modalidadPago === "3-cuotas"
+      ? `3 cuotas de ${formatearPrecio(cuotaSeleccionada || 0)}\nTotal financiado: ${formatearPrecio(totalSeleccionado)}`
+      : cotizacion.modalidadPago === "6-cuotas"
+        ? `6 cuotas de ${formatearPrecio(cuotaSeleccionada || 0)}\nTotal financiado: ${formatearPrecio(totalSeleccionado)}`
+        : `Precio contado: ${formatearPrecio(totalSeleccionado)}`
+    : "";
+
   const generarMensajeFinal = () => {
+    const cantidad = Number.parseInt(cotizacion.cantidad, 10);
+    const errors: Record<string, string> = {};
+    if (!cotizacion.categoria) errors.categoria = "Seleccioná una categoría.";
+    if (!cotizacion.marca) errors.marca = "Seleccioná o escribí una marca.";
+    if (!cotizacion.modelo) errors.modelo = "Seleccioná un modelo.";
+    if (!cotizacion.valorReal) errors.valorReal = "Ingresá el valor inicial.";
+    if (!Number.isInteger(cantidad) || cantidad < 1) errors.cantidad = "La cantidad debe ser al menos 1.";
+    if (!cotizacion.clienteNombre.trim()) errors.clienteNombre = "Ingresá el nombre del cliente.";
+    if (cotizacion.clienteTelefono.replace(/\D/g, "").length < 8) errors.clienteTelefono = "Ingresá un teléfono válido.";
+    const porcentaje = Number(cotizacion.porcentajeAplicado.replace(",", "."));
+    if (!Number.isFinite(porcentaje) || porcentaje < 0 || porcentaje > 100) errors.porcentajeAplicado = "Ingresá un porcentaje entre 0 y 100.";
+    setFormErrors(errors);
+    if (Object.keys(errors).length > 0) return;
+
     if (!calculos) {
       Alert.alert(
         "No se pudo calcular",
@@ -171,19 +236,18 @@ export default function HomeScreen() {
     // Crear el mensaje con formato para WhatsApp/Instagram
     const mensaje = `🏠 *Hogar Conectado* 
 
-*Cotización*
-📦 ${cotizacion.categoria.toUpperCase()}
+*Cotización para ${cotizacion.clienteNombre.trim()}*
+📦 ${categoriaNombre.toUpperCase()}
 🏷️ ${cotizacion.marca.toUpperCase()} - ${cotizacion.modelo.toUpperCase()}
+🔢 Cantidad: ${cantidad}
 ✏️ ${cotizacion.detalle ? `${cotizacion.detalle.toUpperCase()}` : ""}
 
-💰 *Precios:*
-💵 Contado: *${formatearPrecio(calculos.valorConGanancia)}*
-🗓️ 3 Cuotas: *${formatearPrecio(calculos.valorPorCuota3)}* c/u
-🗓️ 6 Cuotas: *${formatearPrecio(calculos.valorPorCuota6)}* c/u
+💰 *${resumenCondicionElegida.replace("\n", "*\n*")}*
 
 📞 ¡Consultá por stock y disponibilidad!`;
 
     setMensajeFinal(mensaje);
+    setCotizacionGuardadaId(null);
 
     // Generar imagen automáticamente
     setTimeout(async () => {
@@ -215,6 +279,18 @@ export default function HomeScreen() {
     }
   };
 
+  const abrirWhatsApp = async () => {
+    if (!mensajeFinal) return;
+    const telefono = cotizacion.clienteTelefono.replace(/\D/g, "");
+    const url = `https://wa.me/${telefono}?text=${encodeURIComponent(mensajeFinal)}`;
+    try {
+      await Linking.openURL(url);
+    } catch (error) {
+      console.error("Error abriendo WhatsApp:", error);
+      Alert.alert("No pudimos abrir WhatsApp", "Podés copiar el texto y pegarlo manualmente.");
+    }
+  };
+
   const copiarImagen = async () => {
     if (imagenGenerada) {
       try {
@@ -242,12 +318,53 @@ export default function HomeScreen() {
       detalle: "",
       valorReal: "",
       porcentajeAplicado: "10",
+      cantidad: "1",
+      modalidadPago: "contado",
+      clienteNombre: "",
+      clienteTelefono: "",
     });
     setMostrarVistaPrevia(false);
     setProductoSeleccionado(null);
+    setFormErrors({});
+    setCotizacionGuardadaId(null);
+  };
+
+  const guardarCotizacion = async () => {
+    if (!productoSeleccionado || cotizacionGuardadaId || guardandoCotizacion) return;
+    setGuardandoCotizacion(true);
+    try {
+      const guardada = await cotizacionesService.crearCotizacion({
+        datosContacto: {
+          nombre: cotizacion.clienteNombre.trim(),
+          telefono: cotizacion.clienteTelefono.trim(),
+        },
+        productos: [{
+          producto: productoSeleccionado._id,
+          cantidad: Number.parseInt(cotizacion.cantidad, 10),
+          porcentajeAplicado: Number(cotizacion.porcentajeAplicado.replace(",", ".")),
+        }],
+        modalidadPago: cotizacion.modalidadPago,
+        observaciones: cotizacion.detalle || undefined,
+      });
+      setCotizacionGuardadaId(guardada._id);
+    } catch (error) {
+      console.error("Error guardando cotización:", error);
+      Alert.alert("No pudimos guardar", "La vista previa sigue disponible. Intentá nuevamente.");
+    } finally {
+      setGuardandoCotizacion(false);
+    }
+  };
+
+  const invalidarVistaPrevia = () => {
+    setMostrarVistaPrevia(false);
+    setModalVisible(false);
+    setMensajeFinal("");
+    setImagenGenerada(null);
+    setCotizacionGuardadaId(null);
   };
 
   const handleCategoriaChange = (categoria: string) => {
+    invalidarVistaPrevia();
     setCotizacion({
       ...cotizacion,
       categoria: categoria,
@@ -259,6 +376,7 @@ export default function HomeScreen() {
   };
 
   const handleMarcaChange = (marca: string) => {
+    invalidarVistaPrevia();
     setCotizacion({
       ...cotizacion,
       marca: marca,
@@ -269,6 +387,7 @@ export default function HomeScreen() {
   };
 
   const handleModeloChange = (modelo: string, producto: Producto) => {
+    invalidarVistaPrevia();
     const precioFormateado = producto.precioBase
       ? formatearPrecioInput(producto.precioBase.toString())
       : "";
@@ -282,15 +401,76 @@ export default function HomeScreen() {
   };
 
   const handleValorRealChange = (text: string) => {
+    invalidarVistaPrevia();
     const valorFormateado = formatearPrecioInput(text);
     setCotizacion({ ...cotizacion, valorReal: valorFormateado });
+    if (formErrors.valorReal) setFormErrors((current) => ({ ...current, valorReal: "" }));
   };
+
+  const updateCotizacionField = <K extends keyof CotizacionData>(
+    field: K,
+    value: CotizacionData[K]
+  ) => {
+    invalidarVistaPrevia();
+    setCotizacion((current) => ({ ...current, [field]: value }));
+    if (formErrors[field]) setFormErrors((current) => ({ ...current, [field]: "" }));
+  };
+
+  const quoteDetailsFields = (
+    <View style={styles.quoteDetailsSection}>
+      <ThemedText style={styles.quoteDetailsTitle}>Datos de la cotización</ThemedText>
+      <ThemedText style={styles.quoteDetailsHint}>
+        Se guardarán junto con una instantánea de los precios utilizados.
+      </ThemedText>
+      <AnimatedInput
+        label="Nombre del cliente"
+        required
+        value={cotizacion.clienteNombre}
+        onChangeText={(value) => updateCotizacionField("clienteNombre", value)}
+        placeholder="Nombre y apellido"
+        error={formErrors.clienteNombre}
+      />
+      <AnimatedInput
+        label="Teléfono"
+        required
+        value={cotizacion.clienteTelefono}
+        onChangeText={(value) => updateCotizacionField("clienteTelefono", value)}
+        placeholder="Ej: 11 2345 6789"
+        keyboardType="phone-pad"
+        error={formErrors.clienteTelefono}
+      />
+      <AnimatedInput
+        label="Cantidad"
+        required
+        value={cotizacion.cantidad}
+        onChangeText={(value) => updateCotizacionField("cantidad", value.replace(/\D/g, ""))}
+        placeholder="1"
+        keyboardType="numeric"
+        error={formErrors.cantidad}
+      />
+      <LabeledDropdown
+        label="Modalidad elegida"
+        required
+        options={[
+          { label: "Contado", value: "contado" },
+          { label: "3 cuotas", value: "3-cuotas" },
+          { label: "6 cuotas", value: "6-cuotas" },
+        ]}
+        selectedValue={cotizacion.modalidadPago}
+        onSelect={(value) => {
+          if (value === "contado" || value === "3-cuotas" || value === "6-cuotas") {
+            updateCotizacionField("modalidadPago", value);
+          }
+        }}
+      />
+    </View>
+  );
 
   return (
     <>
       {isWeb && isWideScreen ? (
         // Layout para web con vista previa
-        <SafeAreaView style={styles.webLayoutFullHeight}>
+        <SafeAreaView style={[styles.webLayoutFullHeight, { height: screenHeight }]}>
           {/* Header reutilizable */}
           <Header
             sectionTitle="Cotizaciones"
@@ -327,7 +507,7 @@ export default function HomeScreen() {
                       onSelect={handleCategoriaChange}
                       placeholder="Seleccionar categoría..."
                       loading={categoriasLoading}
-                      error={categoriasError}
+                      error={formErrors.categoria || categoriasError}
                       onRetry={recargarCategorias}
                     />
 
@@ -340,7 +520,7 @@ export default function HomeScreen() {
                       onSelect={handleMarcaChange}
                       placeholder="Seleccionar o escribir marca..."
                       loading={marcasLoading}
-                      error={marcasError}
+                      error={formErrors.marca || marcasError}
                       disabled={!cotizacion.categoria}
                     />
 
@@ -353,7 +533,7 @@ export default function HomeScreen() {
                       onSelect={handleModeloChange}
                       placeholder="Seleccionar modelo..."
                       loading={productosLoading}
-                      error={productosError}
+                      error={formErrors.modelo || productosError}
                       disabled={!cotizacion.marca}
                     />
 
@@ -372,6 +552,7 @@ export default function HomeScreen() {
                       onChangeText={handleValorRealChange}
                       placeholder="Se autocompletará al seleccionar modelo"
                       keyboardType="numeric"
+                      error={formErrors.valorReal}
                     />
 
                     {/* Porcentaje */}
@@ -379,15 +560,13 @@ export default function HomeScreen() {
                       label="Porcentaje Aplicado (0-100)"
                       required
                       value={cotizacion.porcentajeAplicado}
-                      onChangeText={(text) =>
-                        setCotizacion({
-                          ...cotizacion,
-                          porcentajeAplicado: text,
-                        })
-                      }
+                      onChangeText={(text) => updateCotizacionField("porcentajeAplicado", text)}
                       placeholder="Ej: 10"
                       keyboardType="numeric"
+                      error={formErrors.porcentajeAplicado}
                     />
+
+                    {quoteDetailsFields}
 
                     {/* Botones */}
                     <ThemedView style={styles.webButtonContainer}>
@@ -425,7 +604,15 @@ export default function HomeScreen() {
             <View style={styles.webPreviewColumn}>
               {mostrarVistaPrevia && calculos ? (
                 <FadeInView delay={300}>
-                  <ThemedView style={styles.webPreviewContainer}>
+                  <ScrollView
+                    style={[
+                      styles.webPreviewContainer,
+                      { maxHeight: Math.max(420, screenHeight - 210) },
+                    ]}
+                    contentContainerStyle={styles.webPreviewContent}
+                    showsVerticalScrollIndicator={true}
+                    nestedScrollEnabled
+                  >
                     <ThemedView style={styles.webPreviewHeader}>
                       <ThemedText type="subtitle">Vista Previa</ThemedText>
                       <TouchableOpacity
@@ -533,51 +720,72 @@ export default function HomeScreen() {
                       </ThemedView>
                     )}
 
-                    {/* Precios calculados */}
+                    {/* Condición comercial elegida */}
                     <ThemedView style={styles.webPriceContainer}>
                       <ThemedText type="subtitle" style={styles.webPriceTitle}>
-                        💰 Precios Calculados
+                        💰 Precio cotizado
                       </ThemedText>
 
-                      <ThemedView style={styles.webPriceItem}>
-                        <ThemedText style={styles.webPriceLabel}>
-                          💵 Contado:
+                      <ThemedView style={styles.selectedConditionCard}>
+                        <ThemedText style={styles.selectedConditionLabel}>
+                          {modalidadLabel} · {cantidadSeleccionada} unidad{cantidadSeleccionada === 1 ? "" : "es"}
                         </ThemedText>
-                        <ThemedText style={styles.webPriceValue}>
-                          {formatearPrecio(calculos.valorConGanancia)}
+                        {cuotaSeleccionada && (
+                          <ThemedText style={styles.selectedInstallmentValue}>
+                            {cotizacion.modalidadPago === "3-cuotas" ? "3" : "6"} cuotas de {formatearPrecio(cuotaSeleccionada)}
+                          </ThemedText>
+                        )}
+                        <ThemedText style={styles.selectedConditionTotal}>
+                          {formatearPrecio(totalSeleccionado)}
                         </ThemedText>
-                      </ThemedView>
-
-                      <ThemedView style={styles.webPriceItem}>
-                        <ThemedText style={styles.webPriceLabel}>
-                          🗓️ 3 Cuotas:
-                        </ThemedText>
-                        <ThemedText style={styles.webPriceValue}>
-                          {formatearPrecio(calculos.valorPorCuota3)} c/u
-                        </ThemedText>
-                      </ThemedView>
-
-                      <ThemedView style={styles.webPriceItem}>
-                        <ThemedText style={styles.webPriceLabel}>
-                          🗓️ 6 Cuotas:
-                        </ThemedText>
-                        <ThemedText style={styles.webPriceValue}>
-                          {formatearPrecio(calculos.valorPorCuota6)} c/u
+                        <ThemedText style={styles.selectedConditionCaption}>
+                          {cuotaSeleccionada ? "Total financiado" : "Total contado"}
                         </ThemedText>
                       </ThemedView>
                     </ThemedView>
 
-                    {/* Botón para copiar */}
+                    <ThemedView style={styles.whatsAppPreviewCard}>
+                      <ThemedText type="defaultSemiBold" style={styles.whatsAppPreviewTitle}>
+                        Vista previa para WhatsApp
+                      </ThemedText>
+                      <ThemedText style={styles.whatsAppPreviewText}>
+                        {mensajeFinal}
+                      </ThemedText>
+                      <ThemedView style={styles.whatsAppActions}>
+                        <AnimatedButton
+                          title="Copiar texto"
+                          icon="📋"
+                          onPress={copiarAlPortapapeles}
+                          variant="accent"
+                          size="medium"
+                        />
+                        <AnimatedButton
+                          title={isWeb ? "Abrir WhatsApp Web" : "Abrir WhatsApp"}
+                          icon="💬"
+                          onPress={abrirWhatsApp}
+                          variant="secondary"
+                          size="medium"
+                        />
+                      </ThemedView>
+                    </ThemedView>
+
                     <ThemedView style={styles.webPreviewActions}>
                       <AnimatedButton
-                        title="Copiar al Portapapeles"
-                        icon="📋"
-                        onPress={copiarAlPortapapeles}
-                        variant="accent"
+                        title={cotizacionGuardadaId ? "Cotización guardada" : "Guardar cotización"}
+                        icon={cotizacionGuardadaId ? "✓" : "💾"}
+                        onPress={guardarCotizacion}
+                        variant="primary"
                         size="medium"
+                        loading={guardandoCotizacion}
+                        disabled={Boolean(cotizacionGuardadaId)}
                       />
+                      {cotizacionGuardadaId && (
+                        <ThemedText accessibilityLiveRegion="polite" style={styles.savedQuoteMessage}>
+                          Guardada correctamente · referencia {cotizacionGuardadaId.slice(-6).toUpperCase()}
+                        </ThemedText>
+                      )}
                     </ThemedView>
-                  </ThemedView>
+                  </ScrollView>
                 </FadeInView>
               ) : (
                 <ThemedView style={styles.webPreviewPlaceholder}>
@@ -627,7 +835,7 @@ export default function HomeScreen() {
                   onSelect={handleCategoriaChange}
                   placeholder="Seleccionar categoría..."
                   loading={categoriasLoading}
-                  error={categoriasError}
+                  error={formErrors.categoria || categoriasError}
                   onRetry={recargarCategorias}
                 />
 
@@ -640,7 +848,7 @@ export default function HomeScreen() {
                   onSelect={handleMarcaChange}
                   placeholder="Seleccionar o escribir marca..."
                   loading={marcasLoading}
-                  error={marcasError}
+                  error={formErrors.marca || marcasError}
                   disabled={!cotizacion.categoria}
                 />
 
@@ -653,7 +861,7 @@ export default function HomeScreen() {
                   onSelect={handleModeloChange}
                   placeholder="Seleccionar modelo..."
                   loading={productosLoading}
-                  error={productosError}
+                  error={formErrors.modelo || productosError}
                   disabled={!cotizacion.marca}
                 />
 
@@ -672,6 +880,7 @@ export default function HomeScreen() {
                   onChangeText={handleValorRealChange}
                   placeholder="Se autocompletará al seleccionar modelo"
                   keyboardType="numeric"
+                  error={formErrors.valorReal}
                 />
 
                 {/* Porcentaje */}
@@ -679,12 +888,13 @@ export default function HomeScreen() {
                   label="Porcentaje Aplicado (0-100)"
                   required
                   value={cotizacion.porcentajeAplicado}
-                  onChangeText={(text) =>
-                    setCotizacion({ ...cotizacion, porcentajeAplicado: text })
-                  }
+                  onChangeText={(text) => updateCotizacionField("porcentajeAplicado", text)}
                   placeholder="Ej: 10"
                   keyboardType="numeric"
+                  error={formErrors.porcentajeAplicado}
                 />
+
+                {quoteDetailsFields}
 
                 {/* Botones */}
                 <ThemedView style={styles.buttonContainer}>
@@ -763,6 +973,30 @@ export default function HomeScreen() {
                         variant="accent"
                         size="medium"
                       />
+                      <AnimatedButton
+                        title="Abrir WhatsApp"
+                        icon="💬"
+                        onPress={abrirWhatsApp}
+                        variant="secondary"
+                        size="medium"
+                        style={{ marginTop: SPACING.sm }}
+                      />
+                    </ThemedView>
+                    <ThemedView style={styles.modalButtonContainer}>
+                      <AnimatedButton
+                        title={cotizacionGuardadaId ? "Cotización guardada" : "Guardar cotización"}
+                        icon={cotizacionGuardadaId ? "✓" : "💾"}
+                        onPress={guardarCotizacion}
+                        variant="primary"
+                        size="medium"
+                        loading={guardandoCotizacion}
+                        disabled={Boolean(cotizacionGuardadaId)}
+                      />
+                      {cotizacionGuardadaId && (
+                        <ThemedText accessibilityLiveRegion="polite" style={styles.savedQuoteMessage}>
+                          Guardada correctamente · referencia {cotizacionGuardadaId.slice(-6).toUpperCase()}
+                        </ThemedText>
+                      )}
                     </ThemedView>
                   </ThemedView>
 
@@ -815,12 +1049,27 @@ export default function HomeScreen() {
 
               {/* Contenido de la cotización */}
               <View style={styles.captureContent}>
+                {productoSeleccionado?.imagenes?.[0] && (
+                  <View style={styles.captureImageFrame}>
+                    <Image
+                      source={{ uri: productoSeleccionado.imagenes[0] }}
+                      style={styles.captureProductImage}
+                      contentFit="contain"
+                    />
+                  </View>
+                )}
+                <Text style={styles.captureCustomer}>
+                  PREPARADA PARA {cotizacion.clienteNombre.trim().toUpperCase()}
+                </Text>
                 <Text style={styles.captureCategory}>
-                  📦 {cotizacion.categoria.toUpperCase()}
+                  📦 {categoriaNombre.toUpperCase()}
                 </Text>
                 <Text style={styles.captureProduct}>
                   🏷️ {cotizacion.marca.toUpperCase()} -{" "}
                   {cotizacion.modelo.toUpperCase()}
+                </Text>
+                <Text style={styles.captureMeta}>
+                  CANTIDAD: {cantidadSeleccionada}
                 </Text>
                 {cotizacion.detalle && (
                   <Text style={styles.captureDetail}>
@@ -829,22 +1078,19 @@ export default function HomeScreen() {
                 )}
 
                 <View style={styles.capturePrices}>
-                  <Text style={styles.capturePricesTitle}>💰 PRECIOS:</Text>
+                  <Text style={styles.capturePricesTitle}>💰 PRECIO COTIZADO:</Text>
                   {(() => {
                     if (calculos) {
                       return (
                         <>
-                          <Text style={styles.capturePrice}>
-                            💵 Contado:{" "}
-                            {formatearPrecio(calculos.valorConGanancia)}
-                          </Text>
-                          <Text style={styles.capturePrice}>
-                            🗓️ 3 Cuotas:{" "}
-                            {formatearPrecio(calculos.valorPorCuota3)} c/u
-                          </Text>
-                          <Text style={styles.capturePrice}>
-                            🗓️ 6 Cuotas:{" "}
-                            {formatearPrecio(calculos.valorPorCuota6)} c/u
+                          {cuotaSeleccionada && (
+                            <Text style={styles.capturePrice}>
+                              {cotizacion.modalidadPago === "3-cuotas" ? "3" : "6"} CUOTAS DE {formatearPrecio(cuotaSeleccionada)}
+                            </Text>
+                          )}
+                          <Text style={styles.captureSelectedTotal}>
+                            ✅ {modalidadLabel.toUpperCase()} · {cantidadSeleccionada} UNIDAD{cantidadSeleccionada === 1 ? "" : "ES"}
+                            {"\n"}{formatearPrecio(totalSeleccionado)}
                           </Text>
                         </>
                       );
@@ -911,6 +1157,24 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: COLORS.border,
   },
+  quoteDetailsSection: {
+    gap: SPACING.sm,
+    marginTop: SPACING.md,
+    paddingTop: SPACING.md,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
+  },
+  quoteDetailsTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: COLORS.text,
+  },
+  quoteDetailsHint: {
+    fontSize: 13,
+    lineHeight: 18,
+    color: COLORS.textSecondary,
+    marginBottom: SPACING.xs,
+  },
   webButtonContainer: {
     gap: SPACING.sm,
     marginTop: SPACING.md,
@@ -921,14 +1185,17 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.cardBackground,
     padding: SPACING.md,
+    minHeight: 0,
   },
   webPreviewContainer: {
+    flex: 1,
     backgroundColor: COLORS.surface,
     borderRadius: RADIUS.lg,
-    padding: SPACING.md,
     ...SHADOWS.md,
-    maxHeight: 600, // Reemplazar calc() con valor fijo
-    overflow: "hidden",
+  },
+  webPreviewContent: {
+    padding: SPACING.md,
+    paddingBottom: SPACING.xl,
   },
   webPreviewHeader: {
     flexDirection: "row",
@@ -1007,6 +1274,61 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "600",
     color: COLORS.primary,
+  },
+  selectedConditionCard: {
+    padding: SPACING.md,
+    borderRadius: RADIUS.md,
+    backgroundColor: COLORS.background,
+    borderWidth: 1,
+    borderColor: COLORS.primary,
+    gap: SPACING.xs,
+  },
+  selectedConditionLabel: {
+    color: COLORS.textSecondary,
+    fontSize: 13,
+  },
+  selectedConditionTotal: {
+    color: COLORS.primaryDark,
+    fontSize: 20,
+    fontWeight: "700",
+  },
+  selectedInstallmentValue: {
+    color: COLORS.text,
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  selectedConditionCaption: {
+    color: COLORS.textSecondary,
+    fontSize: 12,
+  },
+  whatsAppPreviewCard: {
+    marginTop: SPACING.md,
+    marginBottom: SPACING.md,
+    padding: SPACING.md,
+    borderRadius: RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.secondaryDark,
+    backgroundColor: "#f4fff8",
+    gap: SPACING.sm,
+  },
+  whatsAppPreviewTitle: {
+    color: COLORS.text,
+    fontSize: 15,
+  },
+  whatsAppPreviewText: {
+    color: COLORS.textSecondary,
+    fontSize: 13,
+    lineHeight: 19,
+  },
+  whatsAppActions: {
+    gap: SPACING.sm,
+    marginTop: SPACING.xs,
+  },
+  savedQuoteMessage: {
+    color: COLORS.textSecondary,
+    fontSize: 13,
+    textAlign: "center",
+    marginTop: SPACING.xs,
   },
   webPreviewActions: {
     gap: SPACING.sm,
@@ -1210,6 +1532,25 @@ const styles = StyleSheet.create({
   captureContent: {
     gap: 40,
   },
+  captureImageFrame: {
+    width: "100%",
+    height: 520,
+    padding: 30,
+    borderRadius: 28,
+    borderWidth: 2,
+    borderColor: "#e2e8f0",
+    backgroundColor: "#ffffff",
+  },
+  captureProductImage: {
+    width: "100%",
+    height: "100%",
+  },
+  captureCustomer: {
+    fontSize: 22,
+    fontWeight: "600",
+    color: "#718096",
+    letterSpacing: 1,
+  },
   captureCategory: {
     fontSize: 32,
     fontWeight: "600",
@@ -1219,6 +1560,11 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: "600",
     color: "#4a5568",
+  },
+  captureMeta: {
+    fontSize: 22,
+    fontWeight: "600",
+    color: "#718096",
   },
   captureDetail: {
     fontSize: 24,
@@ -1240,6 +1586,12 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: "600",
     color: "#4a5568",
+  },
+  captureSelectedTotal: {
+    fontSize: 30,
+    fontWeight: "bold",
+    color: "#8b99e8",
+    marginTop: 20,
   },
   captureContact: {
     fontSize: 24,

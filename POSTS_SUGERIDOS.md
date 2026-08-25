@@ -140,6 +140,27 @@ Prevenir errores también es UX.
 
 ---
 
+## 6. Una cotización debe guardar el contexto, no solo el total
+
+**Tema:** integridad de datos y reglas comerciales
+**Estado:** Borrador
+
+### LinkedIn
+
+Mientras mejoraba el flujo de cotizaciones de un ecommerce apareció una diferencia sutil: la interfaz permitía elegir un porcentaje, pero el servidor podía volver a calcular con su valor predeterminado.
+
+La solución fue tratar cada cotización como una instantánea: producto, cantidad, porcentaje, modalidad y precios quedan guardados juntos. Si el catálogo cambia mañana, la cotización de hoy sigue explicando exactamente qué se ofreció.
+
+Aprendizaje: en operaciones comerciales no alcanza con guardar un total. También hay que conservar el contexto que lo produjo.
+
+### X
+
+Una cotización no debería guardar solo el total.
+
+Producto, cantidad, porcentaje, modalidad y precios forman una instantánea comercial. Así, un cambio futuro en el catálogo no reescribe silenciosamente lo que ofreciste hoy.
+
+---
+
 ## Rutina editorial sugerida
 
 Al final de una jornada con cambios relevantes, responder:

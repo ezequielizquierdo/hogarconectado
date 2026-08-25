@@ -32,7 +32,7 @@ type ResultCardProps = {
   accent?: "primary" | "secondary" | "accent";
   copiedKey: string | null;
   valueKey: string;
-  onCopy: (key: string, value: number) => void;
+  onCopy: (key: string, title: string, value: number) => void;
 };
 
 function ResultCard({
@@ -58,9 +58,10 @@ function ResultCard({
         <Text style={styles.resultValue}>{formatMoney(value)}</Text>
       </View>
       <TouchableOpacity
+        accessibilityRole="button"
         accessibilityLabel={`Copiar ${title}`}
         style={styles.copyButton}
-        onPress={() => onCopy(valueKey, value)}
+        onPress={() => onCopy(valueKey, title, value)}
       >
         <Text style={styles.copyIcon}>{copiedKey === valueKey ? "✓" : "⧉"}</Text>
         <Text style={styles.copyText}>
@@ -77,11 +78,20 @@ export default function CalculadoraScreen() {
   const [valorInicial, setValorInicial] = useState("");
   const [porcentaje, setPorcentaje] = useState("10");
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
+  const [copyConfirmation, setCopyConfirmation] = useState("");
 
   const base = valorInicial ? parseMoney(valorInicial) : null;
   const porcentajeNumero = porcentaje
     ? Number(porcentaje.replace(",", "."))
     : null;
+  const valorError = valorInicial && (!base || base <= 0)
+    ? "Ingresá un valor mayor a 0."
+    : "";
+  const porcentajeError = porcentajeNumero === null
+    ? "Ingresá un porcentaje."
+    : !Number.isFinite(porcentajeNumero) || porcentajeNumero < 0 || porcentajeNumero > 100
+    ? "El porcentaje debe estar entre 0 y 100."
+    : "";
   const { data: resultados, loading, error } = useCalculoPrecios(
     base,
     porcentajeNumero
@@ -96,16 +106,40 @@ export default function CalculadoraScreen() {
     );
   };
 
-  const copyValue = async (key: string, value: number) => {
-    await Clipboard.setStringAsync(formatMoney(value));
+  const confirmCopy = (key: string, message: string) => {
     setCopiedKey(key);
-    setTimeout(() => setCopiedKey((current) => (current === key ? null : current)), 1400);
+    setCopyConfirmation(message);
+    setTimeout(() => {
+      setCopiedKey((current) => (current === key ? null : current));
+      setCopyConfirmation((current) => (current === message ? "" : current));
+    }, 1800);
+  };
+
+  const copyValue = async (key: string, title: string, value: number) => {
+    await Clipboard.setStringAsync(formatMoney(value));
+    confirmCopy(key, `${title}: ${formatMoney(value)} copiado.`);
+  };
+
+  const copySummary = async () => {
+    if (!resultados || base === null || porcentajeNumero === null) return;
+    const summary = [
+      "Hogar Conectado · Resumen de precios",
+      `Valor inicial: ${formatMoney(base)}`,
+      `Ganancia aplicada: ${porcentajeNumero}%`,
+      `Efectivo / contado: ${formatMoney(resultados.efectivo)}`,
+      `Facturado en un pago: ${formatMoney(resultados.factura.unPago)}`,
+      `3 cuotas de ${formatMoney(resultados.tresCuotas.cuota)} · Total ${formatMoney(resultados.tresCuotas.total)}`,
+      `6 cuotas de ${formatMoney(resultados.seisCuotas.cuota)} · Total ${formatMoney(resultados.seisCuotas.total)}`,
+    ].join("\n");
+    await Clipboard.setStringAsync(summary);
+    confirmCopy("resumen", "Resumen completo copiado.");
   };
 
   const clear = () => {
     setValorInicial("");
     setPorcentaje("10");
     setCopiedKey(null);
+    setCopyConfirmation("");
   };
 
   return (
@@ -146,8 +180,11 @@ export default function CalculadoraScreen() {
                   keyboardType="numeric"
                   style={styles.moneyInput}
                   placeholderTextColor={COLORS.textLight}
+                  accessibilityLabel="Valor inicial en pesos"
+                  accessibilityHint={valorError || "Ingresá el costo inicial del producto"}
                 />
               </View>
+              {valorError ? <Text style={styles.fieldError}>{valorError}</Text> : null}
             </View>
 
             <View style={styles.field}>
@@ -162,12 +199,20 @@ export default function CalculadoraScreen() {
                   keyboardType="decimal-pad"
                   style={styles.moneyInput}
                   placeholderTextColor={COLORS.textLight}
+                  accessibilityLabel="Porcentaje aplicado"
+                  accessibilityHint={porcentajeError || "Ingresá un porcentaje entre 0 y 100"}
                 />
                 <Text style={styles.inputSuffix}>%</Text>
               </View>
+              {porcentajeError ? <Text style={styles.fieldError}>{porcentajeError}</Text> : null}
             </View>
 
-            <TouchableOpacity style={styles.clearButton} onPress={clear}>
+            <TouchableOpacity
+              accessibilityRole="button"
+              accessibilityLabel="Limpiar valores de la calculadora"
+              style={styles.clearButton}
+              onPress={clear}
+            >
               <Text style={styles.clearText}>Limpiar valores</Text>
             </TouchableOpacity>
           </View>
@@ -185,6 +230,10 @@ export default function CalculadoraScreen() {
               ) : null}
             </View>
 
+            <Text style={styles.copyConfirmation} accessibilityLiveRegion="polite">
+              {copyConfirmation}
+            </Text>
+
             {!valorInicial ? (
               <View style={styles.emptyState}>
                 <Text style={styles.emptyIcon}>％</Text>
@@ -192,6 +241,12 @@ export default function CalculadoraScreen() {
                 <Text style={styles.emptyText}>
                   Acá aparecerán efectivo, factura y cuotas listos para copiar.
                 </Text>
+              </View>
+            ) : valorError || porcentajeError ? (
+              <View style={styles.emptyState}>
+                <Text style={styles.emptyIcon}>!</Text>
+                <Text style={styles.emptyTitle}>Revisá los datos ingresados</Text>
+                <Text style={styles.emptyText}>{valorError || porcentajeError}</Text>
               </View>
             ) : loading ? (
               <View style={styles.emptyState}>
@@ -207,6 +262,16 @@ export default function CalculadoraScreen() {
               </View>
             ) : (
               <View style={styles.resultsGrid}>
+                <TouchableOpacity
+                  accessibilityRole="button"
+                  accessibilityLabel="Copiar resumen completo de precios"
+                  style={styles.copySummaryButton}
+                  onPress={copySummary}
+                >
+                  <Text style={styles.copySummaryText}>
+                    {copiedKey === "resumen" ? "✓ Resumen copiado" : "⧉ Copiar resumen completo"}
+                  </Text>
+                </TouchableOpacity>
                 <ResultCard
                   title="Efectivo / contado"
                   subtitle={`Incluye ${porcentaje || "0"}% de ganancia`}
@@ -316,6 +381,7 @@ const styles = StyleSheet.create({
   helper: { fontSize: 14, lineHeight: 20, color: COLORS.textSecondary, marginTop: SPACING.sm, marginBottom: SPACING.lg },
   field: { marginBottom: SPACING.md },
   label: { fontSize: 13, fontWeight: "700", color: COLORS.text, marginBottom: SPACING.sm },
+  fieldError: { marginTop: SPACING.xs, color: COLORS.error, fontSize: 12, fontWeight: "600" },
   moneyInputRow: {
     minHeight: 58,
     flexDirection: "row",
@@ -332,9 +398,12 @@ const styles = StyleSheet.create({
   clearButton: { alignItems: "center", paddingVertical: SPACING.sm, marginTop: SPACING.xs },
   clearText: { color: COLORS.textSecondary, fontWeight: "600" },
   resultsHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: SPACING.lg },
+  copyConfirmation: { minHeight: 20, marginBottom: SPACING.sm, color: COLORS.primaryDark, fontSize: 13, fontWeight: "700", textAlign: "right" },
   percentageBadge: { backgroundColor: COLORS.primary + "30", borderRadius: RADIUS.full, paddingHorizontal: SPACING.md, paddingVertical: SPACING.sm },
   percentageBadgeText: { color: COLORS.primaryDark, fontSize: 16, fontWeight: "800" },
   resultsGrid: { gap: SPACING.md },
+  copySummaryButton: { minHeight: 48, alignItems: "center", justifyContent: "center", paddingHorizontal: SPACING.lg, borderRadius: RADIUS.md, backgroundColor: COLORS.primary },
+  copySummaryText: { color: COLORS.text, fontSize: 14, fontWeight: "800" },
   resultCard: {
     flexDirection: "row",
     alignItems: "center",

@@ -118,6 +118,7 @@ export interface CrearCotizacionData {
     productos: Array<{
         producto: string;
         cantidad: number;
+        porcentajeAplicado?: number;
     }>;
     modalidadPago: 'contado' | '3-cuotas' | '6-cuotas';
     observaciones?: string;
