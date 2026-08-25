@@ -123,6 +123,8 @@ export default function AnimatedInput({
           <TextInput
             style={[styles.textInput, icon && styles.textInputWithIcon]}
             value={value}
+            accessibilityLabel={`${label}${required ? ", obligatorio" : ""}`}
+            accessibilityHint={error || props.placeholder}
             onFocus={handleFocus}
             onBlur={handleBlur}
             placeholderTextColor={COLORS.textLight}

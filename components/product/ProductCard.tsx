@@ -12,6 +12,7 @@ import { ThemedView } from "@/components/ThemedView";
 import { COLORS, SPACING, RADIUS, SHADOWS } from "@/constants/theme";
 import { ProductoConPrecios } from "@/services/types";
 import { IconActionButton } from "@/components/ui/IconActionButton";
+import { IconSymbol } from "@/components/ui/IconSymbol";
 
 interface ProductCardProps {
   producto: ProductoConPrecios;
@@ -54,6 +55,8 @@ export default function ProductCard({
         {/* Zona de información del producto - clickeable para ver detalle */}
         <TouchableOpacity
           onPress={onPress}
+          accessibilityRole="button"
+          accessibilityLabel={`Ver detalle de ${producto.marca} ${producto.modelo}`}
           style={[
             styles.productInfoSection,
             !isCompact && styles.productInfoSectionDesktop,
@@ -79,15 +82,38 @@ export default function ProductCard({
                   source={{ uri: producto.imagenes[0] }}
                   style={styles.productImage}
                   contentFit="contain"
+                  accessibilityLabel={`Imagen de ${producto.marca} ${producto.modelo}`}
                 />
               ) : (
                 <View style={styles.placeholderImage}>
-                  <ThemedText style={styles.placeholderText}>📱</ThemedText>
+                  <View style={styles.placeholderIcon}>
+                    <IconSymbol
+                      name="cube.box.fill"
+                      size={30}
+                      color={COLORS.textSecondary}
+                    />
+                  </View>
+                  <ThemedText style={styles.placeholderTitle}>
+                    Sin imagen
+                  </ThemedText>
+                  {showAdminButtons && (
+                    <ThemedText style={styles.placeholderHelp}>
+                      Podés agregarla al editar
+                    </ThemedText>
+                  )}
                 </View>
               )}
             </View>
 
-            <View style={[styles.detailsColumn, isCompact && styles.detailsColumnCompact]}>
+            <View
+              style={[
+                styles.detailsColumn,
+                isCompact
+                  ? styles.detailsColumnCompact
+                  : styles.detailsColumnDesktop,
+              ]}
+            >
+              <View>
               <View
                 style={[
                   styles.stockBadge,
@@ -100,7 +126,7 @@ export default function ProductCard({
               >
                 <ThemedText style={styles.stockText}>
                   {producto.stock.disponible
-                    ? `Stock: ${producto.stock.cantidad}`
+                    ? `Disponible · ${producto.stock.cantidad}`
                     : "Sin stock"}
                 </ThemedText>
               </View>
@@ -117,11 +143,12 @@ export default function ProductCard({
                 <ThemedText style={styles.modeloText} numberOfLines={2}>
                   {producto.modelo}
                 </ThemedText>
-                {isCompact && producto.descripcion && (
+                {producto.descripcion && (
                   <ThemedText style={styles.descriptionText} numberOfLines={2}>
                     {producto.descripcion}
                   </ThemedText>
                 )}
+              </View>
               </View>
 
               <View style={styles.priceContainer}>
@@ -249,6 +276,11 @@ const styles = StyleSheet.create({
     minWidth: 0,
     justifyContent: "center",
   },
+  detailsColumnDesktop: {
+    minWidth: 0,
+    justifyContent: "space-between",
+    paddingVertical: SPACING.sm,
+  },
   productImage: {
     width: "100%",
     height: "100%",
@@ -259,12 +291,31 @@ const styles = StyleSheet.create({
     height: "100%",
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#F8F9FA", // Fondo gris muy claro para el placeholder
+    backgroundColor: COLORS.cardBackground,
     borderRadius: RADIUS.sm,
+    padding: SPACING.lg,
   },
-  placeholderText: {
-    fontSize: 40,
-    opacity: 0.5,
+  placeholderIcon: {
+    width: 52,
+    height: 52,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: RADIUS.full,
+    backgroundColor: COLORS.surface,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    marginBottom: SPACING.sm,
+  },
+  placeholderTitle: {
+    color: COLORS.textSecondary,
+    fontSize: 14,
+    fontWeight: "700",
+  },
+  placeholderHelp: {
+    marginTop: SPACING.xs,
+    color: COLORS.textLight,
+    fontSize: 12,
+    textAlign: "center",
   },
   stockBadge: {
     alignSelf: "flex-start",
@@ -304,6 +355,7 @@ const styles = StyleSheet.create({
     fontSize: Platform.OS === "web" ? 13 : 12,
     color: COLORS.textLight,
     lineHeight: Platform.OS === "web" ? 18 : 16,
+    marginTop: SPACING.xs,
   },
   priceContainer: {
     marginBottom: 0,
@@ -318,7 +370,7 @@ const styles = StyleSheet.create({
   price: {
     fontSize: Platform.OS === "web" ? 18 : 16,
     fontWeight: "bold",
-    color: COLORS.primary,
+    color: COLORS.primaryDark,
   },
   priceCompact: {
     fontSize: 20,

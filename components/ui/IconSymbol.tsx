@@ -22,10 +22,13 @@ const MAPPING = {
   "chevron.left.forwardslash.chevron.right": "code",
   "chevron.right": "chevron-right",
   "doc.text.fill": "assignment",
+  "cube.box.fill": "inventory-2",
   percent: "calculate",
   "person.fill": "contact-mail",
   "person.2.fill": "group",
   "person.crop.circle.fill": "account-circle",
+  "exclamationmark.triangle.fill": "warning",
+  "tray.fill": "inventory",
 } as IconMapping;
 
 /**

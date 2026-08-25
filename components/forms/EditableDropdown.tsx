@@ -43,6 +43,7 @@ export default function EditableDropdown({
   disabled = false,
 }: EditableDropdownProps) {
   const [isVisible, setIsVisible] = useState(false);
+  const [isFocused, setIsFocused] = useState(false);
   const [customValue, setCustomValue] = useState("");
   const [showCustomInput, setShowCustomInput] = useState(false);
 
@@ -77,6 +78,9 @@ export default function EditableDropdown({
         item.value === "__custom__" && styles.customOption,
       ]}
       onPress={() => handleSelect(item.value)}
+      accessibilityRole="button"
+      accessibilityLabel={item.label}
+      accessibilityState={{ selected: item.value === selectedValue }}
     >
       <ThemedText
         style={[
@@ -104,9 +108,16 @@ export default function EditableDropdown({
           style,
           error && styles.dropdownError,
           (loading || disabled) && styles.dropdownDisabled,
+          isFocused && styles.dropdownFocused,
         ]}
         onPress={() => !loading && !disabled && setIsVisible(true)}
+        onFocus={() => setIsFocused(true)}
+        onBlur={() => setIsFocused(false)}
         disabled={loading || disabled}
+        accessibilityRole="button"
+        accessibilityLabel={`${label}${required ? ", obligatorio" : ""}`}
+        accessibilityHint={error || placeholder}
+        accessibilityState={{ disabled: loading || disabled, expanded: isVisible }}
       >
         {loading ? (
           <ActivityIndicator size="small" color={COLORS.primary} />
@@ -150,6 +161,7 @@ export default function EditableDropdown({
                   placeholder="Nombre de la marca"
                   autoFocus
                   onSubmitEditing={handleCustomSubmit}
+                  accessibilityLabel="Nombre de la nueva marca"
                 />
                 <View style={styles.customInputActions}>
                   <TouchableOpacity
@@ -215,6 +227,9 @@ const styles = StyleSheet.create({
   },
   dropdownError: {
     borderColor: COLORS.error,
+  },
+  dropdownFocused: {
+    borderColor: COLORS.primaryDark,
   },
   dropdownDisabled: {
     backgroundColor: COLORS.cardBackground,

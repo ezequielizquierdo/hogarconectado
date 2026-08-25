@@ -25,6 +25,7 @@ import LabeledDropdown from "@/components/forms/LabeledDropdown";
 import EditableDropdown from "@/components/forms/EditableDropdown";
 import AnimatedInput from "@/components/forms/AnimatedInput";
 import AnimatedButton from "@/components/ui/AnimatedButton";
+import { DataStatePanel } from "@/components/ui/DataStatePanel";
 import FadeInView from "@/components/ui/FadeInView";
 import ProductCard from "@/components/product/ProductCard";
 import { SidebarFilters } from "@/components/filters";
@@ -88,10 +89,16 @@ export default function ProductosScreen() {
   const { can } = useAuth();
   const canEdit = can("editor", "admin");
   const canDelete = can("admin");
-  const { categorias, loading: categoriasLoading } = useCategorias();
+  const {
+    categorias,
+    loading: categoriasLoading,
+    error: categoriasError,
+    recargar: recargarCategorias,
+  } = useCategorias();
   const {
     productos,
     loading: productosLoading,
+    error: productosError,
     pagination,
     filtros,
     buscar,
@@ -129,6 +136,9 @@ export default function ProductosScreen() {
   const [saving, setSaving] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [modeloError, setModeloError] = useState<string>("");
+  const [formErrors, setFormErrors] = useState<Partial<Record<keyof ProductoForm, string>>>({});
+  const initialFormSnapshot = useRef(JSON.stringify(initialForm));
+  const productFormScrollRef = useRef<ScrollView>(null);
 
   // Referencia para capturar la vista de Instagram Story
   const instagramViewRef = useRef<View>(null);
@@ -177,7 +187,10 @@ export default function ProductosScreen() {
 
   // Los productos ya vienen filtrados del backend, no necesitamos filtrar localmente
   const productosFiltrados = productos;
-
+  const totalProductos = pagination?.total ?? productosFiltrados.length;
+  const hasActiveFilters = Boolean(
+    searchText.trim() || filtroCategoria || filtroMarca || filtroStock
+  );
   // Función para limpiar filtros (ahora usa el backend)
   const clearAllFilters = () => {
     setSearchText("");
@@ -186,6 +199,35 @@ export default function ProductosScreen() {
     setFiltroStock("");
     limpiarFiltros(); // Llamar al método del hook
   };
+
+  const catalogState = productosLoading
+    ? {
+        status: "loading" as const,
+        title: "Buscando productos…",
+        message: "Estamos actualizando el catálogo.",
+      }
+    : productosError
+    ? {
+        status: "error" as const,
+        title: "No pudimos cargar los productos",
+        message:
+          "Revisá tu conexión o esperá unos segundos si el servicio recién está iniciando.",
+        actionLabel: "Reintentar",
+        onAction: recargar,
+      }
+    : hasActiveFilters
+    ? {
+        status: "empty" as const,
+        title: "No encontramos coincidencias",
+        message: "Probá con otro término o limpiá los filtros aplicados.",
+        actionLabel: "Limpiar filtros",
+        onAction: clearAllFilters,
+      }
+    : {
+        status: "empty" as const,
+        title: "Todavía no hay productos",
+        message: "Cuando agregues productos, aparecerán en este catálogo.",
+      };
 
   // Funciones para actualizar filtros (sincronizadas con backend)
   const handleCategoriaChange = (categoria: string) => {
@@ -244,7 +286,7 @@ export default function ProductosScreen() {
           ? producto.categoria
           : producto.categoria._id;
 
-      setForm({
+      const editForm = {
         marca: producto.marca,
         modelo: producto.modelo,
         descripcion: producto.descripcion || "",
@@ -257,19 +299,51 @@ export default function ProductosScreen() {
             ? producto.imagenes[0]
             : "",
         imagenPublicId: producto.imagenPublicIds?.[0] || "",
-      });
+      };
+      setForm(editForm);
+      initialFormSnapshot.current = JSON.stringify(editForm);
     } else {
       setEditingProduct(null);
       setForm(initialForm);
+      initialFormSnapshot.current = JSON.stringify(initialForm);
     }
+    setFormErrors({});
+    setModeloError("");
     setModalVisible(true);
   };
 
-  const closeModal = () => {
+  const resetAndCloseModal = () => {
     setModalVisible(false);
     setEditingProduct(null);
     setForm(initialForm);
     setModeloError("");
+    setFormErrors({});
+  };
+
+  const requestCloseModal = () => {
+    if (saving) return;
+    const hasUnsavedChanges = JSON.stringify(form) !== initialFormSnapshot.current;
+    if (!hasUnsavedChanges) {
+      resetAndCloseModal();
+      return;
+    }
+
+    const message = "Tenés cambios sin guardar. ¿Querés descartarlos?";
+    if (Platform.OS === "web") {
+      if (window.confirm(message)) resetAndCloseModal();
+      return;
+    }
+    Alert.alert("Descartar cambios", message, [
+      { text: "Seguir editando", style: "cancel" },
+      { text: "Descartar", style: "destructive", onPress: resetAndCloseModal },
+    ]);
+  };
+
+  const updateFormField = <K extends keyof ProductoForm>(field: K, value: ProductoForm[K]) => {
+    setForm((current) => ({ ...current, [field]: value }));
+    if (formErrors[field]) {
+      setFormErrors((current) => ({ ...current, [field]: undefined }));
+    }
   };
 
   const validateModelo = async (modelo: string) => {
@@ -385,12 +459,25 @@ export default function ProductosScreen() {
   };
 
   const handleSave = async () => {
+    if (saving) return;
     if (!canEdit) {
       Alert.alert("Sin permiso", "No podés modificar productos.");
       return;
     }
-    if (!form.marca || !form.modelo || !form.categoria || !form.precioBase) {
-      Alert.alert("Error", "Por favor completa los campos obligatorios");
+    const precioNumerico = parsePrice(form.precioBase);
+    const nextErrors: Partial<Record<keyof ProductoForm, string>> = {};
+    if (!form.marca.trim()) nextErrors.marca = "Seleccioná o escribí una marca.";
+    if (!form.modelo.trim()) nextErrors.modelo = "Ingresá el modelo del producto.";
+    if (!form.categoria) nextErrors.categoria = "Seleccioná una categoría.";
+    if (!form.precioBase.trim() || isNaN(precioNumerico) || precioNumerico <= 0) {
+      nextErrors.precioBase = "Ingresá un precio mayor a 0.";
+    }
+    if (form.stockCantidad && (!/^\d+$/.test(form.stockCantidad) || Number(form.stockCantidad) < 0)) {
+      nextErrors.stockCantidad = "Ingresá una cantidad entera igual o mayor a 0.";
+    }
+    if (Object.keys(nextErrors).length > 0) {
+      setFormErrors(nextErrors);
+      productFormScrollRef.current?.scrollTo({ y: 0, animated: true });
       return;
     }
 
@@ -422,13 +509,6 @@ export default function ProductosScreen() {
       }
 
       // Convertir precio a número (parsePrice maneja formato español)
-      const precioNumerico = parsePrice(form.precioBase);
-      if (isNaN(precioNumerico) || precioNumerico <= 0) {
-        Alert.alert("Error", "El precio debe ser un número válido mayor a 0");
-        setSaving(false);
-        return;
-      }
-
       const productoData = {
         marca: form.marca,
         modelo: formatModeloToUpperCase(form.modelo), // Convertir a mayúsculas
@@ -462,7 +542,7 @@ export default function ProductosScreen() {
         Alert.alert("Éxito", "Producto creado correctamente");
       }
 
-      closeModal();
+      resetAndCloseModal();
 
       // Agregar delay antes de recargar para evitar rate limiting
       await delay(500);
@@ -1013,6 +1093,8 @@ export default function ProductosScreen() {
               onSearchChange={setSearchText}
               onClearFilters={clearAllFilters}
               onAddProduct={canEdit ? () => openModal() : undefined}
+              resultCount={totalProductos}
+              loading={productosLoading}
             />
 
             {/* Contenido principal */}
@@ -1030,18 +1112,7 @@ export default function ProductosScreen() {
                 {/* Lista de productos */}
                 <ThemedView style={styles.webProductsContainer}>
                   {productosFiltrados.length === 0 ? (
-                    <ThemedView style={styles.emptyContainer}>
-                      <ThemedText style={styles.emptyText}>
-                        {productosLoading
-                          ? "Cargando productos..."
-                          : searchText ||
-                            filtroCategoria ||
-                            filtroMarca ||
-                            filtroStock
-                          ? "No se encontraron productos con los filtros aplicados"
-                          : "No hay productos disponibles"}
-                      </ThemedText>
-                    </ThemedView>
+                    <DataStatePanel {...catalogState} />
                   ) : (
                     <View style={styles.webGrid}>
                       {productosFiltrados.map((producto) =>
@@ -1120,7 +1191,7 @@ export default function ProductosScreen() {
               </View>
 
               {/* Botón limpiar filtros */}
-              {(filtroCategoria || filtroMarca || filtroStock) && (
+              {hasActiveFilters && (
                 <TouchableOpacity
                   accessibilityRole="button"
                   accessibilityLabel="Limpiar todos los filtros"
@@ -1198,22 +1269,29 @@ export default function ProductosScreen() {
                 </FadeInView>
               )}
 
+              <View
+                style={styles.mobileResultsSummary}
+                accessibilityLiveRegion="polite"
+              >
+                <ThemedText style={styles.mobileResultsText}>
+                  {productosLoading
+                    ? "Actualizando resultados…"
+                    : `${totalProductos} ${
+                        totalProductos === 1 ? "producto" : "productos"
+                      }`}
+                </ThemedText>
+                {hasActiveFilters && !productosLoading && (
+                  <ThemedText style={styles.mobileFiltersState}>
+                    Según tus filtros
+                  </ThemedText>
+                )}
+              </View>
+
               {/* Lista de productos móvil */}
               <FadeInView delay={400}>
                 <ThemedView style={styles.productListContainer}>
                   {productosFiltrados.length === 0 ? (
-                    <ThemedView style={styles.emptyContainer}>
-                      <ThemedText style={styles.emptyText}>
-                        {productosLoading
-                          ? "Cargando productos..."
-                          : searchText ||
-                            filtroCategoria ||
-                            filtroMarca ||
-                            filtroStock
-                          ? "No se encontraron productos con los filtros aplicados"
-                          : "No hay productos disponibles"}
-                      </ThemedText>
-                    </ThemedView>
+                    <DataStatePanel {...catalogState} />
                   ) : (
                     <View style={styles.mobileList}>
                       {productosFiltrados.map((producto) =>
@@ -1246,7 +1324,7 @@ export default function ProductosScreen() {
         presentationStyle={
           Platform.OS === "web" ? "overFullScreen" : "pageSheet"
         }
-        onRequestClose={closeModal}
+        onRequestClose={requestCloseModal}
       >
         {Platform.OS === "web" ? (
           // Modal web estilo "paper" centrado igual que el de detalle
@@ -1260,60 +1338,75 @@ export default function ProductosScreen() {
                   accessibilityRole="button"
                   accessibilityLabel="Cerrar formulario de producto"
                   style={styles.closeButton}
-                  onPress={closeModal}
+                  onPress={requestCloseModal}
                 >
                   <ThemedText style={styles.closeButtonText}>✕</ThemedText>
                 </TouchableOpacity>
               </ThemedView>
 
               <ScrollView
+                ref={productFormScrollRef}
                 style={styles.webModalContent}
                 contentContainerStyle={styles.webModalContentContainer}
                 showsVerticalScrollIndicator={true}
                 keyboardShouldPersistTaps="handled"
               >
                 <View style={styles.form}>
+                  <View style={styles.formSectionHeader}>
+                    <ThemedText style={styles.formSectionTitle}>Identidad del producto</ThemedText>
+                    <ThemedText style={styles.formSectionHint}>Los campos con * son obligatorios.</ThemedText>
+                  </View>
                   <EditableDropdown
-                    label="Marca *"
+                    label="Marca"
                     required
                     options={marcas}
                     selectedValue={form.marca}
-                    onSelect={(value) => setForm({ ...form, marca: value })}
+                    onSelect={(value) => updateFormField("marca", value)}
                     placeholder="Seleccionar o escribir marca"
                     loading={marcasLoading}
+                    error={formErrors.marca}
                   />
 
                   <AnimatedInput
-                    label="Modelo *"
+                    label="Modelo"
+                    required
                     value={form.modelo}
                     onChangeText={async (text) => {
                       const modeloUpperCase = formatModeloToUpperCase(text);
-                      setForm({ ...form, modelo: modeloUpperCase });
+                      updateFormField("modelo", modeloUpperCase);
                       await validateModelo(text);
                     }}
                     placeholder="Modelo del producto"
-                    error={modeloError}
+                    error={formErrors.modelo || modeloError}
                   />
 
                   <LabeledDropdown
-                    label="Categoría *"
+                    label="Categoría"
+                    required
                     options={categorias.map((cat) => ({
                       label: cat.nombre,
                       value: cat._id,
                     }))}
                     selectedValue={form.categoria}
-                    onSelect={(value) => setForm({ ...form, categoria: value })}
+                    onSelect={(value) => updateFormField("categoria", value)}
                     placeholder="Seleccionar categoría"
                     loading={categoriasLoading}
+                    error={formErrors.categoria || categoriasError}
+                    onRetry={categoriasError ? recargarCategorias : undefined}
                   />
 
+                  <View style={styles.formSectionHeader}>
+                    <ThemedText style={styles.formSectionTitle}>Precio y disponibilidad</ThemedText>
+                    <ThemedText style={styles.formSectionHint}>Usá el precio base del producto antes de aplicar cálculos comerciales.</ThemedText>
+                  </View>
                   <AnimatedInput
-                    label="Precio Base *"
+                    label="Precio base"
+                    required
                     value={form.precioBase}
                     onChangeText={(text) => {
                       // Solo permitir números, puntos y comas
                       const filteredText = text.replace(/[^0-9.,]/g, "");
-                      setForm({ ...form, precioBase: filteredText });
+                      updateFormField("precioBase", filteredText);
                     }}
                     onBlur={() => {
                       // Formatear al perder el foco
@@ -1321,22 +1414,24 @@ export default function ProductosScreen() {
                         const numericValue = parsePrice(form.precioBase);
                         if (!isNaN(numericValue)) {
                           const formattedPrice = formatPrice(numericValue);
-                          setForm({ ...form, precioBase: formattedPrice });
+                          updateFormField("precioBase", formattedPrice);
                         }
                       }
                     }}
                     placeholder="0,00"
                     keyboardType="numeric"
+                    error={formErrors.precioBase}
                   />
 
                   <AnimatedInput
                     label="Stock Cantidad"
                     value={form.stockCantidad}
                     onChangeText={(text) =>
-                      setForm({ ...form, stockCantidad: text })
+                      updateFormField("stockCantidad", text.replace(/\D/g, ""))
                     }
                     placeholder="Cantidad en stock"
                     keyboardType="numeric"
+                    error={formErrors.stockCantidad}
                   />
 
                   <LabeledDropdown
@@ -1347,16 +1442,20 @@ export default function ProductosScreen() {
                     ]}
                     selectedValue={form.stockDisponible}
                     onSelect={(value) =>
-                      setForm({ ...form, stockDisponible: value })
+                      updateFormField("stockDisponible", value)
                     }
                     placeholder="Seleccionar disponibilidad"
                   />
 
+                  <View style={styles.formSectionHeader}>
+                    <ThemedText style={styles.formSectionTitle}>Descripción e imagen</ThemedText>
+                    <ThemedText style={styles.formSectionHint}>La descripción y la imagen son opcionales, pero mejoran la vidriera y las publicaciones.</ThemedText>
+                  </View>
                   <AnimatedInput
                     label="Descripción"
                     value={form.descripcion}
                     onChangeText={(text) =>
-                      setForm({ ...form, descripcion: text })
+                      updateFormField("descripcion", text)
                     }
                     placeholder="Descripción del producto"
                     multiline
@@ -1400,6 +1499,8 @@ export default function ProductosScreen() {
                         <TouchableOpacity
                           style={styles.removeImageButton}
                           onPress={removeImage}
+                          accessibilityRole="button"
+                          accessibilityLabel="Eliminar imagen del producto"
                         >
                           <ThemedText style={styles.removeImageText}>
                             ✕
@@ -1410,6 +1511,8 @@ export default function ProductosScreen() {
                       <TouchableOpacity
                         style={styles.imagePlaceholder}
                         onPress={showImagePicker}
+                        accessibilityRole="button"
+                        accessibilityLabel="Agregar imagen del producto"
                       >
                         <ThemedText style={styles.imagePlaceholderText}>
                           📷 Agregar Imagen
@@ -1425,6 +1528,8 @@ export default function ProductosScreen() {
                         <TouchableOpacity
                           style={styles.changeImageButton}
                           onPress={showImagePicker}
+                          accessibilityRole="button"
+                          accessibilityLabel="Cambiar imagen del producto"
                         >
                           <ThemedText style={styles.changeImageText}>
                             🔄 Cambiar imagen
@@ -1435,7 +1540,7 @@ export default function ProductosScreen() {
                           label="URL de imagen (opcional)"
                           value={form.imagen}
                           onChangeText={(text) =>
-                            setForm({ ...form, imagen: text, imagenPublicId: "" })
+                            setForm((current) => ({ ...current, imagen: text, imagenPublicId: "" }))
                           }
                           placeholder="https://ejemplo.com/imagen.jpg"
                         />
@@ -1447,7 +1552,7 @@ export default function ProductosScreen() {
 
               <View style={styles.webModalActions}>
                 <AnimatedButton
-                  title={editingProduct ? "Actualizar" : "Crear"}
+                  title={saving ? "Guardando producto…" : editingProduct ? "Guardar cambios" : "Crear producto"}
                   onPress={handleSave}
                   loading={saving}
                   style={styles.saveButton}
@@ -1462,59 +1567,80 @@ export default function ProductosScreen() {
               <ThemedText type="subtitle">
                 {editingProduct ? "Editar Producto" : "Nuevo Producto"}
               </ThemedText>
-              <TouchableOpacity onPress={closeModal}>
+              <TouchableOpacity
+                onPress={requestCloseModal}
+                disabled={saving}
+                accessibilityRole="button"
+                accessibilityLabel="Cancelar edición del producto"
+                accessibilityState={{ disabled: saving }}
+              >
                 <ThemedText style={styles.cancelButton}>Cancelar</ThemedText>
               </TouchableOpacity>
             </ThemedView>
 
             <ScrollView
+              ref={productFormScrollRef}
               style={styles.modalContent}
               contentContainerStyle={styles.modalContentContainer}
               showsVerticalScrollIndicator={true}
               keyboardShouldPersistTaps="handled"
             >
               <View style={styles.form}>
+                <View style={styles.formSectionHeader}>
+                  <ThemedText style={styles.formSectionTitle}>Identidad del producto</ThemedText>
+                  <ThemedText style={styles.formSectionHint}>Los campos con * son obligatorios.</ThemedText>
+                </View>
                 <EditableDropdown
-                  label="Marca *"
+                  label="Marca"
                   required
                   options={marcas}
                   selectedValue={form.marca}
-                  onSelect={(value) => setForm({ ...form, marca: value })}
+                  onSelect={(value) => updateFormField("marca", value)}
                   placeholder="Seleccionar o escribir marca"
                   loading={marcasLoading}
+                  error={formErrors.marca}
                 />
 
                 <AnimatedInput
-                  label="Modelo *"
+                  label="Modelo"
+                  required
                   value={form.modelo}
                   onChangeText={async (text) => {
                     const modeloUpperCase = formatModeloToUpperCase(text);
-                    setForm({ ...form, modelo: modeloUpperCase });
+                    updateFormField("modelo", modeloUpperCase);
                     await validateModelo(text);
                   }}
                   placeholder="Modelo del producto"
-                  error={modeloError}
+                  error={formErrors.modelo || modeloError}
                 />
 
                 <LabeledDropdown
-                  label="Categoría *"
+                  label="Categoría"
+                  required
                   options={categorias.map((cat) => ({
                     label: cat.nombre,
                     value: cat._id,
                   }))}
                   selectedValue={form.categoria}
-                  onSelect={(value) => setForm({ ...form, categoria: value })}
+                  onSelect={(value) => updateFormField("categoria", value)}
                   placeholder="Seleccionar categoría"
                   loading={categoriasLoading}
+                  error={formErrors.categoria || categoriasError}
+                  onRetry={categoriasError ? recargarCategorias : undefined}
                 />
 
+                <View style={styles.formSectionHeader}>
+                  <ThemedText style={styles.formSectionTitle}>Precio y disponibilidad</ThemedText>
+                  <ThemedText style={styles.formSectionHint}>Usá el precio base del producto antes de aplicar cálculos comerciales.</ThemedText>
+                </View>
                 <AnimatedInput
-                  label="Precio Base *"
+                  label="Precio base"
+                  required
                   value={form.precioBase}
                   onChangeText={(text) => {
                     // Solo permitir números, puntos y comas
                     const filteredText = text.replace(/[^0-9.,]/g, "");
-                    setForm({ ...form, precioBase: filteredText });
+                    updateFormField("precioBase", filteredText);
                   }}
                   onBlur={() => {
                     // Formatear al perder el foco
@@ -1522,22 +1648,24 @@ export default function ProductosScreen() {
                       const numericValue = parsePrice(form.precioBase);
                       if (!isNaN(numericValue)) {
                         const formattedPrice = formatPrice(numericValue);
-                        setForm({ ...form, precioBase: formattedPrice });
+                        updateFormField("precioBase", formattedPrice);
                       }
                     }
                   }}
                   placeholder="0,00"
                   keyboardType="numeric"
+                  error={formErrors.precioBase}
                 />
 
                 <AnimatedInput
                   label="Stock Cantidad"
                   value={form.stockCantidad}
                   onChangeText={(text) =>
-                    setForm({ ...form, stockCantidad: text })
+                    updateFormField("stockCantidad", text.replace(/\D/g, ""))
                   }
                   placeholder="Cantidad en stock"
                   keyboardType="numeric"
+                  error={formErrors.stockCantidad}
                 />
 
                 <LabeledDropdown
@@ -1548,16 +1676,20 @@ export default function ProductosScreen() {
                   ]}
                   selectedValue={form.stockDisponible}
                   onSelect={(value) =>
-                    setForm({ ...form, stockDisponible: value })
+                    updateFormField("stockDisponible", value)
                   }
                   placeholder="Seleccionar disponibilidad"
                 />
 
+                <View style={styles.formSectionHeader}>
+                  <ThemedText style={styles.formSectionTitle}>Descripción e imagen</ThemedText>
+                  <ThemedText style={styles.formSectionHint}>La descripción y la imagen son opcionales, pero mejoran la vidriera y las publicaciones.</ThemedText>
+                </View>
                 <AnimatedInput
                   label="Descripción"
                   value={form.descripcion}
                   onChangeText={(text) =>
-                    setForm({ ...form, descripcion: text })
+                    updateFormField("descripcion", text)
                   }
                   placeholder="Descripción del producto"
                   multiline
@@ -1601,6 +1733,8 @@ export default function ProductosScreen() {
                       <TouchableOpacity
                         style={styles.removeImageButton}
                         onPress={removeImage}
+                        accessibilityRole="button"
+                        accessibilityLabel="Eliminar imagen del producto"
                       >
                         <ThemedText style={styles.removeImageText}>
                           ✕
@@ -1611,6 +1745,8 @@ export default function ProductosScreen() {
                     <TouchableOpacity
                       style={styles.imagePlaceholder}
                       onPress={showImagePicker}
+                      accessibilityRole="button"
+                      accessibilityLabel="Agregar imagen del producto"
                     >
                       <ThemedText style={styles.imagePlaceholderText}>
                         📷 Agregar Imagen
@@ -1626,6 +1762,8 @@ export default function ProductosScreen() {
                       <TouchableOpacity
                         style={styles.changeImageButton}
                         onPress={showImagePicker}
+                        accessibilityRole="button"
+                        accessibilityLabel="Cambiar imagen del producto"
                       >
                         <ThemedText style={styles.changeImageText}>
                           🔄 Cambiar imagen
@@ -1636,7 +1774,7 @@ export default function ProductosScreen() {
                         label="URL de imagen (opcional)"
                         value={form.imagen}
                         onChangeText={(text) =>
-                          setForm({ ...form, imagen: text, imagenPublicId: "" })
+                          setForm((current) => ({ ...current, imagen: text, imagenPublicId: "" }))
                         }
                         placeholder="https://ejemplo.com/imagen.jpg"
                       />
@@ -1648,7 +1786,7 @@ export default function ProductosScreen() {
 
             <View style={styles.modalActions}>
               <AnimatedButton
-                title={editingProduct ? "Actualizar" : "Crear"}
+                title={saving ? "Guardando producto…" : editingProduct ? "Guardar cambios" : "Crear producto"}
                 onPress={handleSave}
                 loading={saving}
                 style={styles.saveButton}
@@ -2802,6 +2940,8 @@ export default function ProductosScreen() {
             <TouchableOpacity
               onPress={() => setFiltersModalVisible(false)}
               style={styles.filtersModalClose}
+              accessibilityRole="button"
+              accessibilityLabel="Cerrar filtros"
             >
               <ThemedText style={styles.filtersModalCloseText}>×</ThemedText>
             </TouchableOpacity>
@@ -2856,21 +2996,29 @@ export default function ProductosScreen() {
           </ScrollView>
 
           <View style={styles.filtersModalActions}>
-            <TouchableOpacity
-              style={styles.clearAllFiltersButton}
-              onPress={clearAllFilters}
-            >
-              <ThemedText style={styles.clearAllFiltersText}>
-                Limpiar todos los filtros
-              </ThemedText>
-            </TouchableOpacity>
+            {hasActiveFilters && (
+              <TouchableOpacity
+                style={styles.clearAllFiltersButton}
+                onPress={clearAllFilters}
+                accessibilityRole="button"
+                accessibilityLabel="Limpiar búsqueda y filtros"
+              >
+                <ThemedText style={styles.clearAllFiltersText}>
+                  Limpiar filtros
+                </ThemedText>
+              </TouchableOpacity>
+            )}
 
             <TouchableOpacity
               style={styles.applyFiltersButton}
               onPress={() => setFiltersModalVisible(false)}
             >
               <ThemedText style={styles.applyFiltersText}>
-                Aplicar filtros
+                {productosLoading
+                  ? "Actualizando…"
+                  : `Ver ${totalProductos} ${
+                      totalProductos === 1 ? "producto" : "productos"
+                    }`}
               </ThemedText>
             </TouchableOpacity>
           </View>
@@ -2926,6 +3074,23 @@ const styles = StyleSheet.create({
   },
   searchContainer: {
     marginBottom: SPACING.sm, // Mantener solo el margen inferior
+  },
+  mobileResultsSummary: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: SPACING.md,
+    paddingHorizontal: SPACING.xs,
+  },
+  mobileResultsText: {
+    color: COLORS.text,
+    fontSize: 14,
+    fontWeight: "700",
+  },
+  mobileFiltersState: {
+    color: COLORS.primaryDark,
+    fontSize: 12,
+    fontWeight: "700",
   },
   searchInput: {
     backgroundColor: COLORS.surface,
@@ -3071,10 +3236,34 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     paddingVertical: SPACING.xxl,
+    paddingHorizontal: SPACING.lg,
+  },
+  emptyTitle: {
+    color: COLORS.text,
+    fontSize: 20,
+    fontWeight: "700",
+    textAlign: "center",
+    marginBottom: SPACING.xs,
   },
   emptyText: {
     color: COLORS.textSecondary,
-    fontSize: 16,
+    fontSize: 15,
+    lineHeight: 21,
+    textAlign: "center",
+  },
+  emptyAction: {
+    minHeight: 44,
+    marginTop: SPACING.md,
+    paddingHorizontal: SPACING.lg,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: RADIUS.md,
+    backgroundColor: COLORS.primary,
+  },
+  emptyActionText: {
+    color: COLORS.text,
+    fontSize: 14,
+    fontWeight: "700",
   },
   modalContainer: {
     flex: 1,
@@ -3105,6 +3294,23 @@ const styles = StyleSheet.create({
     padding: SPACING.lg,
     gap: SPACING.lg,
     paddingBottom: SPACING.xl,
+  },
+  formSectionHeader: {
+    gap: SPACING.xs,
+    paddingTop: SPACING.xs,
+    paddingBottom: SPACING.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  formSectionTitle: {
+    color: COLORS.text,
+    fontSize: 17,
+    fontWeight: "700",
+  },
+  formSectionHint: {
+    color: COLORS.textSecondary,
+    fontSize: 13,
+    lineHeight: 18,
   },
   modalActions: {
     padding: SPACING.xl,

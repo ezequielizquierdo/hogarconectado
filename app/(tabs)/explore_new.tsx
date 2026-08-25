@@ -38,6 +38,7 @@ export default function ConsultaStockScreen() {
     categorias,
     loading: categoriasLoading,
     error: categoriasError,
+    recargar: recargarCategorias,
   } = useCategorias();
 
   const [categoria, setCategoria] = useState("");
@@ -191,6 +192,7 @@ export default function ConsultaStockScreen() {
                       placeholder="Seleccionar categoría..."
                       loading={categoriasLoading}
                       error={categoriasError}
+                      onRetry={recargarCategorias}
                     />
 
                     {/* Marca */}
@@ -404,6 +406,7 @@ export default function ConsultaStockScreen() {
                     placeholder="Seleccionar categoría..."
                     loading={categoriasLoading}
                     error={categoriasError}
+                    onRetry={recargarCategorias}
                   />
 
                   <EditableDropdown

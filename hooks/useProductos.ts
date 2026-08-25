@@ -15,13 +15,17 @@ export const useProductos = (filtrosIniciales: ProductoFiltros = {}) => {
 
     // Control de rate limiting
     const lastRequestTime = useRef<number>(0);
-    const isRequestInProgress = useRef<boolean>(false);
+    const latestRequestId = useRef<number>(0);
 
     const cargarProductos = useCallback(async (nuevosFiltros?: ProductoFiltros) => {
-        // Evitar requests simultáneos
-        if (isRequestInProgress.current) {
-            console.log('Request en progreso, omitiendo...');
-            return;
+        const requestId = ++latestRequestId.current;
+        const filtrosFinales = nuevosFiltros || filtrosRef.current;
+
+        // Guardar los filtros de inmediato permite encadenar cambios rápidos sin
+        // perder el anterior mientras la consulta todavía está en curso.
+        if (nuevosFiltros) {
+            filtrosRef.current = filtrosFinales;
+            setFiltros(filtrosFinales);
         }
 
         // Rate limiting
@@ -32,12 +36,10 @@ export const useProductos = (filtrosIniciales: ProductoFiltros = {}) => {
         }
 
         try {
-            isRequestInProgress.current = true;
             lastRequestTime.current = Date.now();
             setLoading(true);
             setError(null);
 
-            const filtrosFinales = nuevosFiltros || filtrosRef.current;
             console.log('🔍 useProductos - Filtros enviados:', filtrosFinales);
 
             const { productos: data, pagination: paginationData } =
@@ -46,12 +48,11 @@ export const useProductos = (filtrosIniciales: ProductoFiltros = {}) => {
             console.log('📊 useProductos - Productos recibidos:', data.length);
             console.log('📄 useProductos - Paginación:', paginationData);
 
-            setProductos(data);
-            setPagination(paginationData);
-
-            if (nuevosFiltros) {
-                filtrosRef.current = filtrosFinales;
-                setFiltros(filtrosFinales);
+            // Una respuesta anterior no debe reemplazar los resultados de la
+            // búsqueda o filtro más reciente.
+            if (requestId === latestRequestId.current) {
+                setProductos(data);
+                setPagination(paginationData);
             }
         } catch (err) {
             const errorMessage = handleApiError(err);
@@ -62,11 +63,14 @@ export const useProductos = (filtrosIniciales: ProductoFiltros = {}) => {
                 friendlyMessage = 'El servidor está despertando, esto puede tomar unos segundos. Reintentando automáticamente...';
             }
 
-            setError(friendlyMessage);
+            if (requestId === latestRequestId.current) {
+                setError(friendlyMessage);
+            }
             console.error('Error cargando productos:', err);
         } finally {
-            setLoading(false);
-            isRequestInProgress.current = false;
+            if (requestId === latestRequestId.current) {
+                setLoading(false);
+            }
         }
     }, []);
 

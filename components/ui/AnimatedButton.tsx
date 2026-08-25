@@ -1,4 +1,4 @@
-import React, { useRef } from "react";
+import React, { useRef, useState } from "react";
 import {
   StyleSheet,
   TouchableOpacity,
@@ -32,6 +32,7 @@ export default function AnimatedButton({
   loading = false,
   style,
 }: AnimatedButtonProps) {
+  const [isFocused, setIsFocused] = useState(false);
   const animatedScale = useRef(new Animated.Value(1)).current;
   const animatedOpacity = useRef(new Animated.Value(1)).current;
 
@@ -136,6 +137,7 @@ export default function AnimatedButton({
           transform: [{ scale: animatedScale }],
           opacity: animatedOpacity,
         },
+        isFocused && styles.focused,
         style,
       ]}
     >
@@ -146,6 +148,8 @@ export default function AnimatedButton({
         onPress={onPress}
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
+        onFocus={() => setIsFocused(true)}
+        onBlur={() => setIsFocused(false)}
         disabled={disabled || loading}
         activeOpacity={1}
         style={getButtonStyles()}
@@ -186,5 +190,11 @@ const styles = StyleSheet.create({
   icon: {
     marginRight: SPACING.sm,
     fontSize: 18,
+  },
+  focused: {
+    outlineColor: COLORS.primaryDark,
+    outlineStyle: "solid",
+    outlineWidth: 2,
+    borderRadius: RADIUS.md,
   },
 });

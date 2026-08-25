@@ -83,6 +83,9 @@ export default function FilterModal({
             key={option.id}
             style={styles.filterOption}
             onPress={() => toggleFilter(category, option.id)}
+            accessibilityRole="checkbox"
+            accessibilityLabel={option.label}
+            accessibilityState={{ checked: isSelected }}
           >
             <View
               style={[styles.checkbox, isSelected && styles.checkboxSelected]}
@@ -155,6 +158,7 @@ export default function FilterModal({
           <View style={styles.modalFooter}>
             <TouchableOpacity
               accessibilityRole="button"
+              accessibilityLabel="Limpiar todos los filtros"
               onPress={clearAllFilters}
               style={styles.clearButton}
             >
@@ -165,6 +169,7 @@ export default function FilterModal({
 
             <TouchableOpacity
               accessibilityRole="button"
+              accessibilityLabel="Aplicar filtros seleccionados"
               onPress={applyFilters}
               style={styles.applyButton}
             >

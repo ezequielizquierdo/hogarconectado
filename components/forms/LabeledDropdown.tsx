@@ -19,6 +19,7 @@ interface LabeledDropdownProps {
   style?: any;
   loading?: boolean;
   error?: string | null;
+  onRetry?: () => void;
 }
 
 export default function LabeledDropdown({
@@ -31,6 +32,7 @@ export default function LabeledDropdown({
   style,
   loading = false,
   error = null,
+  onRetry,
 }: LabeledDropdownProps) {
   return (
     <View style={styles.container}>
@@ -48,6 +50,8 @@ export default function LabeledDropdown({
         style={style}
         loading={loading}
         error={error}
+        onRetry={onRetry}
+        accessibilityLabel={`${label}${required ? ", obligatorio" : ""}`}
       />
     </View>
   );

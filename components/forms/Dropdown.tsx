@@ -23,6 +23,8 @@ interface DropdownProps {
   style?: any;
   loading?: boolean;
   error?: string | null;
+  onRetry?: () => void;
+  accessibilityLabel?: string;
 }
 
 export default function Dropdown({
@@ -33,8 +35,11 @@ export default function Dropdown({
   style,
   loading = false,
   error = null,
+  onRetry,
+  accessibilityLabel = "Seleccionar una opción",
 }: DropdownProps) {
   const [isVisible, setIsVisible] = useState(false);
+  const [isFocused, setIsFocused] = useState(false);
 
   const selectedOption = options.find(
     (option) => option.value === selectedValue
@@ -49,6 +54,9 @@ export default function Dropdown({
     <TouchableOpacity
       style={styles.option}
       onPress={() => handleSelect(item.value)}
+      accessibilityRole="button"
+      accessibilityLabel={item.label}
+      accessibilityState={{ selected: item.value === selectedValue }}
     >
       <ThemedText style={styles.optionText}>{item.label}</ThemedText>
     </TouchableOpacity>
@@ -62,9 +70,16 @@ export default function Dropdown({
           style,
           error && styles.dropdownError,
           loading && styles.dropdownDisabled,
+          isFocused && styles.dropdownFocused,
         ]}
         onPress={() => !loading && setIsVisible(true)}
+        onFocus={() => setIsFocused(true)}
+        onBlur={() => setIsFocused(false)}
         disabled={loading}
+        accessibilityRole="button"
+        accessibilityLabel={accessibilityLabel}
+        accessibilityHint={error || placeholder}
+        accessibilityState={{ disabled: loading, expanded: isVisible }}
       >
         {loading ? (
           <ActivityIndicator size="small" color={COLORS.primary} />
@@ -83,7 +98,21 @@ export default function Dropdown({
         )}
       </TouchableOpacity>
 
-      {error && <ThemedText style={styles.errorText}>{error}</ThemedText>}
+      {error ? (
+        <ThemedView style={styles.errorRow}>
+          <ThemedText style={styles.errorText}>{error}</ThemedText>
+          {onRetry ? (
+            <TouchableOpacity
+              accessibilityRole="button"
+              accessibilityLabel="Reintentar carga de opciones"
+              onPress={onRetry}
+              style={styles.retryButton}
+            >
+              <ThemedText style={styles.retryText}>Reintentar</ThemedText>
+            </TouchableOpacity>
+          ) : null}
+        </ThemedView>
+      ) : null}
 
       <Modal
         visible={isVisible}
@@ -127,6 +156,9 @@ const styles = StyleSheet.create({
   dropdownError: {
     borderColor: COLORS.error,
   },
+  dropdownFocused: {
+    borderColor: COLORS.primaryDark,
+  },
   dropdownDisabled: {
     backgroundColor: COLORS.cardBackground,
     opacity: 0.6,
@@ -142,8 +174,27 @@ const styles = StyleSheet.create({
   errorText: {
     fontSize: 12,
     color: COLORS.error,
+    flex: 1,
+  },
+  errorRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: SPACING.sm,
     marginTop: SPACING.xs,
-    marginLeft: SPACING.sm,
+    marginHorizontal: SPACING.sm,
+    backgroundColor: "transparent",
+  },
+  retryButton: {
+    minHeight: 36,
+    justifyContent: "center",
+    paddingHorizontal: SPACING.sm,
+    borderRadius: RADIUS.sm,
+    backgroundColor: COLORS.accent,
+  },
+  retryText: {
+    color: COLORS.text,
+    fontSize: 12,
+    fontWeight: "700",
   },
   arrow: {
     fontSize: 12,

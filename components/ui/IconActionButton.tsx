@@ -1,5 +1,6 @@
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import type { ComponentProps } from "react";
+import { useState } from "react";
 import {
   Platform,
   StyleSheet,
@@ -30,6 +31,7 @@ export function IconActionButton({
   disabled = false,
   style,
 }: IconActionButtonProps) {
+  const [isFocused, setIsFocused] = useState(false);
   return (
     <TouchableOpacity
       accessibilityRole="button"
@@ -39,7 +41,9 @@ export function IconActionButton({
       disabled={disabled}
       hitSlop={4}
       onPress={onPress}
-      style={[styles.button, style, disabled && styles.disabled]}
+      onFocus={() => setIsFocused(true)}
+      onBlur={() => setIsFocused(false)}
+      style={[styles.button, isFocused && styles.focused, style, disabled && styles.disabled]}
     >
       <MaterialIcons accessibilityElementsHidden name={icon} size={22} color={color} />
     </TouchableOpacity>
@@ -56,5 +60,10 @@ const styles = StyleSheet.create({
   },
   disabled: {
     opacity: 0.45,
+  },
+  focused: {
+    outlineColor: COLORS.primaryDark,
+    outlineStyle: "solid",
+    outlineWidth: 2,
   },
 });

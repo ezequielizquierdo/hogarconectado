@@ -60,6 +60,7 @@ export default function HomeScreen() {
     categorias,
     loading: categoriasLoading,
     error: categoriasError,
+    recargar: recargarCategorias,
   } = useCategorias();
 
   const [cotizacion, setCotizacion] = useState<CotizacionData>({
@@ -327,6 +328,7 @@ export default function HomeScreen() {
                       placeholder="Seleccionar categoría..."
                       loading={categoriasLoading}
                       error={categoriasError}
+                      onRetry={recargarCategorias}
                     />
 
                     {/* Marca */}
@@ -626,6 +628,7 @@ export default function HomeScreen() {
                   placeholder="Seleccionar categoría..."
                   loading={categoriasLoading}
                   error={categoriasError}
+                  onRetry={recargarCategorias}
                 />
 
                 {/* Marca */}

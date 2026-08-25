@@ -31,6 +31,8 @@ interface SidebarFiltersProps {
   onSearchChange: (value: string) => void;
   onClearFilters: () => void;
   onAddProduct?: () => void;
+  resultCount: number;
+  loading?: boolean;
 }
 
 const SidebarFilters: React.FC<SidebarFiltersProps> = ({
@@ -46,6 +48,8 @@ const SidebarFilters: React.FC<SidebarFiltersProps> = ({
   onSearchChange,
   onClearFilters,
   onAddProduct,
+  resultCount,
+  loading = false,
 }) => {
   const [categoriasCollapsed, setCategoriasCollapsed] = useState(false);
   const [marcasCollapsed, setMarcasCollapsed] = useState(false);
@@ -66,7 +70,13 @@ const SidebarFilters: React.FC<SidebarFiltersProps> = ({
     toggleCollapse?: () => void
   ) => (
     <View style={styles.filterSection}>
-      <TouchableOpacity style={styles.sectionHeader} onPress={toggleCollapse}>
+      <TouchableOpacity
+        style={styles.sectionHeader}
+        onPress={toggleCollapse}
+        accessibilityRole="button"
+        accessibilityLabel={`${isCollapsed ? "Mostrar" : "Ocultar"} ${title}`}
+        accessibilityState={{ expanded: !isCollapsed }}
+      >
         <Text style={styles.sectionTitle}>{title}</Text>
         <Text style={styles.collapseIcon}>{isCollapsed ? "▶" : "▼"}</Text>
       </TouchableOpacity>
@@ -80,6 +90,9 @@ const SidebarFilters: React.FC<SidebarFiltersProps> = ({
                 selectedValue === "" && styles.filterOptionSelected,
               ]}
               onPress={() => onSelect("")}
+              accessibilityRole="button"
+              accessibilityLabel={`Mostrar todas las opciones de ${title}`}
+              accessibilityState={{ selected: selectedValue === "" }}
             >
               <Text
                 style={[
@@ -100,6 +113,9 @@ const SidebarFilters: React.FC<SidebarFiltersProps> = ({
                 selectedValue === option.value && styles.filterOptionSelected,
               ]}
               onPress={() => onSelect(option.value)}
+              accessibilityRole="button"
+              accessibilityLabel={`${option.label}${option.count !== undefined ? `, ${option.count} productos` : ""}`}
+              accessibilityState={{ selected: selectedValue === option.value }}
             >
               <View style={styles.filterOptionContent}>
                 <Text
@@ -123,7 +139,10 @@ const SidebarFilters: React.FC<SidebarFiltersProps> = ({
   );
 
   const hasActiveFilters =
-    selectedCategoria !== "" || selectedMarca !== "" || selectedStock !== "";
+    selectedCategoria !== "" ||
+    selectedMarca !== "" ||
+    selectedStock !== "" ||
+    searchText.trim() !== "";
 
   return (
     <ThemedView style={styles.container}>
@@ -152,7 +171,21 @@ const SidebarFilters: React.FC<SidebarFiltersProps> = ({
             value={searchText}
             onChangeText={onSearchChange}
             placeholderTextColor={COLORS.textLight}
+            accessibilityLabel="Buscar productos por marca, modelo o categoría"
           />
+        </View>
+
+        <View style={styles.resultsSummary} accessibilityLiveRegion="polite">
+          <ThemedText style={styles.resultsText}>
+            {loading
+              ? "Actualizando resultados…"
+              : `${resultCount} ${resultCount === 1 ? "producto" : "productos"}`}
+          </ThemedText>
+          {hasActiveFilters && (
+            <ThemedText style={styles.activeFiltersText}>
+              Filtros activos
+            </ThemedText>
+          )}
         </View>
 
         <View style={styles.divider} />
@@ -164,6 +197,8 @@ const SidebarFilters: React.FC<SidebarFiltersProps> = ({
             <TouchableOpacity
               onPress={onClearFilters}
               style={styles.clearButton}
+              accessibilityRole="button"
+              accessibilityLabel="Limpiar búsqueda y filtros"
             >
               <Text style={styles.clearButtonText}>Limpiar</Text>
             </TouchableOpacity>
@@ -244,6 +279,22 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: COLORS.border,
     marginVertical: SPACING.md,
+  },
+  resultsSummary: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: SPACING.xs,
+  },
+  resultsText: {
+    color: COLORS.text,
+    fontSize: 13,
+    fontWeight: "700",
+  },
+  activeFiltersText: {
+    color: COLORS.primaryDark,
+    fontSize: 11,
+    fontWeight: "700",
   },
   filterSection: {
     marginBottom: SPACING.md,
