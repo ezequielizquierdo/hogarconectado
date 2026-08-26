@@ -10,6 +10,7 @@ import {
   Platform,
   Dimensions,
   SafeAreaView,
+  ActivityIndicator,
   Image as RNImage,
 } from "react-native";
 import { Image } from "expo-image";
@@ -477,6 +478,9 @@ export default function ProductosScreen() {
 
     setSharingInstagram(true);
     try {
+      // Permitir que el navegador pinte el indicador antes de iniciar la captura.
+      await new Promise<void>((resolve) => setTimeout(resolve, 50));
+
       // Usar la referencia correcta según la plataforma
       const viewRef =
         Platform.OS === "web" ? instagramViewRef : instagramViewRefMobile;
@@ -2669,17 +2673,22 @@ export default function ProductosScreen() {
                   }
                   accessibilityState={{ disabled: sharingInstagram, busy: sharingInstagram }}
                 >
-                  <ThemedText style={styles.instagramButtonText}>
-                    {sharingInstagram
-                      ? preparedInstagramFile
-                        ? "Compartiendo historia…"
-                        : "Preparando historia…"
-                      : !preparedInstagramFile
-                        ? "✨ Preparar imagen"
-                        : isWideScreen
-                        ? "⬇️ Descargar historia"
-                        : "📱 Compartir imagen"}
-                  </ThemedText>
+                  <View style={styles.instagramButtonContent}>
+                    {sharingInstagram && (
+                      <ActivityIndicator size="small" color="#FFFFFF" />
+                    )}
+                    <ThemedText style={styles.instagramButtonText}>
+                      {sharingInstagram
+                        ? preparedInstagramFile
+                          ? "Compartiendo historia…"
+                          : "Preparando imagen…"
+                        : !preparedInstagramFile
+                          ? "✨ Preparar imagen"
+                          : isWideScreen
+                          ? "⬇️ Descargar historia"
+                          : "📱 Compartir imagen"}
+                    </ThemedText>
+                  </View>
                 </TouchableOpacity>
               </View>
             </View>
@@ -3029,11 +3038,16 @@ export default function ProductosScreen() {
                 accessibilityLabel="Compartir historia de Instagram"
                 accessibilityState={{ disabled: sharingInstagram, busy: sharingInstagram }}
               >
-                <ThemedText style={styles.instagramButtonText}>
-                  {sharingInstagram
-                    ? "Generando historia…"
-                    : "📱 Compartir en Instagram"}
-                </ThemedText>
+                <View style={styles.instagramButtonContent}>
+                  {sharingInstagram && (
+                    <ActivityIndicator size="small" color="#FFFFFF" />
+                  )}
+                  <ThemedText style={styles.instagramButtonText}>
+                    {sharingInstagram
+                      ? "Preparando imagen…"
+                      : "📱 Compartir en Instagram"}
+                  </ThemedText>
+                </View>
               </TouchableOpacity>
             </View>
           </SafeAreaView>
@@ -4493,6 +4507,12 @@ const styles = StyleSheet.create({
   },
   instagramShareButtonDisabled: {
     opacity: 0.65,
+  },
+  instagramButtonContent: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+    gap: SPACING.sm,
   },
   instagramButtonText: {
     color: "#FFFFFF" as const,

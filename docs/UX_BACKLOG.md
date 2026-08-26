@@ -290,7 +290,7 @@ Una tarea de interfaz se considera terminada cuando:
 - La exportación captura exactamente el mismo componente que se utiliza como vista previa en cada plataforma.
 - En web móvil, primero se prepara el archivo PNG y un segundo toque directo abre la hoja nativa del sistema cuando el navegador admite compartir archivos.
 - En navegadores sin soporte y en escritorio, la misma acción descarga el PNG y explica cómo continuar en Instagram.
-- La acción comunica el progreso y evita solicitudes duplicadas mientras genera la historia.
+- La acción muestra un spinner con el estado “Preparando imagen…” y evita solicitudes duplicadas mientras genera la historia.
 - Cualquier cambio en los datos visibles invalida el archivo preparado para evitar compartir una versión anterior.
 - Queda pendiente la comprobación manual en dos anchos de teléfono antes de marcar la tarea como completada.
 
