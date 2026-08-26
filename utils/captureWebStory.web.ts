@@ -15,6 +15,14 @@ export async function captureWebStory(
     allowTaint: false,
     backgroundColor: null,
     logging: false,
+    onclone: (documentClone) => {
+      documentClone
+        .querySelectorAll<HTMLElement>("#instagram-story-info-panel")
+        .forEach((panel) => {
+          panel.style.backgroundColor = "#45413B";
+          panel.style.borderRadius = "16px";
+        });
+    },
     scale: Math.max(1, STORY_WIDTH / target.offsetWidth),
     useCORS: true,
   });

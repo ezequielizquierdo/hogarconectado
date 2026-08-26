@@ -2356,7 +2356,7 @@ export default function ProductosScreen() {
                   {/* Vista previa de la historia */}
                   <View ref={instagramViewRef} style={styles.storyPreview}>
                     <Image
-                      source={require("@/assets/images/back-history.jpeg")}
+                      source={require("@/assets/images/back-history.png")}
                       style={styles.storyBackground}
                       contentFit="cover"
                     />
@@ -2378,7 +2378,11 @@ export default function ProductosScreen() {
                         )}
 
                       {/* Información del producto */}
-                      {hasInstagramStoryInfo && <View style={styles.storyProductInfo}>
+                      {hasInstagramStoryInfo && (
+                        <View
+                          nativeID="instagram-story-info-panel"
+                          style={styles.storyProductInfo}
+                        >
                         {instagramStoryOptions.showCategoria &&
                           selectedProductForInstagram?.categoria && (
                             <ThemedText numberOfLines={1} style={styles.storyCategoryTextInPanel}>
@@ -2439,7 +2443,8 @@ export default function ProductosScreen() {
                               {selectedProductForInstagram.descripcion}
                             </ThemedText>
                           )}
-                      </View>}
+                        </View>
+                      )}
 
                       {/* Mensaje de consulta precio - Dentro de la imagen de fondo */}
                       {instagramStoryOptions.showConsultaPrecio && (
@@ -2729,7 +2734,7 @@ export default function ProductosScreen() {
                   style={[styles.storyPreview, { width: 250, height: 444 }]}
                 >
                   <Image
-                    source={require("@/assets/images/back-history.jpeg")}
+                    source={require("@/assets/images/back-history.png")}
                     style={styles.storyBackground}
                     contentFit="cover"
                   />
@@ -2751,7 +2756,11 @@ export default function ProductosScreen() {
                       )}
 
                     {/* Información del producto */}
-                    {hasInstagramStoryInfo && <View style={styles.storyProductInfo}>
+                    {hasInstagramStoryInfo && (
+                      <View
+                        nativeID="instagram-story-info-panel"
+                        style={styles.storyProductInfo}
+                      >
                       {instagramStoryOptions.showCategoria &&
                         selectedProductForInstagram?.categoria && (
                           <ThemedText numberOfLines={1} style={styles.storyCategoryTextInPanel}>
@@ -2812,7 +2821,8 @@ export default function ProductosScreen() {
                             {selectedProductForInstagram.descripcion}
                           </ThemedText>
                         )}
-                    </View>}
+                      </View>
+                    )}
 
                     {/* Mensaje de consulta precio - Dentro de la imagen de fondo */}
                     {instagramStoryOptions.showConsultaPrecio && (
@@ -4413,7 +4423,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.8,
   },
   storyProductInfo: {
-    backgroundColor: "rgba(0, 0, 0, 0.7)" as any,
+    backgroundColor: "#45413B" as const,
     padding: SPACING.md,
     borderRadius: RADIUS.lg,
     alignItems: "center" as const,
