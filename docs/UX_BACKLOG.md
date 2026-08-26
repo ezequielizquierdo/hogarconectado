@@ -288,6 +288,9 @@ Una tarea de interfaz se considera terminada cuando:
 - Categoría, modelo, marca, precio contado, stock, descripción y llamado a consulta conservan controles independientes.
 - Categoría y marca se limitan a una línea, modelo a dos y descripción a tres para evitar desbordes con contenido largo.
 - La exportación captura exactamente el mismo componente que se utiliza como vista previa en cada plataforma.
+- En web móvil, la pieza se convierte en un archivo PNG y utiliza la hoja nativa del sistema cuando el navegador admite compartir archivos.
+- En navegadores sin soporte y en escritorio, la misma acción descarga el PNG y explica cómo continuar en Instagram.
+- La acción comunica el progreso y evita solicitudes duplicadas mientras genera la historia.
 - Queda pendiente la comprobación manual en dos anchos de teléfono antes de marcar la tarea como completada.
 
 ### UX-011 — Estados de usuarios y permisos comprensibles

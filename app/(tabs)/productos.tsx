@@ -142,6 +142,7 @@ export default function ProductosScreen() {
   const [editingProduct, setEditingProduct] = useState<Producto | null>(null);
   const [form, setForm] = useState<ProductoForm>(initialForm);
   const [saving, setSaving] = useState(false);
+  const [sharingInstagram, setSharingInstagram] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [modeloError, setModeloError] = useState<string>("");
   const [formErrors, setFormErrors] = useState<Partial<Record<keyof ProductoForm, string>>>({});
@@ -425,6 +426,9 @@ export default function ProductosScreen() {
   };
 
   const shareToInstagram = async () => {
+    if (sharingInstagram) return;
+
+    setSharingInstagram(true);
     try {
       // Usar la referencia correcta según la plataforma
       const viewRef =
@@ -442,6 +446,56 @@ export default function ProductosScreen() {
         width: 1080, // Tamaño óptimo para Instagram Stories
         height: 1920,
       });
+
+      if (Platform.OS === "web") {
+        const response = await fetch(uri);
+        const blob = await response.blob();
+        const safeModel = (selectedProductForInstagram?.modelo || "producto")
+          .trim()
+          .replace(/[^a-zA-Z0-9-_]+/g, "-")
+          .replace(/^-+|-+$/g, "")
+          .toLowerCase();
+        const filename = `hogar-conectado-${safeModel || "producto"}.png`;
+        const file = new File([blob], filename, { type: "image/png" });
+        const webNavigator = navigator as Navigator & {
+          canShare?: (data?: ShareData) => boolean;
+        };
+
+        if (
+          typeof webNavigator.share === "function" &&
+          typeof webNavigator.canShare === "function" &&
+          webNavigator.canShare({ files: [file] })
+        ) {
+          try {
+            await webNavigator.share({
+              files: [file],
+              title: "Historia de Hogar Conectado",
+            });
+            closeInstagramModal();
+            return;
+          } catch (shareError) {
+            if (shareError instanceof Error && shareError.name === "AbortError") {
+              return;
+            }
+          }
+        }
+
+        const downloadUrl = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = downloadUrl;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(downloadUrl);
+
+        Alert.alert(
+          "Historia descargada",
+          "Guardamos la imagen en tu dispositivo. Abrí Instagram y agregala a una historia."
+        );
+        closeInstagramModal();
+        return;
+      }
 
       // Verificar si Sharing está disponible
       if (!(await Sharing.isAvailableAsync())) {
@@ -461,8 +515,14 @@ export default function ProductosScreen() {
       // Cerrar el modal después de compartir
       closeInstagramModal();
     } catch (error) {
+      if (error instanceof Error && error.name === "AbortError") return;
       console.error("Error al compartir en Instagram:", error);
-      Alert.alert("Error", "No se pudo compartir la imagen");
+      Alert.alert(
+        "No pudimos compartir la historia",
+        "Intentá nuevamente o descargá la imagen desde otro navegador."
+      );
+    } finally {
+      setSharingInstagram(false);
     }
   };
 
@@ -2578,11 +2638,26 @@ export default function ProductosScreen() {
 
               <View style={styles.webModalActions}>
                 <TouchableOpacity
-                  style={styles.instagramShareButton}
+                  style={[
+                    styles.instagramShareButton,
+                    sharingInstagram && styles.instagramShareButtonDisabled,
+                  ]}
                   onPress={shareToInstagram}
+                  disabled={sharingInstagram}
+                  accessibilityRole="button"
+                  accessibilityLabel={
+                    isWideScreen
+                      ? "Descargar historia de Instagram"
+                      : "Compartir historia como imagen"
+                  }
+                  accessibilityState={{ disabled: sharingInstagram, busy: sharingInstagram }}
                 >
                   <ThemedText style={styles.instagramButtonText}>
-                    📱 Compartir en Instagram
+                    {sharingInstagram
+                      ? "Generando historia…"
+                      : isWideScreen
+                        ? "⬇️ Descargar historia"
+                        : "📱 Compartir imagen"}
                   </ThemedText>
                 </TouchableOpacity>
               </View>
@@ -2923,11 +2998,20 @@ export default function ProductosScreen() {
 
             <View style={styles.modalActions}>
               <TouchableOpacity
-                style={styles.instagramShareButton}
+                style={[
+                  styles.instagramShareButton,
+                  sharingInstagram && styles.instagramShareButtonDisabled,
+                ]}
                 onPress={shareToInstagram}
+                disabled={sharingInstagram}
+                accessibilityRole="button"
+                accessibilityLabel="Compartir historia de Instagram"
+                accessibilityState={{ disabled: sharingInstagram, busy: sharingInstagram }}
               >
                 <ThemedText style={styles.instagramButtonText}>
-                  📱 Compartir en Instagram
+                  {sharingInstagram
+                    ? "Generando historia…"
+                    : "📱 Compartir en Instagram"}
                 </ThemedText>
               </TouchableOpacity>
             </View>
@@ -4385,6 +4469,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.lg,
     alignItems: "center" as const,
     justifyContent: "center" as const,
+  },
+  instagramShareButtonDisabled: {
+    opacity: 0.65,
   },
   instagramButtonText: {
     color: "#FFFFFF" as const,

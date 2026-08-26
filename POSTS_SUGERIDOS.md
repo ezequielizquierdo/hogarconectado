@@ -161,6 +161,29 @@ Producto, cantidad, porcentaje, modalidad y precios forman una instantánea come
 
 ---
 
+## 7. Compartir una imagen desde una web no es lo mismo que abrir Instagram
+
+**Tema:** experiencia multiplataforma y Web Share API
+**Estado:** Borrador
+
+### LinkedIn
+
+En un ecommerce personal queríamos que una historia generada desde la web llegara a Instagram con un solo botón.
+
+El detalle apareció en el último paso: una web no puede precargar libremente una imagen dentro de Instagram. La experiencia correcta es generar un archivo real, abrir la hoja nativa del teléfono y dejar que la persona elija Instagram. Si el navegador no admite compartir archivos, la alternativa debe ser una descarga clara.
+
+Aprendizaje: una buena experiencia multiplataforma no fuerza el mismo comportamiento en todos los dispositivos. Diseña una salida confiable para cada capacidad disponible.
+
+### X
+
+“Compartir en Instagram” no significa lo mismo en una app nativa, una web móvil y un escritorio.
+
+La solución: archivo PNG + hoja nativa cuando está disponible + descarga como alternativa.
+
+Diseñar para capacidades reales evita botones que prometen más de lo que la plataforma permite.
+
+---
+
 ## Rutina editorial sugerida
 
 Al final de una jornada con cambios relevantes, responder:
