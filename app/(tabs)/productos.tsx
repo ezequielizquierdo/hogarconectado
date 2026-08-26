@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import {
   StyleSheet,
   ScrollView,
@@ -41,6 +41,7 @@ import { Producto, ProductoConPrecios } from "@/services/types";
 import { COLORS, SPACING, RADIUS, SHADOWS } from "@/constants/theme";
 import { useAuth } from "@/contexts/AuthContext";
 import { captureWebStory } from "@/utils/captureWebStory";
+import { InstagramStoryRenderData } from "@/utils/instagramStoryRenderer";
 
 // Funciones de utilidad
 const formatPrice = (price: number | string): string => {
@@ -61,6 +62,24 @@ const parsePrice = (formattedPrice: string): number => {
 
 const formatModeloToUpperCase = (modelo: string): string => {
   return modelo.toUpperCase().trim();
+};
+
+const formatPrecioLocal = (precio: number): string =>
+  precio.toLocaleString("es-AR", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  });
+
+const getShortCategoryName = (categoryName: string): string => {
+  if (
+    categoryName.toLowerCase().includes("electrodomésticos de cocina") ||
+    categoryName.toLowerCase().includes("electrodomesticos de cocina")
+  ) {
+    return "Electrodomésticos";
+  }
+
+  const words = categoryName.split(" ");
+  return words.length > 2 ? words.slice(0, 2).join(" ") : categoryName;
 };
 
 interface ProductoForm {
@@ -146,6 +165,9 @@ export default function ProductosScreen() {
   const [saving, setSaving] = useState(false);
   const [sharingInstagram, setSharingInstagram] = useState(false);
   const [preparedInstagramFile, setPreparedInstagramFile] = useState<File | null>(null);
+  const [instagramPreviewUrl, setInstagramPreviewUrl] = useState("");
+  const [renderingInstagramPreview, setRenderingInstagramPreview] =
+    useState(false);
   const [instagramPreparationError, setInstagramPreparationError] = useState("");
   const [refreshing, setRefreshing] = useState(false);
   const [modeloError, setModeloError] = useState<string>("");
@@ -383,31 +405,44 @@ export default function ProductosScreen() {
     }
   };
 
-  // Función para formatear precio en formato local (punto para miles, coma para decimales)
-  const formatPrecioLocal = (precio: number): string => {
-    return precio.toLocaleString("es-AR", {
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    });
-  };
+  const instagramStoryRenderData = useMemo<InstagramStoryRenderData>(() => {
+    if (!selectedProductForInstagram) return {};
 
-  // Función para acortar nombres de categorías largas
-  const getShortCategoryName = (categoryName: string): string => {
-    // Casos específicos primero
-    if (
-      categoryName.toLowerCase().includes("electrodomésticos de cocina") ||
-      categoryName.toLowerCase().includes("electrodomesticos de cocina")
-    ) {
-      return "Electrodomésticos";
-    }
+    const categoryName =
+      typeof selectedProductForInstagram.categoria === "string"
+        ? selectedProductForInstagram.categoria
+        : selectedProductForInstagram.categoria?.nombre;
 
-    // Si la categoría es muy larga, tomar solo las primeras dos palabras
-    const words = categoryName.split(" ");
-    if (words.length > 2) {
-      return words.slice(0, 2).join(" ");
-    }
-    return categoryName;
-  };
+    return {
+      imageUrl: selectedProductForInstagram.imagenes?.[0],
+      categoria:
+        instagramStoryOptions.showCategoria && categoryName
+          ? getShortCategoryName(categoryName)
+          : undefined,
+      modelo: instagramStoryOptions.showModelo
+        ? selectedProductForInstagram.modelo
+        : undefined,
+      marca: instagramStoryOptions.showMarca
+        ? selectedProductForInstagram.marca
+        : undefined,
+      precio:
+        instagramStoryOptions.showPrecio &&
+        selectedProductForInstagram.precios?.contado != null
+          ? formatPrecioLocal(selectedProductForInstagram.precios.contado)
+          : undefined,
+      stock: instagramStoryOptions.showStock
+        ? selectedProductForInstagram.stock?.disponible
+          ? `Stock: ${selectedProductForInstagram.stock.cantidad || "Disponible"}`
+          : "Sin stock"
+        : undefined,
+      descripcion: instagramStoryOptions.showDescripcion
+        ? selectedProductForInstagram.descripcion
+        : undefined,
+      consultaPrecio: instagramStoryOptions.showConsultaPrecio
+        ? "Consultá por el mejor precio"
+        : undefined,
+    };
+  }, [instagramStoryOptions, selectedProductForInstagram]);
 
   const openInstagramModal = async (producto: Producto) => {
     try {
@@ -428,6 +463,8 @@ export default function ProductosScreen() {
     setInstagramModalVisible(false);
     setSelectedProductForInstagram(null);
     setPreparedInstagramFile(null);
+    setInstagramPreviewUrl("");
+    setRenderingInstagramPreview(false);
     setInstagramPreparationError("");
   };
 
@@ -499,8 +536,13 @@ export default function ProductosScreen() {
       const filename = `hogar-conectado-${safeModel || "producto"}.png`;
 
       if (Platform.OS === "web") {
-        const file = await captureWebStory(viewRef.current, filename);
+        const file = await captureWebStory(
+          viewRef.current,
+          filename,
+          instagramStoryRenderData
+        );
         setPreparedInstagramFile(file);
+        setInstagramPreviewUrl(URL.createObjectURL(file));
         return;
       }
 
@@ -570,9 +612,71 @@ export default function ProductosScreen() {
   };
 
   useEffect(() => {
+    if (
+      Platform.OS !== "web" ||
+      !instagramModalVisible ||
+      !selectedProductForInstagram
+    ) {
+      setPreparedInstagramFile(null);
+      setInstagramPreviewUrl("");
+      setRenderingInstagramPreview(false);
+      setInstagramPreparationError("");
+      return;
+    }
+
+    let cancelled = false;
+    let generatedPreviewUrl = "";
+
     setPreparedInstagramFile(null);
+    setInstagramPreviewUrl("");
+    setRenderingInstagramPreview(true);
     setInstagramPreparationError("");
-  }, [instagramStoryOptions, selectedProductForInstagram]);
+
+    const renderTimer = window.setTimeout(async () => {
+      try {
+        const target = instagramViewRef.current;
+        if (!target) {
+          throw new Error("No se encontró la vista previa de la historia.");
+        }
+
+        const safeModel = (selectedProductForInstagram.modelo || "producto")
+          .trim()
+          .replace(/[^a-zA-Z0-9-_]+/g, "-")
+          .replace(/^-+|-+$/g, "")
+          .toLowerCase();
+        const filename = `hogar-conectado-${safeModel || "producto"}.png`;
+        const file = await captureWebStory(
+          target,
+          filename,
+          instagramStoryRenderData
+        );
+
+        if (cancelled) return;
+        generatedPreviewUrl = URL.createObjectURL(file);
+        setPreparedInstagramFile(file);
+        setInstagramPreviewUrl(generatedPreviewUrl);
+      } catch (error) {
+        if (cancelled) return;
+        console.error("Error al generar la vista final de Instagram:", error);
+        setInstagramPreparationError(
+          "No pudimos generar la vista final. Revisá la conexión e intentá nuevamente."
+        );
+      } finally {
+        if (!cancelled) setRenderingInstagramPreview(false);
+      }
+    }, 80);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(renderTimer);
+      if (generatedPreviewUrl) URL.revokeObjectURL(generatedPreviewUrl);
+    };
+  }, [
+    instagramModalVisible,
+    instagramStoryRenderData,
+    instagramStoryOptions,
+    selectedProductForInstagram,
+  ]);
 
   const handleSave = async () => {
     if (saving) return;
@@ -2379,7 +2483,8 @@ export default function ProductosScreen() {
               >
                 <View style={styles.instagramPreviewContainer}>
                   {/* Vista previa de la historia */}
-                  <View ref={instagramViewRef} style={styles.storyPreview}>
+                  <View style={styles.storyPreviewFrame}>
+                    <View ref={instagramViewRef} style={styles.storyPreview}>
                     <Image
                       source={require("@/assets/images/back-history.png")}
                       style={styles.storyBackground}
@@ -2483,6 +2588,25 @@ export default function ProductosScreen() {
                         </View>
                       )}
                     </View>
+                    </View>
+
+                    {instagramPreviewUrl ? (
+                      <Image
+                        accessibilityLabel="Vista final de la historia de Instagram"
+                        source={{ uri: instagramPreviewUrl }}
+                        style={styles.storyRenderedPreview}
+                        contentFit="contain"
+                      />
+                    ) : null}
+
+                    {renderingInstagramPreview ? (
+                      <View style={styles.storyRenderingOverlay}>
+                        <ActivityIndicator size="large" color={COLORS.primaryDark} />
+                        <ThemedText style={styles.storyRenderingText}>
+                          Actualizando vista final…
+                        </ThemedText>
+                      </View>
+                    ) : null}
                   </View>
                 </View>
 
@@ -2721,24 +2845,30 @@ export default function ProductosScreen() {
                       styles.instagramShareButton,
                       preparedInstagramFile &&
                         styles.instagramPreparedActionButton,
-                      sharingInstagram && styles.instagramShareButtonDisabled,
+                      (sharingInstagram || renderingInstagramPreview) &&
+                        styles.instagramShareButtonDisabled,
                     ]}
                     onPress={shareToInstagram}
-                    disabled={sharingInstagram}
+                    disabled={sharingInstagram || renderingInstagramPreview}
                     accessibilityRole="button"
                     accessibilityLabel={
                       !preparedInstagramFile
                         ? "Preparar historia de Instagram"
                         : "Compartir historia como imagen"
                     }
-                    accessibilityState={{ disabled: sharingInstagram, busy: sharingInstagram }}
+                    accessibilityState={{
+                      disabled: sharingInstagram || renderingInstagramPreview,
+                      busy: sharingInstagram || renderingInstagramPreview,
+                    }}
                   >
                     <View style={styles.instagramButtonContent}>
-                      {sharingInstagram && (
+                      {(sharingInstagram || renderingInstagramPreview) && (
                         <ActivityIndicator size="small" color="#FFFFFF" />
                       )}
                       <ThemedText style={styles.instagramButtonText}>
-                        {sharingInstagram
+                        {renderingInstagramPreview
+                          ? "Generando vista final…"
+                          : sharingInstagram
                           ? preparedInstagramFile
                             ? "Compartiendo historia…"
                             : "Preparando imagen…"
@@ -4384,6 +4514,14 @@ const styles = StyleSheet.create({
     padding: SPACING.lg,
     alignItems: "center" as const,
   },
+  storyPreviewFrame: {
+    width: 300,
+    height: 533,
+    borderRadius: RADIUS.lg,
+    overflow: "hidden" as const,
+    position: "relative" as const,
+    ...SHADOWS.md,
+  },
   storyPreview: {
     width: 300,
     height: 533, // Proporción 9:16 de Instagram Stories
@@ -4391,6 +4529,25 @@ const styles = StyleSheet.create({
     overflow: "hidden" as const,
     position: "relative" as const,
     ...SHADOWS.md,
+  },
+  storyRenderedPreview: {
+    ...StyleSheet.absoluteFillObject,
+    width: "100%" as const,
+    height: "100%" as const,
+    backgroundColor: COLORS.surface,
+  },
+  storyRenderingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+    backgroundColor: "rgba(255, 255, 255, 0.88)" as const,
+    gap: SPACING.sm,
+  },
+  storyRenderingText: {
+    color: COLORS.text,
+    fontSize: 14,
+    fontWeight: "600" as const,
+    textAlign: "center" as const,
   },
   storyBackground: {
     width: "100%" as const,
