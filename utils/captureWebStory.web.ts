@@ -22,6 +22,17 @@ export async function captureWebStory(
           panel.style.backgroundColor = "#45413B";
           panel.style.borderRadius = "16px";
         });
+
+      documentClone
+        .querySelectorAll<HTMLElement>("#instagram-story-product-image")
+        .forEach((container) => {
+          const image = container.querySelector<HTMLImageElement>("img");
+          if (image) {
+            image.style.objectFit = "contain";
+            image.style.width = "100%";
+            image.style.height = "100%";
+          }
+        });
     },
     scale: Math.max(1, STORY_WIDTH / target.offsetWidth),
     useCORS: true,

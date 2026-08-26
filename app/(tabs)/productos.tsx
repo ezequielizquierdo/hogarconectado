@@ -2366,7 +2366,10 @@ export default function ProductosScreen() {
                       {/* Imagen del producto */}
                       {selectedProductForInstagram?.imagenes &&
                         selectedProductForInstagram.imagenes.length > 0 && (
-                          <View style={styles.storyProductImageContainer}>
+                          <View
+                            nativeID="instagram-story-product-image"
+                            style={styles.storyProductImageContainer}
+                          >
                             <Image
                               source={{
                                 uri: selectedProductForInstagram.imagenes[0],
@@ -2744,7 +2747,10 @@ export default function ProductosScreen() {
                     {/* Imagen del producto */}
                     {selectedProductForInstagram?.imagenes &&
                       selectedProductForInstagram.imagenes.length > 0 && (
-                        <View style={styles.storyProductImageContainer}>
+                        <View
+                          nativeID="instagram-story-product-image"
+                          style={styles.storyProductImageContainer}
+                        >
                             <Image
                               source={{
                                 uri: selectedProductForInstagram.imagenes[0],
@@ -4340,25 +4346,29 @@ const styles = StyleSheet.create({
   },
   storyContent: {
     flex: 1,
-    padding: SPACING.md,
+    paddingHorizontal: 22,
+    paddingTop: SPACING.lg,
+    paddingBottom: 28,
     position: "relative" as const,
   },
   storyProductImageContainer: {
     flex: 1,
-    width: "100%" as const,
+    width: "88%" as const,
+    alignSelf: "center" as const,
     alignItems: "center" as const,
     justifyContent: "center" as const,
-    marginTop: SPACING.xs,
-    marginBottom: SPACING.sm,
+    marginTop: SPACING.sm,
+    marginBottom: SPACING.md,
     minHeight: 0,
+    padding: SPACING.xs,
+    borderRadius: RADIUS.lg,
+    backgroundColor: "rgba(255, 255, 255, 0.92)" as const,
+    overflow: "hidden" as const,
   },
   storyProductImage: {
     width: "100%" as const,
     height: "100%" as const,
-    maxWidth: 280,
     borderRadius: RADIUS.lg,
-    backgroundColor: "rgba(255, 255, 255, 0.9)" as any,
-    padding: SPACING.xs,
   },
   // Estilos para contenedor mejorado de categoría
   storyCategoryContainer: {
@@ -4427,7 +4437,8 @@ const styles = StyleSheet.create({
     padding: SPACING.md,
     borderRadius: RADIUS.lg,
     alignItems: "center" as const,
-    width: "100%" as const,
+    width: "88%" as const,
+    alignSelf: "center" as const,
     flexShrink: 0,
   },
   storyCategoryTextInPanel: {
