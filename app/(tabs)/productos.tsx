@@ -40,6 +40,7 @@ import { uploadService, UploadedImage } from "@/services/uploadService";
 import { Producto, ProductoConPrecios } from "@/services/types";
 import { COLORS, SPACING, RADIUS, SHADOWS } from "@/constants/theme";
 import { useAuth } from "@/contexts/AuthContext";
+import { captureWebStory } from "@/utils/captureWebStory";
 
 // Funciones de utilidad
 const formatPrice = (price: number | string): string => {
@@ -145,6 +146,7 @@ export default function ProductosScreen() {
   const [saving, setSaving] = useState(false);
   const [sharingInstagram, setSharingInstagram] = useState(false);
   const [preparedInstagramFile, setPreparedInstagramFile] = useState<File | null>(null);
+  const [instagramPreparationError, setInstagramPreparationError] = useState("");
   const [refreshing, setRefreshing] = useState(false);
   const [modeloError, setModeloError] = useState<string>("");
   const [formErrors, setFormErrors] = useState<Partial<Record<keyof ProductoForm, string>>>({});
@@ -426,6 +428,7 @@ export default function ProductosScreen() {
     setInstagramModalVisible(false);
     setSelectedProductForInstagram(null);
     setPreparedInstagramFile(null);
+    setInstagramPreparationError("");
   };
 
   const shareToInstagram = async () => {
@@ -477,40 +480,37 @@ export default function ProductosScreen() {
     }
 
     setSharingInstagram(true);
+    setInstagramPreparationError("");
     try {
       // Permitir que el navegador pinte el indicador antes de iniciar la captura.
       await new Promise<void>((resolve) => setTimeout(resolve, 50));
 
-      // Usar la referencia correcta según la plataforma
-      const viewRef =
-        Platform.OS === "web" ? instagramViewRef : instagramViewRefMobile;
+      const viewRef = Platform.OS === "web" ? instagramViewRef : instagramViewRefMobile;
 
       if (!viewRef.current) {
-        Alert.alert("Error", "No se pudo capturar la vista para compartir");
-        return;
+        throw new Error("No se encontró la vista previa para preparar la historia.");
       }
 
-      // Capturar la vista como imagen
-      const uri = await captureRef(viewRef.current, {
-        format: "png",
-        quality: 1.0,
-        width: 1080, // Tamaño óptimo para Instagram Stories
-        height: 1920,
-      });
+      const safeModel = (selectedProductForInstagram?.modelo || "producto")
+        .trim()
+        .replace(/[^a-zA-Z0-9-_]+/g, "-")
+        .replace(/^-+|-+$/g, "")
+        .toLowerCase();
+      const filename = `hogar-conectado-${safeModel || "producto"}.png`;
 
       if (Platform.OS === "web") {
-        const response = await fetch(uri);
-        const blob = await response.blob();
-        const safeModel = (selectedProductForInstagram?.modelo || "producto")
-          .trim()
-          .replace(/[^a-zA-Z0-9-_]+/g, "-")
-          .replace(/^-+|-+$/g, "")
-          .toLowerCase();
-        const filename = `hogar-conectado-${safeModel || "producto"}.png`;
-        const file = new File([blob], filename, { type: "image/png" });
+        const file = await captureWebStory(viewRef.current, filename);
         setPreparedInstagramFile(file);
         return;
       }
+
+      // Capturar la vista con la implementación nativa de iOS o Android.
+      const uri = await captureRef(viewRef.current, {
+        format: "png",
+        quality: 1.0,
+        width: 1080,
+        height: 1920,
+      });
 
       // Verificar si Sharing está disponible
       if (!(await Sharing.isAvailableAsync())) {
@@ -532,6 +532,9 @@ export default function ProductosScreen() {
     } catch (error) {
       if (error instanceof Error && error.name === "AbortError") return;
       console.error("Error al compartir en Instagram:", error);
+      setInstagramPreparationError(
+        "No pudimos preparar la imagen. Revisá la conexión e intentá nuevamente."
+      );
       Alert.alert(
         "No pudimos compartir la historia",
         "Intentá nuevamente o descargá la imagen desde otro navegador."
@@ -543,6 +546,7 @@ export default function ProductosScreen() {
 
   useEffect(() => {
     setPreparedInstagramFile(null);
+    setInstagramPreparationError("");
   }, [instagramStoryOptions, selectedProductForInstagram]);
 
   const handleSave = async () => {
@@ -2690,6 +2694,14 @@ export default function ProductosScreen() {
                     </ThemedText>
                   </View>
                 </TouchableOpacity>
+                {instagramPreparationError ? (
+                  <ThemedText
+                    accessibilityRole="alert"
+                    style={styles.instagramPreparationError}
+                  >
+                    {instagramPreparationError}
+                  </ThemedText>
+                ) : null}
               </View>
             </View>
           </View>
@@ -4518,6 +4530,12 @@ const styles = StyleSheet.create({
     color: "#FFFFFF" as const,
     fontSize: 16,
     fontWeight: "600" as const,
+    textAlign: "center" as const,
+  },
+  instagramPreparationError: {
+    color: COLORS.error,
+    fontSize: 14,
+    marginTop: SPACING.sm,
     textAlign: "center" as const,
   },
   storyConsultaBox: {
