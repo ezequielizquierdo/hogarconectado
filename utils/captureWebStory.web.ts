@@ -47,7 +47,22 @@ export async function captureWebStory(
     throw new Error("No se pudo preparar el lienzo de la historia.");
   }
 
-  context.drawImage(sourceCanvas, 0, 0, STORY_WIDTH, STORY_HEIGHT);
+  const fitScale = Math.min(
+    STORY_WIDTH / sourceCanvas.width,
+    STORY_HEIGHT / sourceCanvas.height
+  );
+  const fittedWidth = sourceCanvas.width * fitScale;
+  const fittedHeight = sourceCanvas.height * fitScale;
+  const offsetX = (STORY_WIDTH - fittedWidth) / 2;
+  const offsetY = (STORY_HEIGHT - fittedHeight) / 2;
+
+  context.drawImage(
+    sourceCanvas,
+    offsetX,
+    offsetY,
+    fittedWidth,
+    fittedHeight
+  );
 
   const blob = await new Promise<Blob>((resolve, reject) => {
     outputCanvas.toBlob((result) => {

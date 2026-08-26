@@ -544,6 +544,31 @@ export default function ProductosScreen() {
     }
   };
 
+  const savePreparedInstagramImage = () => {
+    if (Platform.OS !== "web" || !preparedInstagramFile) return;
+
+    const downloadUrl = URL.createObjectURL(preparedInstagramFile);
+    const isAppleMobileBrowser =
+      /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+      (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+
+    if (isAppleMobileBrowser) {
+      const imageWindow = window.open(downloadUrl, "_blank");
+      if (imageWindow) imageWindow.opener = null;
+      else window.location.href = downloadUrl;
+      window.setTimeout(() => URL.revokeObjectURL(downloadUrl), 60_000);
+      return;
+    }
+
+    const link = document.createElement("a");
+    link.href = downloadUrl;
+    link.download = preparedInstagramFile.name;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.setTimeout(() => URL.revokeObjectURL(downloadUrl), 1000);
+  };
+
   useEffect(() => {
     setPreparedInstagramFile(null);
     setInstagramPreparationError("");
@@ -2668,40 +2693,68 @@ export default function ProductosScreen() {
               </ScrollView>
 
               <View style={styles.webModalActions}>
-                <TouchableOpacity
-                  style={[
-                    styles.instagramShareButton,
-                    sharingInstagram && styles.instagramShareButtonDisabled,
-                  ]}
-                  onPress={shareToInstagram}
-                  disabled={sharingInstagram}
-                  accessibilityRole="button"
-                  accessibilityLabel={
-                    !preparedInstagramFile
-                      ? "Preparar historia de Instagram"
-                      : isWideScreen
-                      ? "Descargar historia de Instagram"
-                      : "Compartir historia como imagen"
+                <View
+                  style={
+                    preparedInstagramFile
+                      ? styles.instagramPreparedActions
+                      : undefined
                   }
-                  accessibilityState={{ disabled: sharingInstagram, busy: sharingInstagram }}
                 >
-                  <View style={styles.instagramButtonContent}>
-                    {sharingInstagram && (
-                      <ActivityIndicator size="small" color="#FFFFFF" />
-                    )}
-                    <ThemedText style={styles.instagramButtonText}>
-                      {sharingInstagram
-                        ? preparedInstagramFile
-                          ? "Compartiendo historia…"
-                          : "Preparando imagen…"
-                        : !preparedInstagramFile
-                          ? "✨ Preparar imagen"
-                          : isWideScreen
-                          ? "⬇️ Descargar historia"
-                          : "📱 Compartir imagen"}
-                    </ThemedText>
-                  </View>
-                </TouchableOpacity>
+                  {preparedInstagramFile ? (
+                    <TouchableOpacity
+                      style={[
+                        styles.instagramSaveButton,
+                        styles.instagramPreparedActionButton,
+                      ]}
+                      onPress={savePreparedInstagramImage}
+                      accessibilityRole="button"
+                      accessibilityLabel="Guardar historia como imagen"
+                    >
+                      <ThemedText style={styles.instagramSaveButtonText}>
+                        ⬇️ Guardar imagen
+                      </ThemedText>
+                    </TouchableOpacity>
+                  ) : null}
+
+                  <TouchableOpacity
+                    style={[
+                      styles.instagramShareButton,
+                      preparedInstagramFile &&
+                        styles.instagramPreparedActionButton,
+                      sharingInstagram && styles.instagramShareButtonDisabled,
+                    ]}
+                    onPress={shareToInstagram}
+                    disabled={sharingInstagram}
+                    accessibilityRole="button"
+                    accessibilityLabel={
+                      !preparedInstagramFile
+                        ? "Preparar historia de Instagram"
+                        : "Compartir historia como imagen"
+                    }
+                    accessibilityState={{ disabled: sharingInstagram, busy: sharingInstagram }}
+                  >
+                    <View style={styles.instagramButtonContent}>
+                      {sharingInstagram && (
+                        <ActivityIndicator size="small" color="#FFFFFF" />
+                      )}
+                      <ThemedText style={styles.instagramButtonText}>
+                        {sharingInstagram
+                          ? preparedInstagramFile
+                            ? "Compartiendo historia…"
+                            : "Preparando imagen…"
+                          : !preparedInstagramFile
+                            ? "✨ Preparar imagen"
+                            : "📱 Compartir imagen"}
+                      </ThemedText>
+                    </View>
+                  </TouchableOpacity>
+                </View>
+                {preparedInstagramFile && !isWideScreen ? (
+                  <ThemedText style={styles.instagramSaveHint}>
+                    En iPhone, abrí “Guardar imagen” y mantenela presionada
+                    para guardarla en Fotos.
+                  </ThemedText>
+                ) : null}
                 {instagramPreparationError ? (
                   <ThemedText
                     accessibilityRole="alert"
@@ -4537,6 +4590,34 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.lg,
     alignItems: "center" as const,
     justifyContent: "center" as const,
+  },
+  instagramPreparedActions: {
+    flexDirection: "row" as const,
+    gap: SPACING.sm,
+  },
+  instagramPreparedActionButton: {
+    flex: 1,
+  },
+  instagramSaveButton: {
+    backgroundColor: COLORS.accent,
+    borderRadius: RADIUS.lg,
+    paddingVertical: SPACING.lg,
+    paddingHorizontal: SPACING.md,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+  },
+  instagramSaveButtonText: {
+    color: COLORS.text,
+    fontSize: 16,
+    fontWeight: "700" as const,
+    textAlign: "center" as const,
+  },
+  instagramSaveHint: {
+    color: COLORS.textSecondary,
+    fontSize: 13,
+    lineHeight: 18,
+    marginTop: SPACING.sm,
+    textAlign: "center" as const,
   },
   instagramShareButtonDisabled: {
     opacity: 0.65,
