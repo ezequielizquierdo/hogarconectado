@@ -143,6 +143,7 @@ export default function ProductosScreen() {
   const [form, setForm] = useState<ProductoForm>(initialForm);
   const [saving, setSaving] = useState(false);
   const [sharingInstagram, setSharingInstagram] = useState(false);
+  const [preparedInstagramFile, setPreparedInstagramFile] = useState<File | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [modeloError, setModeloError] = useState<string>("");
   const [formErrors, setFormErrors] = useState<Partial<Record<keyof ProductoForm, string>>>({});
@@ -423,10 +424,56 @@ export default function ProductosScreen() {
   const closeInstagramModal = () => {
     setInstagramModalVisible(false);
     setSelectedProductForInstagram(null);
+    setPreparedInstagramFile(null);
   };
 
   const shareToInstagram = async () => {
     if (sharingInstagram) return;
+
+    if (Platform.OS === "web" && preparedInstagramFile) {
+      const webNavigator = navigator as Navigator & {
+        canShare?: (data?: ShareData) => boolean;
+      };
+
+      if (
+        typeof webNavigator.share === "function" &&
+        typeof webNavigator.canShare === "function" &&
+        webNavigator.canShare({ files: [preparedInstagramFile] })
+      ) {
+        try {
+          const sharePromise = webNavigator.share({
+            files: [preparedInstagramFile],
+            title: "Historia de Hogar Conectado",
+          });
+          setSharingInstagram(true);
+          await sharePromise;
+          closeInstagramModal();
+          return;
+        } catch (shareError) {
+          if (shareError instanceof Error && shareError.name === "AbortError") {
+            return;
+          }
+        } finally {
+          setSharingInstagram(false);
+        }
+      }
+
+      const downloadUrl = URL.createObjectURL(preparedInstagramFile);
+      const link = document.createElement("a");
+      link.href = downloadUrl;
+      link.download = preparedInstagramFile.name;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(downloadUrl), 1000);
+
+      Alert.alert(
+        "Historia descargada",
+        "Guardamos la imagen en tu dispositivo. Abrí Instagram y agregala a una historia."
+      );
+      closeInstagramModal();
+      return;
+    }
 
     setSharingInstagram(true);
     try {
@@ -457,43 +504,7 @@ export default function ProductosScreen() {
           .toLowerCase();
         const filename = `hogar-conectado-${safeModel || "producto"}.png`;
         const file = new File([blob], filename, { type: "image/png" });
-        const webNavigator = navigator as Navigator & {
-          canShare?: (data?: ShareData) => boolean;
-        };
-
-        if (
-          typeof webNavigator.share === "function" &&
-          typeof webNavigator.canShare === "function" &&
-          webNavigator.canShare({ files: [file] })
-        ) {
-          try {
-            await webNavigator.share({
-              files: [file],
-              title: "Historia de Hogar Conectado",
-            });
-            closeInstagramModal();
-            return;
-          } catch (shareError) {
-            if (shareError instanceof Error && shareError.name === "AbortError") {
-              return;
-            }
-          }
-        }
-
-        const downloadUrl = URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.href = downloadUrl;
-        link.download = filename;
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
-        URL.revokeObjectURL(downloadUrl);
-
-        Alert.alert(
-          "Historia descargada",
-          "Guardamos la imagen en tu dispositivo. Abrí Instagram y agregala a una historia."
-        );
-        closeInstagramModal();
+        setPreparedInstagramFile(file);
         return;
       }
 
@@ -525,6 +536,10 @@ export default function ProductosScreen() {
       setSharingInstagram(false);
     }
   };
+
+  useEffect(() => {
+    setPreparedInstagramFile(null);
+  }, [instagramStoryOptions, selectedProductForInstagram]);
 
   const handleSave = async () => {
     if (saving) return;
@@ -2646,7 +2661,9 @@ export default function ProductosScreen() {
                   disabled={sharingInstagram}
                   accessibilityRole="button"
                   accessibilityLabel={
-                    isWideScreen
+                    !preparedInstagramFile
+                      ? "Preparar historia de Instagram"
+                      : isWideScreen
                       ? "Descargar historia de Instagram"
                       : "Compartir historia como imagen"
                   }
@@ -2654,8 +2671,12 @@ export default function ProductosScreen() {
                 >
                   <ThemedText style={styles.instagramButtonText}>
                     {sharingInstagram
-                      ? "Generando historia…"
-                      : isWideScreen
+                      ? preparedInstagramFile
+                        ? "Compartiendo historia…"
+                        : "Preparando historia…"
+                      : !preparedInstagramFile
+                        ? "✨ Preparar imagen"
+                        : isWideScreen
                         ? "⬇️ Descargar historia"
                         : "📱 Compartir imagen"}
                   </ThemedText>
