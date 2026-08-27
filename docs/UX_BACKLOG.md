@@ -105,7 +105,7 @@ Una tarea de interfaz se considera terminada cuando:
 
 ### UX-003 — Búsqueda y filtros eficientes
 
-**Estado:** En validación  
+**Estado:** En validación
 **Objetivo:** reducir el tiempo necesario para encontrar un producto.
 
 **Historia de usuario:** como vendedor, quiero buscar por marca, modelo o categoría y comprender qué filtros están aplicados para llegar al producto correcto sin recorrer todo el catálogo.
@@ -350,7 +350,7 @@ Una tarea de interfaz se considera terminada cuando:
 
 ### UX-013 — Consolidación de tokens y temas
 
-**Estado:** Pendiente  
+**Estado:** En validación
 **Objetivo:** reducir inconsistencias y estilos aislados.
 
 **Criterios de aceptación:**
@@ -360,6 +360,16 @@ Una tarea de interfaz se considera terminada cuando:
 - Se decide y documenta el destino del teal heredado.
 - Se completa el modo oscuro o se retira su exposición hasta implementarlo correctamente.
 - Espaciado, radios, tipografía y sombras utilizan vocabulario compartido.
+
+**Implementación preparada:**
+
+- La paleta heredada de Expo dejó de introducir teal y un modo oscuro incompleto en componentes temáticos.
+- Los esquemas del sistema utilizan temporalmente la identidad clara aprobada hasta diseñar un modo oscuro completo.
+- Se incorporó una jerarquía tipográfica compartida para cuerpo, énfasis, títulos y etiquetas.
+- Enlaces, navegación, sombras, estados destructivos e Instagram consumen tokens semánticos centralizados.
+- El login reemplaza su presentación provisional por logo real, capas ambientales, jerarquía tipográfica y estados de carga y error alineados al sistema.
+- Los encabezados de escritorio y móvil comparten overlay, contraste, tipografía y tratamiento del logotipo.
+- La adopción continuará por superficie para retirar valores aislados sin alterar de forma masiva pantallas estables.
 
 ### UX-014 — Validación visual repetible
 
@@ -450,10 +460,11 @@ Una tarea de interfaz se considera terminada cuando:
 ### AUTO-002 — Integración continua del backend
 
 **Prioridad:** Alta  
-**Estado:** Propuesta
+**Estado:** Implementada
 
-- Ejecutar pruebas del backend en cada pull request y push relevante.
-- Incorporar gradualmente pruebas de autenticación, precios, productos e imágenes.
+- Ejecuta instalación reproducible, validación de sintaxis y pruebas del backend en cada pull request y push a `main`.
+- El lockfile fue validado con la misma versión principal de npm utilizada en integración continua.
+- Las pruebas de autenticación, precios, productos e imágenes continuarán ampliándose gradualmente.
 
 ### AUTO-003 — Smoke test posterior al despliegue
 

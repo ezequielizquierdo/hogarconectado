@@ -2,7 +2,7 @@ import React from "react";
 import { View, StyleSheet, Text, Platform } from "react-native";
 import { Image } from "expo-image";
 import { ThemedText } from "@/components/ThemedText";
-import { SPACING } from "@/constants/theme";
+import { COLORS, RADIUS, SHADOWS, SPACING, TYPOGRAPHY } from "@/constants/theme";
 
 interface HeaderProps {
   sectionTitle: string;
@@ -20,21 +20,14 @@ export default function Header({ sectionTitle, sectionSubtitle }: HeaderProps) {
           data-testid="header-background-image"
         />
         <View style={styles.headerOverlay}>
-          {/* Logo y marca a la izquierda */}
-          {/* <View style={styles.brandContainer}> */}
-          <View style={styles.logoContainer}>
-            {/* <View style={styles.logoCircle}> */}
+          <View style={styles.logoCircle}>
             <Image
-              source={require("@/assets/images/logotipo.png")}
+              source={require("@/assets/images/logo-transparent-circle.png")}
               style={styles.logoImage}
               contentFit="contain"
+              accessibilityLabel="Logo de Hogar Conectado"
             />
-            {/* </View> */}
           </View>
-          {/* <Text style={styles.brandText}>hogar conectado</Text> */}
-          {/* </View> */}
-
-          {/* Información de la sección a la derecha */}
           <View style={styles.sectionContainer}>
             <ThemedText style={styles.sectionTitle}>{sectionTitle}</ThemedText>
             <Text style={styles.sectionSubtitle}>{sectionSubtitle}</Text>
@@ -65,67 +58,31 @@ const styles = StyleSheet.create({
   },
   headerOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.4)",
+    backgroundColor: COLORS.heroOverlay,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: SPACING.xl,
   },
-  brandContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    flex: 1,
-  },
-  logoContainer: {
-    marginRight: SPACING.md,
-  },
   logoCircle: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: "rgba(255, 255, 255, 0.9)",
+    width: 64,
+    height: 64,
+    borderRadius: RADIUS.full,
+    backgroundColor: COLORS.overlay,
     justifyContent: "center",
     alignItems: "center",
-    ...(Platform.OS === "web"
-      ? {
-          boxShadow: "0px 2px 3.84px rgba(0, 0, 0, 0.25)",
-        }
-      : {
-          shadowColor: "#000",
-          shadowOffset: {
-            width: 0,
-            height: 2,
-          },
-          shadowOpacity: 0.25,
-          shadowRadius: 3.84,
-        }),
-    elevation: 5,
+    ...SHADOWS.md,
   },
   logoImage: {
-    width: 30,
-    height: 40,
-  },
-  brandText: {
-    color: "#FFFFFF",
-    fontSize: 20,
-    fontWeight: "600",
-    ...(Platform.OS === "web"
-      ? {
-          textShadow: "-1px 1px 10px rgba(0, 0, 0, 0.75)",
-        }
-      : {
-          textShadowColor: "rgba(0, 0, 0, 0.75)",
-          textShadowOffset: { width: -1, height: 1 },
-          textShadowRadius: 10,
-        }),
+    width: 50,
+    height: 50,
   },
   sectionContainer: {
     alignItems: "flex-end",
   },
   sectionTitle: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: "#FFFFFF",
+    ...TYPOGRAPHY.headline,
+    color: COLORS.heroText,
     ...(Platform.OS === "web"
       ? {
           textShadow: "-1px 1px 10px rgba(0, 0, 0, 0.75)",
@@ -138,7 +95,7 @@ const styles = StyleSheet.create({
   },
   sectionSubtitle: {
     fontSize: 14,
-    color: "#E0E0E0",
+    color: COLORS.heroTextMuted,
     marginTop: 4,
     ...(Platform.OS === "web"
       ? {

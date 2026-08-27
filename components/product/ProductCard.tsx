@@ -173,7 +173,7 @@ export default function ProductCard({
                   label={`Crear historia de Instagram de ${producto.marca} ${producto.modelo}`}
                   icon="photo-camera"
                   onPress={onInstagramStory}
-                  color="#C13584"
+                  color={COLORS.instagram}
                   style={[styles.actionButton, styles.instagramButton]}
                 />
               )}
@@ -193,7 +193,7 @@ export default function ProductCard({
                   label={`Eliminar ${producto.marca} ${producto.modelo}`}
                   icon="delete-outline"
                   onPress={onDelete}
-                  color="#B42318"
+                  color={COLORS.errorStrong}
                   style={[styles.actionButton, styles.deleteButton]}
                 />
               )}
@@ -248,7 +248,7 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS.md,
     overflow: "hidden",
     marginBottom: SPACING.sm,
-    backgroundColor: "#FFFFFF", // Fondo blanco
+    backgroundColor: COLORS.surface,
     justifyContent: "center",
     alignItems: "center",
     padding: SPACING.xs, // Padding para separar la imagen de los bordes
@@ -397,6 +397,6 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.error + "15", // Color rojizo muy suave
   },
   instagramButton: {
-    backgroundColor: "#E4405F" + "15", // Color de Instagram muy suave
+    backgroundColor: COLORS.instagram + "15",
   },
 });

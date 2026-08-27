@@ -230,6 +230,27 @@ Automatizar calidad requiere definirla antes.
 
 ---
 
+## 10. Un sistema visual también es infraestructura
+
+**Tema:** diseño sistemático y deuda visual
+**Estado:** Borrador
+
+### LinkedIn
+
+Al mejorar la interfaz de un ecommerce personal encontré dos identidades conviviendo en el código: la paleta actual del producto y colores heredados del proyecto inicial.
+
+Antes de sumar una nueva librería gráfica, centralizamos tipografía, enlaces, estados, sombras y colores semánticos. El cambio no busca “decorar” pantallas: evita que cada componente tome decisiones distintas y hace que las próximas mejoras sean más rápidas y predecibles.
+
+Aprendizaje: un sistema visual no es solo una guía para diseñadores. También es infraestructura que reduce deuda y protege la coherencia del producto.
+
+### X
+
+Antes de sumar una librería UI, unificamos los tokens que ya tenía el proyecto: tipografía, enlaces, estados, sombras y color.
+
+Un sistema visual también es infraestructura: reduce decisiones repetidas y evita que cada pantalla termine hablando un idioma distinto.
+
+---
+
 ## Rutina editorial sugerida
 
 Al final de una jornada con cambios relevantes, responder:

@@ -2,7 +2,7 @@ import React from "react";
 import { View, StyleSheet, Platform } from "react-native";
 import { Image } from "expo-image";
 import { ThemedText } from "@/components/ThemedText";
-import { SPACING, SHADOWS } from "@/constants/theme";
+import { COLORS, RADIUS, SPACING, SHADOWS, TYPOGRAPHY } from "@/constants/theme";
 
 interface MobileHeaderProps {
   title: string;
@@ -67,6 +67,7 @@ const styles = StyleSheet.create({
     paddingTop: Platform.OS === "ios" ? 50 : 30, // Safe area para notch
     paddingBottom: SPACING.md,
     gap: SPACING.md,
+    backgroundColor: COLORS.heroOverlay,
   },
   logoContainer: {
     alignItems: "center",
@@ -75,8 +76,8 @@ const styles = StyleSheet.create({
   logoCircle: {
     width: 60,
     height: 60,
-    borderRadius: 30,
-    backgroundColor: "rgba(255, 255, 255, 0.9)",
+    borderRadius: RADIUS.full,
+    backgroundColor: COLORS.overlay,
     alignItems: "center",
     justifyContent: "center",
     ...SHADOWS.md,
@@ -91,9 +92,8 @@ const styles = StyleSheet.create({
     alignItems: "flex-end",
   },
   sectionTitle: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: "#FFFFFF",
+    ...TYPOGRAPHY.headline,
+    color: COLORS.heroText,
     ...(Platform.OS === "web"
       ? {
           textShadow: "1px 1px 3px rgba(0, 0, 0, 0.5)",
@@ -106,8 +106,8 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   sectionSubtitle: {
-    fontSize: 16,
-    color: "#FFFFFF",
+    ...TYPOGRAPHY.body,
+    color: COLORS.heroTextMuted,
     ...(Platform.OS === "web"
       ? {
           textShadow: "1px 1px 2px rgba(0, 0, 0, 0.5)",
