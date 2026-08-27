@@ -7,23 +7,32 @@ import { COLORS, RADIUS, SPACING, SHADOWS, TYPOGRAPHY } from "@/constants/theme"
 interface MobileHeaderProps {
   title: string;
   subtitle?: string;
+  variant?: "image" | "solid";
 }
 
-export default function MobileHeader({ title, subtitle }: MobileHeaderProps) {
+export default function MobileHeader({
+  title,
+  subtitle,
+  variant = "image",
+}: MobileHeaderProps) {
+  const isSolid = variant === "solid";
+
   return (
-    <View style={styles.headerContainer}>
+    <View style={[styles.headerContainer, isSolid && styles.headerContainerSolid]}>
       {/* Imagen de fondo */}
-      <Image
-        source={require("../assets/images/background-hogar.jpeg")}
-        style={styles.backgroundImage}
-        contentFit="cover"
-      />
+      {!isSolid && (
+        <Image
+          source={require("../assets/images/background-hogar.jpeg")}
+          style={styles.backgroundImage}
+          contentFit="cover"
+        />
+      )}
 
       {/* Contenido del header */}
-      <View style={styles.headerContent}>
-        {/* Logo con círculo contenedor */}
+      <View style={[styles.headerContent, isSolid && styles.headerContentSolid]}>
+        {/* El recurso ya incluye su identidad circular. */}
         <View style={styles.logoContainer}>
-          <View style={styles.logoCircle}>
+          <View style={[styles.logoCircle, isSolid && styles.logoDirect]}>
             <Image
               source={require("../assets/images/logo-transparent-circle.png")}
               style={styles.logo}
@@ -34,9 +43,20 @@ export default function MobileHeader({ title, subtitle }: MobileHeaderProps) {
 
         {/* Información de la sección */}
         <View style={styles.sectionInfo}>
-          <ThemedText style={styles.sectionTitle}>{title}</ThemedText>
+          <ThemedText
+            style={[styles.sectionTitle, isSolid && styles.sectionTitleSolid]}
+          >
+            {title}
+          </ThemedText>
           {subtitle && (
-            <ThemedText style={styles.sectionSubtitle}>{subtitle}</ThemedText>
+            <ThemedText
+              style={[
+                styles.sectionSubtitle,
+                isSolid && styles.sectionSubtitleSolid,
+              ]}
+            >
+              {subtitle}
+            </ThemedText>
           )}
         </View>
       </View>
@@ -49,6 +69,9 @@ const styles = StyleSheet.create({
     position: "relative",
     height: Platform.OS === "ios" ? 120 : 100, // Más altura en iOS para el notch
     overflow: "hidden",
+  },
+  headerContainerSolid: {
+    height: Platform.OS === "ios" ? 104 : 84,
   },
   backgroundImage: {
     position: "absolute",
@@ -69,6 +92,11 @@ const styles = StyleSheet.create({
     gap: SPACING.md,
     backgroundColor: COLORS.heroOverlay,
   },
+  headerContentSolid: {
+    backgroundColor: "#f3f4ff",
+    paddingTop: Platform.OS === "ios" ? 42 : SPACING.md,
+    paddingBottom: SPACING.sm,
+  },
   logoContainer: {
     alignItems: "center",
     justifyContent: "center",
@@ -82,14 +110,22 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     ...SHADOWS.md,
   },
+  logoDirect: {
+    width: 48,
+    height: 48,
+    backgroundColor: "transparent",
+    borderWidth: 0,
+    boxShadow: "none",
+    elevation: 0,
+  },
   logo: {
-    width: 40,
-    height: 40,
+    width: 46,
+    height: 46,
   },
   sectionInfo: {
     flex: 1,
     justifyContent: "center",
-    alignItems: "flex-end",
+    alignItems: "flex-start",
   },
   sectionTitle: {
     ...TYPOGRAPHY.headline,
@@ -105,6 +141,12 @@ const styles = StyleSheet.create({
         }),
     marginBottom: 2,
   },
+  sectionTitleSolid: {
+    color: COLORS.ink,
+    ...(Platform.OS === "web"
+      ? { textShadow: "none" }
+      : { textShadowColor: "transparent", textShadowRadius: 0 }),
+  },
   sectionSubtitle: {
     ...TYPOGRAPHY.body,
     color: COLORS.heroTextMuted,
@@ -118,5 +160,12 @@ const styles = StyleSheet.create({
           textShadowRadius: 2,
         }),
     opacity: 0.9,
+  },
+  sectionSubtitleSolid: {
+    color: COLORS.text,
+    ...(Platform.OS === "web"
+      ? { textShadow: "none" }
+      : { textShadowColor: "transparent", textShadowRadius: 0 }),
+    opacity: 1,
   },
 });

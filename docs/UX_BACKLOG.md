@@ -75,6 +75,8 @@ Una tarea de interfaz se considera terminada cuando:
 - Estado activo con superficie, texto e icono; foco de teclado visible en escritorio.
 - Operación en el centro; Contacto, Usuarios y Perfil como destinos secundarios según contexto y permisos.
 - Validación visual confirmada en móvil y escritorio; se eliminó la composición lateral que generaba espacio vacío en el catálogo.
+- Piloto de encabezado operativo unificado en Productos: identidad, sección activa y navegación comparten una única barra en escritorio; se eliminó el encabezado duplicado.
+- El logo utiliza directamente su forma circular turquesa, sin un segundo contenedor blanco, y la superficie del encabezado emplea un lavanda claro para conservar jerarquía y contraste.
 
 ### UX-002 — Catálogo adaptable y escaneable
 
@@ -98,10 +100,13 @@ Una tarea de interfaz se considera terminada cuando:
 **Implementación preparada:**
 
 - Grilla de dos columnas en escritorio con composición horizontal e imagen protagonista.
+- Piloto posterior inspirado en patrones de ecommerce: encabezado cromático sin fotografía y cards verticales de tres o cuatro columnas según el ancho disponible.
+- Área multimedia blanca, amplia y sin borde interior; la imagen utiliza `contain` para conservar su proporción y queda centrada con márgenes consistentes.
 - En viewports angostos, composición vertical: imagen protagonista, información debajo y acciones iconográficas con nombre accesible.
 - Jerarquía estable de stock, categoría, marca, modelo, descripción y precio contado.
 - Precio contado anclado en la zona inferior de la información para facilitar comparaciones.
 - Estado explícito “Sin imagen” con acceso orientativo para administradores.
+- En escritorio, los productos sin imagen reducen el área multimedia a un estado compacto con borde discontinuo, evitando cards visualmente vacías de gran altura.
 - Card completa accesible como acción para abrir el detalle; acciones administrativas con nombres específicos.
 - Se reservó espacio para la navegación inferior y se limitó el ancho del contenido para evitar recortes y desplazamiento horizontal.
 
@@ -188,6 +193,10 @@ Una tarea de interfaz se considera terminada cuando:
 - Crear y editar bloquean envíos duplicados y comunican el progreso de guardado.
 - Cerrar un formulario modificado solicita confirmación antes de descartar los cambios.
 - La imagen conserva acciones explícitas para agregar, reemplazar y eliminar.
+- Precio base y porcentaje comercial se editan por separado; el formulario muestra el porcentaje efectivo actual y valida un rango de 0 a 100.
+- Los productos existentes que aún no poseen un porcentaje propio conservan el porcentaje global como respaldo, sin exigir una migración masiva inmediata.
+
+**Validación funcional parcial:** se confirmó en entorno local que modificar el porcentaje de un producto persiste el nuevo valor y actualiza su precio contado en el catálogo. Resta completar las pruebas del formulario con errores, cierre accidental y reemplazo de imagen.
 
 ### UX-006 — Accesibilidad operativa básica
 

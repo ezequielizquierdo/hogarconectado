@@ -9,6 +9,7 @@ import { IconSymbol } from "@/components/ui/IconSymbol";
 import TabBarBackground from "@/components/ui/TabBarBackground";
 import { COLORS, RADIUS, SPACING } from "@/constants/theme";
 import { useAuth } from "@/contexts/AuthContext";
+import { DesktopHeaderProvider } from "@/contexts/DesktopHeaderContext";
 
 export default function TabLayout() {
   const { user } = useAuth();
@@ -17,7 +18,8 @@ export default function TabLayout() {
   const showUsersInNavigation = user?.rol === "admin" && isDesktop;
 
   return (
-    <Tabs
+    <DesktopHeaderProvider>
+      <Tabs
       tabBar={(props) =>
         isDesktop ? (
           <DesktopTabBar {...props} showUsers={user?.rol === "admin"} />
@@ -143,6 +145,7 @@ export default function TabLayout() {
           href: null, // Esto oculta la tab pero mantiene la ruta
         }}
       />
-    </Tabs>
+      </Tabs>
+    </DesktopHeaderProvider>
   );
 }

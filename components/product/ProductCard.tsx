@@ -42,6 +42,7 @@ export default function ProductCard({
   const isCompact = Platform.OS !== "web" || width <= 768;
   const isNarrow = width <= 480;
   const hasStock = producto.stock.disponible && producto.stock.cantidad > 0;
+  const hasImage = Boolean(producto.imagenes?.length);
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat("es-AR", {
@@ -53,7 +54,13 @@ export default function ProductCard({
 
   return (
     <View style={styles.container}>
-      <ThemedView style={[styles.card, !isCompact && styles.cardDesktop]}>
+      <ThemedView
+        style={[
+          styles.card,
+          !isCompact && styles.cardDesktop,
+          !isCompact && !hasImage && styles.cardDesktopWithoutImage,
+        ]}
+      >
         <View style={styles.cardAccent} />
         {/* Zona de información del producto - clickeable para ver detalle */}
         <TouchableOpacity
@@ -80,6 +87,7 @@ export default function ProductCard({
                   ? styles.imageContainerCompact
                   : styles.imageContainerDesktop,
                 isNarrow && styles.imageContainerNarrow,
+                !isCompact && !hasImage && styles.imageContainerDesktopEmpty,
               ]}
             >
               {producto.imagenes && producto.imagenes.length > 0 ? (
@@ -236,6 +244,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 8,
   },
+  cardDesktopWithoutImage: {
+    minHeight: 0,
+  },
   productInfoSection: {
     padding: SPACING.md,
   },
@@ -255,9 +266,9 @@ const styles = StyleSheet.create({
     gap: SPACING.md,
   },
   mainContentDesktop: {
-    flexDirection: "row",
+    flexDirection: "column",
     alignItems: "stretch",
-    gap: SPACING.lg,
+    gap: SPACING.md,
   },
   imageContainer: {
     width: "100%",
@@ -265,7 +276,7 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS.md,
     overflow: "hidden",
     marginBottom: SPACING.sm,
-    backgroundColor: COLORS.cardBackground,
+    backgroundColor: COLORS.surface,
     justifyContent: "center",
     alignItems: "center",
     padding: SPACING.xs, // Padding para separar la imagen de los bordes
@@ -285,11 +296,20 @@ const styles = StyleSheet.create({
     padding: SPACING.md,
   },
   imageContainerDesktop: {
-    width: "44%",
-    height: 290,
+    width: "100%",
+    height: 260,
     flexShrink: 0,
     marginBottom: 0,
+    padding: SPACING.lg,
+    borderWidth: 0,
+  },
+  imageContainerDesktopEmpty: {
+    height: 150,
     padding: SPACING.md,
+    borderWidth: 1,
+    borderStyle: "dashed",
+    borderColor: COLORS.borderFocus,
+    backgroundColor: COLORS.cardBackground,
   },
   detailsColumn: {
     flex: 1,
@@ -305,7 +325,8 @@ const styles = StyleSheet.create({
   detailsColumnDesktop: {
     minWidth: 0,
     justifyContent: "space-between",
-    paddingVertical: SPACING.sm,
+    paddingVertical: 0,
+    minHeight: 170,
   },
   productImage: {
     width: "100%",
@@ -317,7 +338,7 @@ const styles = StyleSheet.create({
     height: "100%",
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: COLORS.cardBackground,
+    backgroundColor: "#f3f4ff",
     borderRadius: RADIUS.sm,
     padding: SPACING.lg,
   },

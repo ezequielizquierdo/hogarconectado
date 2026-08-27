@@ -7,20 +7,29 @@ import { COLORS, RADIUS, SHADOWS, SPACING, TYPOGRAPHY } from "@/constants/theme"
 interface HeaderProps {
   sectionTitle: string;
   sectionSubtitle: string;
+  variant?: "image" | "solid";
 }
 
-export default function Header({ sectionTitle, sectionSubtitle }: HeaderProps) {
+export default function Header({
+  sectionTitle,
+  sectionSubtitle,
+  variant = "image",
+}: HeaderProps) {
+  const isSolid = variant === "solid";
+
   return (
-    <View style={styles.headerContainer}>
+    <View style={[styles.headerContainer, isSolid && styles.headerContainerSolid]}>
       <View style={styles.headerBackground} data-testid="header-background">
-        <Image
-          source={require("@/assets/images/background-hogar.jpeg")}
-          style={styles.backgroundImage}
-          contentFit="cover"
-          data-testid="header-background-image"
-        />
-        <View style={styles.headerOverlay}>
-          <View style={styles.logoCircle}>
+        {!isSolid && (
+          <Image
+            source={require("@/assets/images/background-hogar.jpeg")}
+            style={styles.backgroundImage}
+            contentFit="cover"
+            data-testid="header-background-image"
+          />
+        )}
+        <View style={[styles.headerOverlay, isSolid && styles.headerOverlaySolid]}>
+          <View style={[styles.logoCircle, isSolid && styles.logoCircleSolid]}>
             <Image
               source={require("@/assets/images/logo-transparent-circle.png")}
               style={styles.logoImage}
@@ -29,8 +38,19 @@ export default function Header({ sectionTitle, sectionSubtitle }: HeaderProps) {
             />
           </View>
           <View style={styles.sectionContainer}>
-            <ThemedText style={styles.sectionTitle}>{sectionTitle}</ThemedText>
-            <Text style={styles.sectionSubtitle}>{sectionSubtitle}</Text>
+            <ThemedText
+              style={[styles.sectionTitle, isSolid && styles.sectionTitleSolid]}
+            >
+              {sectionTitle}
+            </ThemedText>
+            <Text
+              style={[
+                styles.sectionSubtitle,
+                isSolid && styles.sectionSubtitleSolid,
+              ]}
+            >
+              {sectionSubtitle}
+            </Text>
           </View>
         </View>
       </View>
@@ -42,6 +62,9 @@ const styles = StyleSheet.create({
   headerContainer: {
     height: 120, // Reducido de 200px a 120px
     width: "100%",
+  },
+  headerContainerSolid: {
+    height: 88,
   },
   headerBackground: {
     flex: 1,
@@ -64,6 +87,9 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingHorizontal: SPACING.xl,
   },
+  headerOverlaySolid: {
+    backgroundColor: COLORS.primary,
+  },
   logoCircle: {
     width: 64,
     height: 64,
@@ -72,6 +98,13 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     ...SHADOWS.md,
+  },
+  logoCircleSolid: {
+    width: 56,
+    height: 56,
+    backgroundColor: COLORS.surface,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.72)",
   },
   logoImage: {
     width: 50,
@@ -93,6 +126,12 @@ const styles = StyleSheet.create({
           textShadowRadius: 10,
         }),
   },
+  sectionTitleSolid: {
+    color: COLORS.ink,
+    ...(Platform.OS === "web"
+      ? { textShadow: "none" }
+      : { textShadowColor: "transparent", textShadowRadius: 0 }),
+  },
   sectionSubtitle: {
     fontSize: 14,
     color: COLORS.heroTextMuted,
@@ -106,5 +145,11 @@ const styles = StyleSheet.create({
           textShadowOffset: { width: -1, height: 1 },
           textShadowRadius: 10,
         }),
+  },
+  sectionSubtitleSolid: {
+    color: COLORS.text,
+    ...(Platform.OS === "web"
+      ? { textShadow: "none" }
+      : { textShadowColor: "transparent", textShadowRadius: 0 }),
   },
 });

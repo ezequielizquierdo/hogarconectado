@@ -33,6 +33,8 @@ export interface Producto {
     modelo: string;
     descripcion?: string;
     precioBase: number;
+    porcentajeGanancia?: number;
+    porcentajeGananciaAplicado?: number;
     precioConGanancia?: number;
     especificaciones?: Record<string, any>;
     stock: {

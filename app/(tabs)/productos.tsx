@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from "react";
+import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import {
   StyleSheet,
   ScrollView,
@@ -22,7 +22,6 @@ import * as Sharing from "expo-sharing";
 import { captureRef } from "react-native-view-shot";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
-import Header from "@/components/layout/Header";
 import MobileHeader from "@/components/MobileHeader";
 import LabeledDropdown from "@/components/forms/LabeledDropdown";
 import EditableDropdown from "@/components/forms/EditableDropdown";
@@ -42,6 +41,7 @@ import { uploadService, UploadedImage } from "@/services/uploadService";
 import { Producto, ProductoConPrecios } from "@/services/types";
 import { COLORS, SPACING, RADIUS, SHADOWS } from "@/constants/theme";
 import { useAuth } from "@/contexts/AuthContext";
+import { useDesktopHeader } from "@/contexts/DesktopHeaderContext";
 import { captureWebStory } from "@/utils/captureWebStory";
 import { InstagramStoryRenderData } from "@/utils/instagramStoryRenderer";
 
@@ -90,6 +90,7 @@ interface ProductoForm {
   descripcion: string;
   categoria: string;
   precioBase: string;
+  porcentajeGanancia: string;
   stockCantidad: string;
   stockDisponible: string;
   imagen: string;
@@ -102,6 +103,7 @@ const initialForm: ProductoForm = {
   descripcion: "",
   categoria: "",
   precioBase: "",
+  porcentajeGanancia: "30",
   stockCantidad: "",
   stockDisponible: "true",
   imagen: "",
@@ -109,6 +111,7 @@ const initialForm: ProductoForm = {
 };
 
 export default function ProductosScreen() {
+  const { setAction: setDesktopHeaderAction } = useDesktopHeader();
   const { can } = useAuth();
   const canEdit = can("editor", "admin");
   const canDelete = can("admin");
@@ -311,7 +314,7 @@ export default function ProductosScreen() {
     ),
   };
 
-  const openModal = (producto?: Producto) => {
+  const openModal = useCallback((producto?: Producto) => {
     if (!canEdit) {
       Alert.alert("Sin permiso", "Tu usuario tiene acceso de consulta.");
       return;
@@ -329,6 +332,11 @@ export default function ProductosScreen() {
         descripcion: producto.descripcion || "",
         categoria: categoriaId,
         precioBase: producto.precioBase.toString(),
+        porcentajeGanancia: String(
+          producto.porcentajeGanancia ??
+            producto.porcentajeGananciaAplicado ??
+            30
+        ),
         stockCantidad: producto.stock.cantidad.toString(),
         stockDisponible: producto.stock.disponible.toString(),
         imagen:
@@ -347,7 +355,7 @@ export default function ProductosScreen() {
     setFormErrors({});
     setModeloError("");
     setModalVisible(true);
-  };
+  }, [canEdit]);
 
   const resetAndCloseModal = () => {
     setModalVisible(false);
@@ -687,12 +695,22 @@ export default function ProductosScreen() {
       return;
     }
     const precioNumerico = parsePrice(form.precioBase);
+    const porcentajeGanancia = Number(form.porcentajeGanancia.replace(",", "."));
     const nextErrors: Partial<Record<keyof ProductoForm, string>> = {};
     if (!form.marca.trim()) nextErrors.marca = "Seleccioná o escribí una marca.";
     if (!form.modelo.trim()) nextErrors.modelo = "Ingresá el modelo del producto.";
     if (!form.categoria) nextErrors.categoria = "Seleccioná una categoría.";
     if (!form.precioBase.trim() || isNaN(precioNumerico) || precioNumerico <= 0) {
       nextErrors.precioBase = "Ingresá un precio mayor a 0.";
+    }
+    if (
+      !form.porcentajeGanancia.trim() ||
+      !Number.isFinite(porcentajeGanancia) ||
+      porcentajeGanancia < 0 ||
+      porcentajeGanancia > 100
+    ) {
+      nextErrors.porcentajeGanancia =
+        "Ingresá un porcentaje entre 0 y 100.";
     }
     if (form.stockCantidad && (!/^\d+$/.test(form.stockCantidad) || Number(form.stockCantidad) < 0)) {
       nextErrors.stockCantidad = "Ingresá una cantidad entera igual o mayor a 0.";
@@ -737,6 +755,7 @@ export default function ProductosScreen() {
         descripcion: form.descripcion,
         categoria: form.categoria,
         precioBase: precioNumerico,
+        porcentajeGanancia,
         stock: {
           cantidad: parseInt(form.stockCantidad) || 0,
           disponible: form.stockDisponible === "true",
@@ -1272,8 +1291,24 @@ export default function ProductosScreen() {
   const isWeb = Platform.OS === "web";
   const { width } = Dimensions.get("window");
   const isWideScreen = width > 768;
+
+  useEffect(() => {
+    if (!(isWeb && isWideScreen && canEdit)) {
+      setDesktopHeaderAction(null);
+      return;
+    }
+
+    setDesktopHeaderAction({
+      label: "Agregar producto",
+      onPress: () => openModal(),
+    });
+
+    return () => setDesktopHeaderAction(null);
+  }, [canEdit, isWeb, isWideScreen, openModal, setDesktopHeaderAction]);
   const getCardWidth = () => {
     if (!isWideScreen) return "100%";
+    if (width >= 1440) return "calc(25% - 18px)";
+    if (width >= 1100) return "calc(33.333% - 16px)";
     return "calc(50% - 12px)";
   };
 
@@ -1293,12 +1328,6 @@ export default function ProductosScreen() {
       {isWeb && isWideScreen ? (
         // Layout para web con sidebar
         <View style={styles.webLayoutFullHeight}>
-          {/* Header reutilizable */}
-          <Header
-            sectionTitle="Productos"
-            sectionSubtitle="Gestiona tu inventario"
-          />
-
           {/* Contenido con sidebar */}
           <View style={styles.webContentWithSidebar}>
             {/* Sidebar de filtros */}
@@ -1314,7 +1343,6 @@ export default function ProductosScreen() {
               onStockChange={handleStockChange}
               onSearchChange={setSearchText}
               onClearFilters={clearAllFilters}
-              onAddProduct={canEdit ? () => openModal() : undefined}
               resultCount={totalProductos}
               loading={productosLoading}
             />
@@ -1360,7 +1388,11 @@ export default function ProductosScreen() {
         // Layout móvil con header estilo web
         <View style={styles.mobileLayout}>
           {/* Header móvil reutilizable */}
-          <MobileHeader title="Productos" subtitle="Gestiona tu inventario" />
+          <MobileHeader
+            title="Productos"
+            subtitle="Gestiona tu inventario"
+            variant="solid"
+          />
 
           <ScrollView
             style={styles.mobileContent}
@@ -1675,6 +1707,21 @@ export default function ProductosScreen() {
                   />
 
                   <AnimatedInput
+                    label="Porcentaje para precio contado"
+                    required
+                    value={form.porcentajeGanancia}
+                    onChangeText={(text) =>
+                      updateFormField(
+                        "porcentajeGanancia",
+                        text.replace(/[^0-9.,]/g, "")
+                      )
+                    }
+                    placeholder="Ej.: 30"
+                    keyboardType="decimal-pad"
+                    error={formErrors.porcentajeGanancia}
+                  />
+
+                  <AnimatedInput
                     label="Stock Cantidad"
                     value={form.stockCantidad}
                     onChangeText={(text) =>
@@ -1906,6 +1953,21 @@ export default function ProductosScreen() {
                   placeholder="0,00"
                   keyboardType="numeric"
                   error={formErrors.precioBase}
+                />
+
+                <AnimatedInput
+                  label="Porcentaje para precio contado"
+                  required
+                  value={form.porcentajeGanancia}
+                  onChangeText={(text) =>
+                    updateFormField(
+                      "porcentajeGanancia",
+                      text.replace(/[^0-9.,]/g, "")
+                    )
+                  }
+                  placeholder="Ej.: 30"
+                  keyboardType="decimal-pad"
+                  error={formErrors.porcentajeGanancia}
                 />
 
                 <AnimatedInput

@@ -348,6 +348,89 @@ El tamaño cambia, pero también debe cambiar la composición.
 
 ---
 
+## 13. Usar referentes no es copiar interfaces
+
+**Tema:** análisis de referentes y decisiones de producto
+**Estado:** Borrador
+
+### LinkedIn
+
+Para mejorar el catálogo de un ecommerce estudiamos la estructura de Mercado Libre. No copiamos su amarillo, sus promociones ni su densidad de información: identificamos dos decisiones que sí resolvían nuestros problemas.
+
+La primera fue convertir el encabezado en una firma cromática simple. La segunda, darle a cada producto una superficie de imagen blanca, amplia y consistente. Luego llevamos ambos principios a nuestra propia identidad lavanda y conservamos únicamente los datos que necesita nuestra operación.
+
+Aprendizaje: un buen referente no entrega una plantilla. Ayuda a formular mejores preguntas sobre jerarquía, consistencia y contexto de uso.
+
+Mercado Libre cuenta con Andes, su lenguaje de diseño compartido. Este artículo de su equipo técnico explica cómo un sistema de diseño puede resolver problemas de accesibilidad y consistencia: [What we have learned from working on digital accessibility](https://medium.com/mercadolibre-tech/what-we-have-learned-from-working-on-digital-accessibility-954f275fdff3).
+
+### X
+
+Usar un referente no es copiar una interfaz.
+
+De Mercado Libre tomamos dos principios: encabezado como firma cromática e imágenes de producto sobre superficies amplias y consistentes. Después los adaptamos a nuestra identidad y a nuestros datos reales.
+
+El patrón inspira; el contexto decide.
+
+**Referencia:** [Mercado Libre Tech sobre accesibilidad y Andes](https://medium.com/mercadolibre-tech/what-we-have-learned-from-working-on-digital-accessibility-954f275fdff3).
+
+---
+
+## 14. Cuando dos encabezados deberían ser uno
+
+**Tema:** referentes de ecommerce y jerarquía de navegación
+**Estado:** Borrador
+
+### LinkedIn
+
+Tomar un ecommerce reconocido como referencia no significa copiar su encabezado o sus colores.
+
+Al revisar el catálogo de Hogar Conectado frente a Mercado Libre apareció una idea más útil: distintas filas pueden sentirse como una sola estructura si comparten jerarquía e identidad. En nuestra aplicación, sin embargo, había dos encabezados que competían entre sí.
+
+La solución fue específica para el producto: una barra operativa única que reúne marca, sección activa y navegación. Menos altura, menos repetición y más espacio para los productos.
+
+La investigación de Baymard sobre navegación en ecommerce destaca dos principios que guiaron la decisión: mantener visible la navegación principal e identificar con claridad el alcance actual: [Ecommerce Navigation UX Best Practices](https://baymard.com/blog/ecommerce-navigation-best-practice).
+
+Aprendizaje: un referente aporta patrones para pensar; la solución final debe responder al contexto real de uso.
+
+### X
+
+Usar un ecommerce reconocido como referencia no significa copiar su UI.
+
+Al revisar nuestro catálogo, el aprendizaje útil fue otro: marca, sección activa y navegación deben sentirse como una sola estructura.
+
+Menos encabezados. Más espacio para operar.
+
+**Referencia:** [Ecommerce Navigation UX — Baymard](https://baymard.com/blog/ecommerce-navigation-best-practice).
+
+---
+
+## 15. Una regla global también necesita excepciones
+
+**Tema:** evolución de datos, reglas comerciales y compatibilidad
+**Estado:** Borrador
+
+### LinkedIn
+
+En un ecommerce pequeño comenzamos con un único porcentaje de ganancia para todos los productos. Era simple y cumplía su función, hasta que la operación necesitó ajustar un producto sin modificar los demás.
+
+La solución no fue duplicar fórmulas en la interfaz. Incorporamos un porcentaje opcional por producto, validado por el backend, y mantuvimos la regla global como respaldo para los registros existentes.
+
+Así logramos dos cosas: mayor flexibilidad comercial y compatibilidad con los datos ya cargados, sin una migración masiva inmediata.
+
+MongoDB documenta una idea relacionada en su patrón de versionado de esquemas: un modelo flexible puede admitir estructuras anteriores y nuevas mientras la aplicación aprende a interpretar ambas: [Maintain Different Schema Versions](https://www.mongodb.com/docs/manual/data-modeling/design-patterns/data-versioning/schema-versioning/).
+
+Aprendizaje: agregar flexibilidad no debería significar perder una única fuente de verdad.
+
+### X
+
+Una regla global de precios funcionó hasta que un producto necesitó una excepción.
+
+Sumamos un porcentaje opcional por producto y conservamos el valor global como respaldo. Más flexibilidad, sin romper los datos existentes ni duplicar fórmulas.
+
+**Referencia:** [Schema Versioning Pattern — MongoDB](https://www.mongodb.com/docs/manual/data-modeling/design-patterns/data-versioning/schema-versioning/).
+
+---
+
 ## Rutina editorial sugerida
 
 Al final de una jornada con cambios relevantes, responder:

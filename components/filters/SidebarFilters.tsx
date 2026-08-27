@@ -10,7 +10,6 @@ import {
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
-import AnimatedButton from "@/components/ui/AnimatedButton";
 import { COLORS, SPACING, RADIUS, SHADOWS } from "@/constants/theme";
 
 interface FilterOption {
@@ -31,7 +30,6 @@ interface SidebarFiltersProps {
   onStockChange: (value: string) => void;
   onSearchChange: (value: string) => void;
   onClearFilters: () => void;
-  onAddProduct?: () => void;
   resultCount: number;
   loading?: boolean;
 }
@@ -48,7 +46,6 @@ const SidebarFilters: React.FC<SidebarFiltersProps> = ({
   onStockChange,
   onSearchChange,
   onClearFilters,
-  onAddProduct,
   resultCount,
   loading = false,
 }) => {
@@ -161,16 +158,6 @@ const SidebarFilters: React.FC<SidebarFiltersProps> = ({
         style={styles.scrollContainer}
         showsVerticalScrollIndicator={false}
       >
-        {/* Botón de agregar producto prominente */}
-        {onAddProduct && <View style={styles.addProductSection}>
-          <AnimatedButton
-            title="Agregar producto"
-            onPress={onAddProduct}
-            variant="primary"
-            style={styles.addProductButton}
-          />
-        </View>}
-
         {/* Sección de búsqueda */}
         <View style={styles.searchSection}>
           <View style={styles.searchLabelRow}>
@@ -389,12 +376,6 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     textAlign: "center",
     marginTop: 2,
-  },
-  addProductSection: {
-    paddingVertical: SPACING.md,
-  },
-  addProductButton: {
-    width: "100%",
   },
   filtersHeader: {
     flexDirection: "row",
