@@ -1,10 +1,14 @@
 import { InstagramStoryRenderData } from "./instagramStoryRenderer";
+import {
+  calculateContainedImageRect,
+  calculateInstagramStoryLayout,
+  INSTAGRAM_STORY_SAFE_AREA,
+  INSTAGRAM_STORY_SIZE,
+} from "./instagramStoryLayout";
 
-const STORY_WIDTH = 1080;
-const STORY_HEIGHT = 1920;
-const SAFE_MARGIN_X = 96;
-const SAFE_MARGIN_TOP = 150;
-const SAFE_MARGIN_BOTTOM = 190;
+const STORY_WIDTH = INSTAGRAM_STORY_SIZE.width;
+const STORY_HEIGHT = INSTAGRAM_STORY_SIZE.height;
+const SAFE_MARGIN_X = INSTAGRAM_STORY_SAFE_AREA.horizontal;
 const CONTENT_WIDTH = STORY_WIDTH - SAFE_MARGIN_X * 2;
 
 const PANEL_COLOR = "#45413B";
@@ -80,19 +84,12 @@ const drawImageContain = (
   width: number,
   height: number
 ) => {
-  const scale = Math.min(
-    width / image.naturalWidth,
-    height / image.naturalHeight
+  const rect = calculateContainedImageRect(
+    image.naturalWidth,
+    image.naturalHeight,
+    { x, y, width, height }
   );
-  const drawWidth = image.naturalWidth * scale;
-  const drawHeight = image.naturalHeight * scale;
-  context.drawImage(
-    image,
-    x + (width - drawWidth) / 2,
-    y + (height - drawHeight) / 2,
-    drawWidth,
-    drawHeight
-  );
+  context.drawImage(image, rect.x, rect.y, rect.width, rect.height);
 };
 
 const wrapText = (
@@ -144,26 +141,6 @@ const findBackgroundSource = (target: HTMLElement): string => {
   return source;
 };
 
-const calculatePanelHeight = (
-  context: CanvasRenderingContext2D,
-  data: InstagramStoryRenderData
-) => {
-  let height = 72;
-  if (data.categoria) height += 46;
-  if (data.modelo) height += 66;
-  if (data.marca) height += 46;
-  if (data.precio) height += 126;
-  if (data.stock) height += 48;
-  if (data.descripcion) {
-    context.font = "italic 32px Arial, sans-serif";
-    height +=
-      wrapText(context, data.descripcion, CONTENT_WIDTH - 112, 3).length *
-        40 +
-      16;
-  }
-  return height;
-};
-
 export async function captureWebStory(
   target: unknown,
   filename: string,
@@ -192,51 +169,52 @@ export async function captureWebStory(
   context.textBaseline = "middle";
   drawImageCover(context, backgroundImage, 0, 0, STORY_WIDTH, STORY_HEIGHT);
 
-  const consultaHeight = data.consultaPrecio ? 92 : 0;
-  const consultaGap = data.consultaPrecio ? 28 : 0;
-  const hasProductInfo = Boolean(
-    data.categoria ||
-      data.modelo ||
-      data.marca ||
-      data.precio ||
-      data.stock ||
-      data.descripcion
-  );
-  const panelHeight = hasProductInfo
-    ? calculatePanelHeight(context, data)
-    : 0;
-  const panelBottom =
-    STORY_HEIGHT - SAFE_MARGIN_BOTTOM - consultaHeight - consultaGap;
-  const panelY = panelBottom - panelHeight;
-  const imageY = SAFE_MARGIN_TOP;
-  const imageBottom = hasProductInfo ? panelY - 44 : panelBottom;
-  const imageHeight = Math.max(400, imageBottom - imageY);
+  context.font = "italic 32px Arial, sans-serif";
+  const descriptionLines = data.descripcion
+    ? wrapText(context, data.descripcion, CONTENT_WIDTH - 112, 3)
+    : [];
+  const layout = calculateInstagramStoryLayout(data, descriptionLines.length);
+  const { image: imageLayout, panel, consultation } = layout;
 
   if (productImage) {
-    roundedRect(context, SAFE_MARGIN_X, imageY, CONTENT_WIDTH, imageHeight, 44);
+    roundedRect(
+      context,
+      imageLayout.x,
+      imageLayout.y,
+      imageLayout.width,
+      imageLayout.height,
+      44
+    );
     context.fillStyle = "rgba(255, 255, 255, 0.94)";
     context.fill();
     context.save();
-    roundedRect(context, SAFE_MARGIN_X, imageY, CONTENT_WIDTH, imageHeight, 44);
+    roundedRect(
+      context,
+      imageLayout.x,
+      imageLayout.y,
+      imageLayout.width,
+      imageLayout.height,
+      44
+    );
     context.clip();
     drawImageContain(
       context,
       productImage,
-      SAFE_MARGIN_X + 32,
-      imageY + 32,
-      CONTENT_WIDTH - 64,
-      imageHeight - 64
+      imageLayout.x + 32,
+      imageLayout.y + 32,
+      imageLayout.width - 64,
+      imageLayout.height - 64
     );
     context.restore();
   }
 
-  if (hasProductInfo) {
-    roundedRect(context, SAFE_MARGIN_X, panelY, CONTENT_WIDTH, panelHeight, 44);
+  if (panel) {
+    roundedRect(context, panel.x, panel.y, panel.width, panel.height, 44);
     context.fillStyle = PANEL_COLOR;
     context.fill();
   }
 
-  let textY = panelY + 44;
+  let textY = (panel?.y ?? 0) + 44;
   context.fillStyle = TEXT_COLOR;
 
   if (data.categoria) {
@@ -277,25 +255,18 @@ export async function captureWebStory(
   if (data.descripcion) {
     context.fillStyle = TEXT_COLOR;
     context.font = "italic 32px Arial, sans-serif";
-    const lines = wrapText(
-      context,
-      data.descripcion,
-      CONTENT_WIDTH - 112,
-      3
-    );
-    lines.forEach((line, index) => {
+    descriptionLines.forEach((line, index) => {
       drawCenteredText(context, line, textY + 20 + index * 40);
     });
   }
 
-  if (data.consultaPrecio) {
-    const consultaY = STORY_HEIGHT - SAFE_MARGIN_BOTTOM - consultaHeight;
+  if (data.consultaPrecio && consultation) {
     roundedRect(
       context,
-      SAFE_MARGIN_X,
-      consultaY,
-      CONTENT_WIDTH,
-      consultaHeight,
+      consultation.x,
+      consultation.y,
+      consultation.width,
+      consultation.height,
       32
     );
     context.fillStyle = CONSULTA_COLOR;
@@ -305,7 +276,7 @@ export async function captureWebStory(
     drawCenteredText(
       context,
       data.consultaPrecio,
-      consultaY + consultaHeight / 2
+      consultation.y + consultation.height / 2
     );
   }
 

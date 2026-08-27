@@ -19,11 +19,12 @@ Aplicación universal para administrar productos, consultar stock, calcular prec
 ```bash
 npm install
 npm run web
+npm test
 npm run lint
 npx expo export --platform web
 ```
 
-Antes de entregar cambios de código, ejecutar como mínimo `npm run lint`. Para cambios que puedan afectar producción web, ejecutar también `npx expo export --platform web`.
+Antes de entregar cambios de código, ejecutar como mínimo `npm test` y `npm run lint`. Para cambios que puedan afectar producción web, ejecutar también `npx expo export --platform web`.
 
 ## Configuración
 

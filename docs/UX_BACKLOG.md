@@ -33,6 +33,22 @@ Una tarea de interfaz se considera terminada cuando:
 
 ## P1 — Experiencia esencial
 
+### UX-000 — Investigación de referentes mobile de ecommerce
+
+**Estado:** Pendiente
+**Objetivo:** revisar patrones de navegación y presentación mobile respaldados por casos actuales, comentarios de uso y buenas prácticas verificables antes de rediseñar la interfaz general.
+
+**Criterios de investigación:**
+
+- Comparar al menos cinco ecommerce reconocidos por su experiencia móvil.
+- Priorizar evidencia de usabilidad, accesibilidad y navegabilidad por encima de tendencias visuales.
+- Analizar navegación, búsqueda, filtros, cards, detalle de producto y acciones comerciales.
+- Separar patrones transferibles de decisiones propias de cada marca.
+- Documentar capturas, fuentes, hallazgos y una recomendación aplicable a Hogar Conectado.
+- Validar cualquier propuesta tanto en Safari iPhone como en Android y escritorio.
+
+**Dependencia:** realizar cuando el flujo operativo prioritario esté estabilizado.
+
 ### UX-001 — Navegación adaptable y comprensible
 
 **Estado:** Completada  

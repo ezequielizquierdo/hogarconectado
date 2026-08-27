@@ -184,6 +184,29 @@ Diseñar para capacidades reales evita botones que prometen más de lo que la pl
 
 ---
 
+## 8. La vista previa también forma parte del contrato
+
+**Tema:** WYSIWYG, Canvas e historias para redes
+**Estado:** Borrador
+
+### LinkedIn
+
+La funcionalidad estaba resuelta: la web generaba una historia y Safari permitía compartirla en Instagram. Sin embargo, la imagen final no coincidía con la vista previa: cambiaban los márgenes, los colores y hasta la proporción del producto.
+
+El problema era depender de una captura del DOM, que cada navegador podía interpretar de manera diferente. Lo reemplazamos por un render determinístico en Canvas de 1080 × 1920. Ahora la vista previa, la descarga y el archivo compartido utilizan exactamente el mismo PNG.
+
+Aprendizaje: WYSIWYG no es solamente una comodidad visual. Cuando una pieza se publica en redes, que “lo que ves sea lo que obtenés” también forma parte del contrato con la persona usuaria.
+
+### X
+
+La historia se podía compartir, pero el PNG final no coincidía con la vista previa.
+
+Reemplazamos la captura del DOM por un Canvas fijo de 1080 × 1920. Vista previa, descarga y compartir ahora usan el mismo archivo.
+
+WYSIWYG también es confianza.
+
+---
+
 ## Rutina editorial sugerida
 
 Al final de una jornada con cambios relevantes, responder:
