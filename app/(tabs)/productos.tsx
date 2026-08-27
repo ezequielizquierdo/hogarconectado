@@ -12,7 +12,9 @@ import {
   SafeAreaView,
   ActivityIndicator,
   Image as RNImage,
+  TextInput,
 } from "react-native";
+import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
 import * as DocumentPicker from "expo-document-picker";
@@ -1374,10 +1376,11 @@ export default function ProductosScreen() {
                 {canEdit && <TouchableOpacity
                   onPress={() => openModal()}
                   style={styles.addButtonMobile}
+                  accessibilityRole="button"
+                  accessibilityLabel="Agregar producto"
                 >
-                  <ThemedText style={styles.addButtonText}>
-                    + Agregar
-                  </ThemedText>
+                  <MaterialIcons name="add" size={19} color={COLORS.text} />
+                  <ThemedText style={styles.addButtonText}>Agregar</ThemedText>
                 </TouchableOpacity>}
 
                 <TouchableOpacity
@@ -1386,7 +1389,12 @@ export default function ProductosScreen() {
                   style={styles.filterButtonMobile}
                   onPress={() => setFiltersModalVisible(true)}
                 >
-                  <ThemedText style={styles.addButtonText}>Filtrar</ThemedText>
+                  <MaterialIcons
+                    name="tune"
+                    size={18}
+                    color={COLORS.primaryDark}
+                  />
+                  <ThemedText style={styles.filterButtonText}>Filtrar</ThemedText>
                   {(filtroCategoria || filtroMarca || filtroStock) && (
                     <View style={styles.activeFiltersBadge}>
                       <ThemedText style={styles.badgeText}>
@@ -1403,13 +1411,34 @@ export default function ProductosScreen() {
 
               {/* Input de búsqueda */}
               <View style={styles.searchContainer}>
-                <AnimatedInput
-                  label=""
+                <MaterialIcons
+                  name="search"
+                  size={20}
+                  color={COLORS.textSecondary}
+                />
+                <TextInput
                   placeholder="Buscar productos..."
+                  placeholderTextColor={COLORS.textLight}
                   value={searchText}
                   onChangeText={setSearchText}
                   style={styles.searchInput}
+                  accessibilityLabel="Buscar productos"
                 />
+                {searchText.length > 0 && (
+                  <TouchableOpacity
+                    onPress={() => setSearchText("")}
+                    accessibilityRole="button"
+                    accessibilityLabel="Limpiar búsqueda"
+                    hitSlop={10}
+                    style={styles.clearSearchButton}
+                  >
+                    <MaterialIcons
+                      name="close"
+                      size={18}
+                      color={COLORS.textSecondary}
+                    />
+                  </TouchableOpacity>
+                )}
               </View>
 
               {/* Botón limpiar filtros */}
@@ -3392,7 +3421,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: SPACING.sm,
-    marginBottom: SPACING.sm, // Reducido de SPACING.md a SPACING.sm para equilibrar con el espacio hacia la grilla
+    marginBottom: SPACING.md,
   },
   filtersButtonMobile: {
     flex: 1,
@@ -3409,10 +3438,12 @@ const styles = StyleSheet.create({
   },
   filterButtonMobile: {
     flex: 1,
-    minHeight: 48,
-    backgroundColor: COLORS.primary,
+    minHeight: 42,
+    backgroundColor: COLORS.surface,
+    borderWidth: 1,
+    borderColor: COLORS.primary,
     paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm,
+    paddingVertical: SPACING.xs,
     borderRadius: RADIUS.md,
     flexDirection: "row",
     alignItems: "center",
@@ -3420,7 +3451,16 @@ const styles = StyleSheet.create({
     gap: SPACING.xs,
   },
   searchContainer: {
-    marginBottom: SPACING.sm, // Mantener solo el margen inferior
+    minHeight: 44,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: SPACING.sm,
+    backgroundColor: COLORS.cardBackground,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: RADIUS.md,
+    paddingHorizontal: SPACING.md,
+    marginBottom: SPACING.lg,
   },
   mobileResultsSummary: {
     flexDirection: "row",
@@ -3440,15 +3480,20 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   searchInput: {
-    backgroundColor: COLORS.surface,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: RADIUS.md,
-    paddingHorizontal: SPACING.md,
+    flex: 1,
+    minWidth: 0,
     paddingVertical: SPACING.sm,
-    fontSize: 16,
+    fontSize: 15,
     color: COLORS.text,
-    width: "100%",
+    outlineWidth: 0,
+  },
+  clearSearchButton: {
+    width: 30,
+    height: 30,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: RADIUS.full,
+    backgroundColor: COLORS.surface,
   },
   clearFiltersButtonMobile: {
     alignSelf: "flex-start",
@@ -3476,14 +3521,22 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.primary,
     paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm,
+    paddingVertical: SPACING.xs,
     borderRadius: RADIUS.md,
-    minHeight: 48,
+    minHeight: 42,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: SPACING.xs,
     justifyContent: "center",
   },
   addButtonText: {
     color: COLORS.text,
     fontWeight: "600",
+    fontSize: 14,
+  },
+  filterButtonText: {
+    color: COLORS.primaryDark,
+    fontWeight: "700",
     fontSize: 14,
   },
   // Estilos para layout móvil con imagen de fondo
