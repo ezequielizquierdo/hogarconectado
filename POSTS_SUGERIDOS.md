@@ -207,6 +207,29 @@ WYSIWYG también es confianza.
 
 ---
 
+## 9. Automatizar después de definir qué significa estar bien
+
+**Tema:** integración continua y controles de calidad
+**Estado:** Borrador
+
+### LinkedIn
+
+Agregar CI no fue el primer paso del proyecto. Primero definimos qué controles realmente protegían la aplicación: pruebas de reglas sensibles, lint, TypeScript y una exportación web completa.
+
+Recién entonces los convertimos en un workflow automático para cada cambio relevante. La automatización no toma decisiones de producto ni despliega por su cuenta; verifica de manera repetible que el código conserve las condiciones que ya acordamos.
+
+Aprendizaje: automatizar una lista de comandos aporta velocidad. Automatizar una definición clara de calidad aporta confianza.
+
+### X
+
+CI no empieza creando un archivo YAML.
+
+Primero definimos qué significa que el frontend esté sano: tests, lint, tipos y build web. Después automatizamos esos controles en cada cambio.
+
+Automatizar calidad requiere definirla antes.
+
+---
+
 ## Rutina editorial sugerida
 
 Al final de una jornada con cambios relevantes, responder:

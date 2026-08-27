@@ -439,11 +439,13 @@ Una tarea de interfaz se considera terminada cuando:
 ### AUTO-001 — Integración continua del frontend
 
 **Prioridad:** Alta  
-**Estado:** Propuesta
+**Estado:** Implementada
 
-- Ejecutar lint, TypeScript y exportación web en cada pull request y push relevante.
-- Bloquear una integración si falla una validación obligatoria.
-- No desplegar desde la automatización; Render conserva el despliegue por commit en `main`.
+- Ejecuta tests, lint, TypeScript y exportación web en cada pull request y push a `main`.
+- Usa instalación reproducible mediante `npm ci` y Node 20.19.4.
+- Cancela ejecuciones anteriores de la misma rama cuando son reemplazadas por un cambio más reciente.
+- Opera con permisos de solo lectura y variables públicas ficticias para validar la compilación.
+- No despliega: Render conserva el despliegue automático por commit en `main`.
 
 ### AUTO-002 — Integración continua del backend
 

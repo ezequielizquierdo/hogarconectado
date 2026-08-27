@@ -26,6 +26,8 @@ npx expo export --platform web
 
 Antes de entregar cambios de código, ejecutar como mínimo `npm test` y `npm run lint`. Para cambios que puedan afectar producción web, ejecutar también `npx expo export --platform web`.
 
+GitHub Actions repite tests, lint, TypeScript y exportación web en pull requests y pushes a `main`. El workflow valida pero no despliega; Render conserva esa responsabilidad.
+
 ## Configuración
 
 Variables públicas utilizadas por el frontend:
