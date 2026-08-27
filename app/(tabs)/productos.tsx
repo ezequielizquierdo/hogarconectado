@@ -1272,7 +1272,7 @@ export default function ProductosScreen() {
   const isWideScreen = width > 768;
   const getCardWidth = () => {
     if (!isWideScreen) return "100%";
-    return "calc(50% - 8px)";
+    return "calc(50% - 12px)";
   };
 
   // Preparar datos para el sidebar
@@ -1362,6 +1362,8 @@ export default function ProductosScreen() {
 
           <ScrollView
             style={styles.mobileContent}
+            contentContainerStyle={styles.mobileContentContainer}
+            showsHorizontalScrollIndicator={false}
             refreshControl={
               <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
             }
@@ -3373,10 +3375,17 @@ const styles = StyleSheet.create({
   mobileLayout: {
     flex: 1,
     backgroundColor: COLORS.background,
+    overflow: "hidden",
   },
   mobileContent: {
     flex: 1,
+    backgroundColor: COLORS.background,
+  },
+  mobileContentContainer: {
+    width: "100%",
+    maxWidth: "100%",
     padding: SPACING.md,
+    paddingBottom: 88,
   },
   // Estilos para barra de acciones móvil
   mobileActionsBar: {
@@ -3442,7 +3451,8 @@ const styles = StyleSheet.create({
     width: "100%",
   },
   clearFiltersButtonMobile: {
-    backgroundColor: COLORS.error,
+    alignSelf: "flex-start",
+    backgroundColor: COLORS.accent,
     paddingHorizontal: SPACING.sm,
     paddingVertical: SPACING.sm,
     borderRadius: RADIUS.md,
@@ -3463,23 +3473,29 @@ const styles = StyleSheet.create({
     height: 40,
   },
   addButtonMobile: {
+    flex: 1,
     backgroundColor: COLORS.primary,
     paddingHorizontal: SPACING.md,
     paddingVertical: SPACING.sm,
     borderRadius: RADIUS.md,
+    minHeight: 48,
+    justifyContent: "center",
   },
   addButtonText: {
-    color: "#FFFFFF",
+    color: COLORS.text,
     fontWeight: "600",
     fontSize: 14,
   },
   // Estilos para layout móvil con imagen de fondo
   mobileContentWithBackground: {
-    backgroundColor: COLORS.cardBackground,
+    width: "100%",
+    maxWidth: "100%",
+    backgroundColor: COLORS.surface,
     borderRadius: RADIUS.lg,
     padding: SPACING.md,
     marginBottom: SPACING.lg,
-    ...SHADOWS.sm,
+    borderWidth: 1,
+    borderColor: COLORS.border,
   },
   mobileHeaderActions: {
     alignItems: "flex-end",
@@ -3740,7 +3756,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   activeFiltersBadge: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: COLORS.surface,
     borderRadius: 12,
     width: 20,
     height: 20,
@@ -3775,14 +3791,16 @@ const styles = StyleSheet.create({
   filterChip: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: COLORS.primary + "15",
+    backgroundColor: COLORS.primary + "25",
+    borderWidth: 1,
+    borderColor: COLORS.primary,
     borderRadius: RADIUS.sm,
     paddingHorizontal: SPACING.sm,
     paddingVertical: SPACING.xs,
     gap: SPACING.xs,
   },
   chipText: {
-    color: COLORS.primary,
+    color: COLORS.text,
     fontSize: 12,
     fontWeight: "500",
   },
@@ -3795,7 +3813,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   chipRemoveText: {
-    color: COLORS.primary,
+    color: COLORS.text,
     fontSize: 12,
     fontWeight: "700",
   },
@@ -3969,8 +3987,7 @@ const styles = StyleSheet.create({
     flexDirection: "row" as const,
     flexWrap: "wrap" as const,
     justifyContent: "flex-start" as const,
-    paddingHorizontal: SPACING.lg,
-    gap: SPACING.md, // Espacio uniforme entre cards
+    gap: SPACING.lg,
   },
   mobileList: {
     flexDirection: "column",
@@ -4296,7 +4313,7 @@ const styles = StyleSheet.create({
   },
   mainContent: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: COLORS.cardBackground,
   },
   mainScrollView: {
     flex: 1,
@@ -4347,8 +4364,9 @@ const styles = StyleSheet.create({
     maxWidth: 400,
   },
   webProductsContainer: {
-    padding: SPACING.lg,
+    padding: SPACING.xl,
     flex: 1,
+    backgroundColor: COLORS.cardBackground,
   },
 
   // Estilos para header estilo ParallaxScrollView en web
@@ -4440,7 +4458,7 @@ const styles = StyleSheet.create({
   webContentWithSidebar: {
     flex: 1,
     flexDirection: "row" as const,
-    backgroundColor: COLORS.background,
+    backgroundColor: COLORS.cardBackground,
   },
   // Estilos para modal web tipo "paper"
   webModalOverlay: {

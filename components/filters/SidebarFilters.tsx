@@ -7,6 +7,7 @@ import {
   StyleSheet,
   TextInput,
 } from "react-native";
+import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
 import AnimatedButton from "@/components/ui/AnimatedButton";
@@ -62,6 +63,7 @@ const SidebarFilters: React.FC<SidebarFiltersProps> = ({
 
   const renderFilterSection = (
     title: string,
+    icon: React.ComponentProps<typeof MaterialIcons>["name"],
     options: FilterOption[],
     selectedValue: string,
     onSelect: (value: string) => void,
@@ -77,8 +79,17 @@ const SidebarFilters: React.FC<SidebarFiltersProps> = ({
         accessibilityLabel={`${isCollapsed ? "Mostrar" : "Ocultar"} ${title}`}
         accessibilityState={{ expanded: !isCollapsed }}
       >
-        <Text style={styles.sectionTitle}>{title}</Text>
-        <Text style={styles.collapseIcon}>{isCollapsed ? "▶" : "▼"}</Text>
+        <View style={styles.sectionTitleRow}>
+          <View style={styles.sectionIcon}>
+            <MaterialIcons name={icon} size={17} color={COLORS.primaryDark} />
+          </View>
+          <Text style={styles.sectionTitle}>{title}</Text>
+        </View>
+        <MaterialIcons
+          name={isCollapsed ? "expand-more" : "expand-less"}
+          size={20}
+          color={COLORS.textSecondary}
+        />
       </TouchableOpacity>
 
       {!isCollapsed && (
@@ -153,7 +164,7 @@ const SidebarFilters: React.FC<SidebarFiltersProps> = ({
         {/* Botón de agregar producto prominente */}
         {onAddProduct && <View style={styles.addProductSection}>
           <AnimatedButton
-            title="➕ Agregar Producto"
+            title="Agregar producto"
             onPress={onAddProduct}
             variant="primary"
             style={styles.addProductButton}
@@ -162,9 +173,10 @@ const SidebarFilters: React.FC<SidebarFiltersProps> = ({
 
         {/* Sección de búsqueda */}
         <View style={styles.searchSection}>
-          <ThemedText style={styles.searchLabel}>
-            🔍 Buscar Productos
-          </ThemedText>
+          <View style={styles.searchLabelRow}>
+            <MaterialIcons name="search" size={18} color={COLORS.primaryDark} />
+            <ThemedText style={styles.searchLabel}>Buscar productos</ThemedText>
+          </View>
           <TextInput
             style={styles.searchInput}
             placeholder="Buscar por marca, modelo, categoría..."
@@ -207,7 +219,8 @@ const SidebarFilters: React.FC<SidebarFiltersProps> = ({
 
         {/* Categorías */}
         {renderFilterSection(
-          "🏷️ Categorías",
+          "Categorías",
+          "category",
           categorias,
           selectedCategoria,
           onCategoriaChange,
@@ -220,7 +233,8 @@ const SidebarFilters: React.FC<SidebarFiltersProps> = ({
 
         {/* Marcas */}
         {renderFilterSection(
-          "🏢 Marcas",
+          "Marcas",
+          "business",
           marcas,
           selectedMarca,
           onMarcaChange,
@@ -233,7 +247,8 @@ const SidebarFilters: React.FC<SidebarFiltersProps> = ({
 
         {/* Stock */}
         {renderFilterSection(
-          "📦 Disponibilidad",
+          "Disponibilidad",
+          "inventory-2",
           stockOptions,
           selectedStock,
           onStockChange,
@@ -267,11 +282,11 @@ const styles = StyleSheet.create({
   clearButton: {
     paddingHorizontal: SPACING.sm,
     paddingVertical: SPACING.xs,
-    backgroundColor: COLORS.primary,
+    backgroundColor: COLORS.accent,
     borderRadius: RADIUS.sm,
   },
   clearButtonText: {
-    color: COLORS.surface,
+    color: COLORS.text,
     fontSize: 12,
     fontWeight: "500",
   },
@@ -297,24 +312,34 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   filterSection: {
-    marginBottom: SPACING.md,
+    marginBottom: SPACING.sm,
   },
   sectionHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
+    minHeight: 44,
     paddingVertical: SPACING.xs,
+  },
+  sectionTitleRow: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: SPACING.sm,
+  },
+  sectionIcon: {
+    width: 30,
+    height: 30,
+    borderRadius: RADIUS.sm,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: COLORS.primary + "20",
   },
   sectionTitle: {
     fontSize: 16,
     fontWeight: "600",
     color: COLORS.text,
     flex: 1,
-  },
-  collapseIcon: {
-    fontSize: 12,
-    color: COLORS.textSecondary,
-    marginLeft: SPACING.xs,
   },
   sectionContent: {
     marginTop: SPACING.xs,
@@ -339,8 +364,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   filterOptionTextSelected: {
-    color: COLORS.surface,
-    fontWeight: "500",
+    color: COLORS.text,
+    fontWeight: "700",
   },
   filterCount: {
     fontSize: 12,
@@ -386,11 +411,16 @@ const styles = StyleSheet.create({
     paddingVertical: SPACING.md,
     paddingHorizontal: SPACING.xs,
   },
+  searchLabelRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: SPACING.sm,
+    marginBottom: SPACING.sm,
+  },
   searchLabel: {
     fontSize: 14,
     fontWeight: "600",
     color: COLORS.text,
-    marginBottom: SPACING.sm,
   },
   searchInput: {
     backgroundColor: COLORS.surface,

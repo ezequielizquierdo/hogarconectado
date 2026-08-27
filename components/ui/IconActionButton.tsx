@@ -9,7 +9,8 @@ import {
   type ViewStyle,
 } from "react-native";
 
-import { COLORS, RADIUS } from "@/constants/theme";
+import { ThemedText } from "@/components/ThemedText";
+import { COLORS, RADIUS, SPACING } from "@/constants/theme";
 
 type MaterialIconName = ComponentProps<typeof MaterialIcons>["name"];
 
@@ -20,6 +21,7 @@ interface IconActionButtonProps {
   color?: string;
   disabled?: boolean;
   style?: StyleProp<ViewStyle>;
+  visibleLabel?: string;
 }
 
 /** Acción iconográfica con semántica y área táctil consistentes. */
@@ -30,6 +32,7 @@ export function IconActionButton({
   color = COLORS.text,
   disabled = false,
   style,
+  visibleLabel,
 }: IconActionButtonProps) {
   const [isFocused, setIsFocused] = useState(false);
   return (
@@ -46,6 +49,11 @@ export function IconActionButton({
       style={[styles.button, isFocused && styles.focused, style, disabled && styles.disabled]}
     >
       <MaterialIcons accessibilityElementsHidden name={icon} size={22} color={color} />
+      {visibleLabel ? (
+        <ThemedText style={[styles.label, { color }]} numberOfLines={1}>
+          {visibleLabel}
+        </ThemedText>
+      ) : null}
     </TouchableOpacity>
   );
 }
@@ -57,6 +65,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderRadius: RADIUS.md,
+    flexDirection: "row",
+    gap: SPACING.xs,
   },
   disabled: {
     opacity: 0.45,
@@ -65,5 +75,10 @@ const styles = StyleSheet.create({
     outlineColor: COLORS.primaryDark,
     outlineStyle: "solid",
     outlineWidth: 2,
+  },
+  label: {
+    fontSize: 12,
+    lineHeight: 16,
+    fontWeight: "700",
   },
 });

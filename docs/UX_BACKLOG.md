@@ -98,10 +98,14 @@ Una tarea de interfaz se considera terminada cuando:
 **Implementación preparada:**
 
 - Grilla de dos columnas en escritorio con composición horizontal e imagen protagonista.
+- En viewports angostos, composición vertical: imagen protagonista, información debajo y acciones iconográficas con nombre accesible.
 - Jerarquía estable de stock, categoría, marca, modelo, descripción y precio contado.
 - Precio contado anclado en la zona inferior de la información para facilitar comparaciones.
 - Estado explícito “Sin imagen” con acceso orientativo para administradores.
 - Card completa accesible como acción para abrir el detalle; acciones administrativas con nombres específicos.
+- Se reservó espacio para la navegación inferior y se limitó el ancho del contenido para evitar recortes y desplazamiento horizontal.
+
+**Validación visual parcial:** en viewport móvil de aproximadamente 390 × 844 se confirmó la composición vertical, la imagen protagonista y la ausencia de compresión horizontal. Se ajustaron luego las etiquetas de navegación truncadas y el estado contradictorio “Disponible · 0”. Resta comprobar una card sin imagen y textos excepcionalmente largos.
 
 ### UX-003 — Búsqueda y filtros eficientes
 
@@ -353,6 +357,8 @@ Una tarea de interfaz se considera terminada cuando:
 **Estado:** En validación
 **Objetivo:** reducir inconsistencias y estilos aislados.
 
+**Decisión aprobada:** la identidad visual aplicada al login, la navegación y los encabezados —“La Vidriera Operativa”, con Lavanda Operativa, Menta Disponible, Durazno Cercano y capas suaves— se adopta como estándar para el resto del proyecto. La extensión se realizará gradualmente para preservar los flujos que ya funcionan.
+
 **Criterios de aceptación:**
 
 - Los nuevos componentes no incorporan colores hexadecimales si existe un token equivalente.
@@ -360,6 +366,8 @@ Una tarea de interfaz se considera terminada cuando:
 - Se decide y documenta el destino del teal heredado.
 - Se completa el modo oscuro o se retira su exposición hasta implementarlo correctamente.
 - Espaciado, radios, tipografía y sombras utilizan vocabulario compartido.
+- Todas las pantallas activas convergen hacia la identidad aprobada sin conservar estilos heredados o provisionales visibles.
+- Cada migración de superficie se valida en móvil y escritorio antes de considerarse terminada.
 
 **Implementación preparada:**
 
@@ -369,7 +377,10 @@ Una tarea de interfaz se considera terminada cuando:
 - Enlaces, navegación, sombras, estados destructivos e Instagram consumen tokens semánticos centralizados.
 - El login reemplaza su presentación provisional por logo real, capas ambientales, jerarquía tipográfica y estados de carga y error alineados al sistema.
 - Los encabezados de escritorio y móvil comparten overlay, contraste, tipografía y tratamiento del logotipo.
-- La adopción continuará por superficie para retirar valores aislados sin alterar de forma masiva pantallas estables.
+- La identidad resultante fue aprobada visualmente y se convierte en referencia para las demás superficies del producto.
+- La adopción continuará por superficie para retirar valores aislados sin alterar de forma masiva pantallas estables, comenzando por catálogo, cotizaciones, calculadora, stock, usuarios y perfil.
+- El catálogo adopta capas tonales, acento lavanda, filtros con iconografía consistente y acciones administrativas con etiquetas visibles.
+- Los estados de stock, filtros activos y acciones conservan color funcional, texto explícito y contraste independiente de los emojis heredados.
 
 ### UX-014 — Validación visual repetible
 

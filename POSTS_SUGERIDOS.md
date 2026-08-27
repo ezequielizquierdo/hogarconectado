@@ -8,6 +8,9 @@ Los textos deben:
 
 - Ser concretos y atractivos desde la primera línea.
 - Explicar una experiencia real, no vender resultados inventados.
+- Incluir al menos una fuente primaria o publicación reconocida que permita ampliar el tema.
+- Explicar brevemente por qué esa referencia es relevante; no agregar enlaces sin contexto.
+- Verificar que el enlace siga vigente antes de publicar.
 - Evitar credenciales, datos privados y detalles sensibles de infraestructura.
 - Adaptarse antes de publicar al tono y límite de cada red.
 
@@ -28,6 +31,8 @@ La mejora surgió de pensar el contexto de uso: barra inferior y pocas opciones 
 
 La herramienta ayudó, pero la decisión siguió siendo de producto. Esa combinación —criterios repetibles más revisión humana— me está resultando mucho más útil que “hacerlo más lindo”.
 
+Impeccable es un sistema orientado a crear, revisar y refinar interfaces con asistentes de código. Su documentación incluye comandos específicos para auditar, adaptar y pulir una UI: [documentación oficial de Impeccable](https://impeccable.style/docs/).
+
 ### X
 
 Una UI puede funcionar y aun así hacerte perder tiempo.
@@ -35,6 +40,8 @@ Una UI puede funcionar y aun así hacerte perder tiempo.
 Usé Impeccable para auditar un catálogo y el problema principal no era visual: la navegación móvil también se mostraba en escritorio.
 
 La lección: adaptar no es agrandar. Es repensar la experiencia según el contexto.
+
+**Referencia:** [Documentación oficial de Impeccable](https://impeccable.style/docs/).
 
 ---
 
@@ -53,6 +60,8 @@ La corrección fue reemplazarla por una barra superior horizontal y conservar la
 
 Aprendizaje: las validaciones automáticas protegen el código; la validación visual protege la experiencia. Necesitamos ambas.
 
+La guía de [responsive design de MDN](https://developer.mozilla.org/en-US/docs/Learn_web_development/Core/CSS_layout/Responsive_Design) ayuda a entender esta idea: adaptar una interfaz implica responder a distintos tamaños, dispositivos y formas de interacción, no escalar una única composición.
+
 ### X
 
 Una UI puede pasar lint, TypeScript y el build… y todavía verse mal.
@@ -60,6 +69,8 @@ Una UI puede pasar lint, TypeScript y el build… y todavía verse mal.
 Una navegación lateral funcionaba, pero rompía la composición del catálogo. La cambié por una barra superior en desktop y mantuve la inferior en mobile.
 
 El código se valida. La experiencia también.
+
+**Referencia:** [Responsive web design — MDN](https://developer.mozilla.org/en-US/docs/Learn_web_development/Core/CSS_layout/Responsive_Design).
 
 ---
 
@@ -78,6 +89,8 @@ El beneficio no es solamente ahorrar tiempo. También reduce decisiones inconsis
 
 Mi recomendación: empezar con una skill pequeña, ejecutarla varias veces y mejorarla con evidencia real antes de crear un gran agente generalista.
 
+Anthropic define las Agent Skills como capacidades modulares que reúnen instrucciones, metadatos y recursos opcionales para reutilizar conocimiento especializado cuando una tarea lo necesita: [introducción oficial a Agent Skills](https://platform.claude.com/docs/en/agents-and-tools/agent-skills/overview).
+
 ### X
 
 Una buena skill no intenta saber todo.
@@ -85,6 +98,8 @@ Una buena skill no intenta saber todo.
 En mi proyecto personal funcionan mejor las skills pequeñas y repetibles: revisar UI, validar una entrega o proteger reglas de negocio.
 
 Menos “agente que hace todo”; más procedimientos claros, verificables y mejorables.
+
+**Referencia:** [Agent Skills — documentación de Anthropic](https://platform.claude.com/docs/en/agents-and-tools/agent-skills/overview).
 
 ---
 
@@ -103,6 +118,8 @@ Por eso separamos identidad, estado de acceso y rol: una cuenta puede estar pend
 
 La interfaz oculta las acciones que no corresponden, pero la autorización real se aplica nuevamente en el backend. Si la seguridad depende solo de esconder un botón, no es seguridad.
 
+La [guía de autorización de OWASP](https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html) profundiza esta separación y recomienda comprobar permisos en cada solicitud, además de aplicar el principio de mínimo privilegio.
+
 ### X
 
 “Ingresar con Google” confirma identidad, no permisos.
@@ -110,6 +127,8 @@ La interfaz oculta las acciones que no corresponden, pero la autorización real 
 En una app de productos y precios también necesitás estados de acceso, roles y autorización en el backend.
 
 Ocultar un botón mejora la UX. Validar la operación en el servidor aporta seguridad.
+
+**Referencia:** [Authorization Cheat Sheet — OWASP](https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html).
 
 ---
 
@@ -128,6 +147,8 @@ También bloqueamos envíos repetidos mientras se guarda. Son cambios pequeños,
 
 Aprendizaje: prevenir errores también es diseñar una experiencia más amable.
 
+El tutorial de formularios de W3C muestra distintas formas de comunicar errores, confirmaciones y progreso de manera accesible: [User Notifications — WAI](https://www.w3.org/WAI/tutorials/forms/notifications/).
+
 ### X
 
 Un formulario seguro no solo valida datos:
@@ -137,6 +158,8 @@ Un formulario seguro no solo valida datos:
 - advierte antes de descartar cambios.
 
 Prevenir errores también es UX.
+
+**Referencia:** [Notificaciones accesibles en formularios — W3C WAI](https://www.w3.org/WAI/tutorials/forms/notifications/).
 
 ---
 
@@ -153,11 +176,15 @@ La solución fue tratar cada cotización como una instantánea: producto, cantid
 
 Aprendizaje: en operaciones comerciales no alcanza con guardar un total. También hay que conservar el contexto que lo produjo.
 
+Como lectura conceptual, Martin Fowler explica por qué conservar la historia permite reconstruir estados pasados en [Event Sourcing](https://martinfowler.com/eaaDev/EventSourcing.html). Una instantánea de cotización no implementa ese patrón, pero comparte la necesidad de preservar el contexto histórico en vez de depender solo del estado actual.
+
 ### X
 
 Una cotización no debería guardar solo el total.
 
 Producto, cantidad, porcentaje, modalidad y precios forman una instantánea comercial. Así, un cambio futuro en el catálogo no reescribe silenciosamente lo que ofreciste hoy.
+
+**Referencia conceptual:** [Event Sourcing — Martin Fowler](https://martinfowler.com/eaaDev/EventSourcing.html). Una instantánea comercial es una solución más acotada, no una implementación completa del patrón.
 
 ---
 
@@ -174,6 +201,8 @@ El detalle apareció en el último paso: una web no puede precargar libremente u
 
 Aprendizaje: una buena experiencia multiplataforma no fuerza el mismo comportamiento en todos los dispositivos. Diseña una salida confiable para cada capacidad disponible.
 
+La [documentación de Web Share API en MDN](https://developer.mozilla.org/en-US/docs/Web/API/Web_Share_API) detalla cómo una web delega al mecanismo nativo del sistema la elección del destino para compartir texto, enlaces o archivos.
+
 ### X
 
 “Compartir en Instagram” no significa lo mismo en una app nativa, una web móvil y un escritorio.
@@ -181,6 +210,8 @@ Aprendizaje: una buena experiencia multiplataforma no fuerza el mismo comportami
 La solución: archivo PNG + hoja nativa cuando está disponible + descarga como alternativa.
 
 Diseñar para capacidades reales evita botones que prometen más de lo que la plataforma permite.
+
+**Referencia:** [Web Share API — MDN](https://developer.mozilla.org/en-US/docs/Web/API/Web_Share_API).
 
 ---
 
@@ -197,6 +228,8 @@ El problema era depender de una captura del DOM, que cada navegador podía inter
 
 Aprendizaje: WYSIWYG no es solamente una comodidad visual. Cuando una pieza se publica en redes, que “lo que ves sea lo que obtenés” también forma parte del contrato con la persona usuaria.
 
+Para profundizar en el mecanismo utilizado, MDN documenta [Canvas API](https://developer.mozilla.org/en-US/docs/Web/API/Canvas_API), que permite dibujar gráficos mediante JavaScript y controlar explícitamente la salida generada.
+
 ### X
 
 La historia se podía compartir, pero el PNG final no coincidía con la vista previa.
@@ -204,6 +237,8 @@ La historia se podía compartir, pero el PNG final no coincidía con la vista pr
 Reemplazamos la captura del DOM por un Canvas fijo de 1080 × 1920. Vista previa, descarga y compartir ahora usan el mismo archivo.
 
 WYSIWYG también es confianza.
+
+**Referencia:** [Canvas API — MDN](https://developer.mozilla.org/en-US/docs/Web/API/Canvas_API).
 
 ---
 
@@ -220,6 +255,8 @@ Recién entonces los convertimos en un workflow automático para cada cambio rel
 
 Aprendizaje: automatizar una lista de comandos aporta velocidad. Automatizar una definición clara de calidad aporta confianza.
 
+La guía de [integración continua con GitHub Actions](https://docs.github.com/en/actions/get-started/continuous-integration) explica cómo ejecutar compilaciones y pruebas automáticamente frente a cambios en el repositorio.
+
 ### X
 
 CI no empieza creando un archivo YAML.
@@ -227,6 +264,8 @@ CI no empieza creando un archivo YAML.
 Primero definimos qué significa que el frontend esté sano: tests, lint, tipos y build web. Después automatizamos esos controles en cada cambio.
 
 Automatizar calidad requiere definirla antes.
+
+**Referencia:** [Continuous integration — GitHub Docs](https://docs.github.com/en/actions/get-started/continuous-integration).
 
 ---
 
@@ -243,11 +282,69 @@ Antes de sumar una nueva librería gráfica, centralizamos tipografía, enlaces,
 
 Aprendizaje: un sistema visual no es solo una guía para diseñadores. También es infraestructura que reduce deuda y protege la coherencia del producto.
 
+La [Design Tokens Community Group](https://www.designtokens.org/) trabaja en un formato compartido para intercambiar decisiones de diseño —como color, tipografía y espaciado— entre herramientas y plataformas.
+
 ### X
 
 Antes de sumar una librería UI, unificamos los tokens que ya tenía el proyecto: tipografía, enlaces, estados, sombras y color.
 
 Un sistema visual también es infraestructura: reduce decisiones repetidas y evita que cada pantalla termine hablando un idioma distinto.
+
+**Referencia:** [Design Tokens Community Group](https://www.designtokens.org/).
+
+---
+
+## 11. Una interfaz más limpia no siempre tiene menos texto
+
+**Tema:** iconografía, claridad operativa y accesibilidad
+**Estado:** Borrador
+
+### LinkedIn
+
+Al consolidar la identidad visual de un catálogo, una de las mejoras más útiles fue también una de las más simples: acompañar con texto las acciones que antes mostraban solamente un icono.
+
+“Historia”, “Editar” y “Eliminar” ocupan más espacio que tres símbolos aislados, pero reducen la interpretación y hacen que una tarea repetitiva sea más rápida y segura. También reemplazamos emojis decorativos por una familia de iconos consistente y reservamos el color para comunicar selección, disponibilidad o riesgo.
+
+La limpieza visual no consiste en retirar toda explicación. Consiste en eliminar ruido sin quitar significado.
+
+Material Design recomienda usar una etiqueta textual para especificar qué sucede al seleccionar un icono de acción: [guía de accesibilidad de Material Design](https://m1.material.io/usability/accessibility.html).
+
+### X
+
+Una interfaz más limpia no siempre tiene menos texto.
+
+En un catálogo reemplazamos acciones con iconos aislados por icono + “Historia”, “Editar” y “Eliminar”. Ocupan un poco más, pero reducen dudas y errores.
+
+Quitar ruido no debería quitar significado.
+
+**Referencia:** [Accessibility — Material Design](https://m1.material.io/usability/accessibility.html).
+
+---
+
+## 12. Responsive no significa encoger la interfaz
+
+**Tema:** ecommerce mobile, componentes flexibles y validación visual
+**Estado:** Borrador
+
+### LinkedIn
+
+En la versión mobile de un catálogo de ecommerce detectamos un problema bastante común: la interfaz entraba en la pantalla, pero no se adaptaba realmente a ella. La imagen competía con los datos, las acciones se truncaban y la navegación inferior cubría parte del contenido.
+
+La solución no fue reducir tipografías. Cambiamos la composición de la card según el espacio disponible: imagen protagonista arriba, información comercial debajo, acciones más compactas y espacio reservado para la navegación del teléfono.
+
+Aprendizaje: responsive no es hacer más pequeña una pantalla de escritorio. Es decidir nuevamente qué necesita protagonismo en cada contexto.
+
+El curso [Learn Responsive Design de web.dev](https://web.dev/learn/design/) desarrolla esta idea mediante layouts flexibles, imágenes adaptables, interacción táctil y patrones de interfaz que responden a distintos tamaños.
+
+### X
+
+Responsive no es encoger una pantalla de escritorio.
+
+En un catálogo mobile reorganizamos la card completa: imagen protagonista, datos debajo, acciones compactas y espacio real para la navegación inferior.
+
+El tamaño cambia, pero también debe cambiar la composición.
+
+**Referencia:** [Learn Responsive Design — web.dev](https://web.dev/learn/design/).
 
 ---
 

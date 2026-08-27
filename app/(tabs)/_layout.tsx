@@ -48,6 +48,15 @@ export default function TabLayout() {
             // Use a transparent background on iOS to show the blur effect
             position: "absolute",
           },
+          web: isDesktop
+            ? undefined
+            : {
+                height: 68,
+                paddingTop: SPACING.xs,
+                paddingBottom: SPACING.xs,
+                backgroundColor: COLORS.surface,
+                borderTopColor: COLORS.border,
+              },
           default: {
             backgroundColor: COLORS.surface,
             borderTopColor: COLORS.border,
@@ -62,6 +71,7 @@ export default function TabLayout() {
         name="index"
         options={{
           title: "Cotizaciones",
+          tabBarLabel: isDesktop ? "Cotizaciones" : "Cotizar",
           tabBarIcon: ({ color }) => (
             <IconSymbol size={28} name="house.fill" color={color} />
           ),
@@ -71,6 +81,7 @@ export default function TabLayout() {
         name="explore_new"
         options={{
           title: "Consulta Stock",
+          tabBarLabel: isDesktop ? "Consulta Stock" : "Stock",
           tabBarIcon: ({ color }) => (
             <IconSymbol size={28} name="doc.text.fill" color={color} />
           ),
@@ -80,6 +91,7 @@ export default function TabLayout() {
         name="productos"
         options={{
           title: "Productos",
+          tabBarLabel: "Productos",
           tabBarIcon: ({ color }) => (
             <IconSymbol size={28} name="cube.box.fill" color={color} />
           ),
@@ -99,6 +111,7 @@ export default function TabLayout() {
         name="calculadora"
         options={{
           title: "Calculadora",
+          tabBarLabel: isDesktop ? "Calculadora" : "Calcular",
           tabBarIcon: ({ color }) => (
             <IconSymbol size={28} name="percent" color={color} />
           ),
@@ -118,6 +131,7 @@ export default function TabLayout() {
         name="perfil"
         options={{
           title: "Perfil",
+          tabBarLabel: "Perfil",
           tabBarIcon: ({ color }) => (
             <IconSymbol size={28} name="person.crop.circle.fill" color={color} />
           ),

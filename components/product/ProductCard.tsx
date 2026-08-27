@@ -40,6 +40,8 @@ export default function ProductCard({
 }: ProductCardProps) {
   const { width } = useWindowDimensions();
   const isCompact = Platform.OS !== "web" || width <= 768;
+  const isNarrow = width <= 480;
+  const hasStock = producto.stock.disponible && producto.stock.cantidad > 0;
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat("es-AR", {
@@ -52,6 +54,7 @@ export default function ProductCard({
   return (
     <View style={styles.container}>
       <ThemedView style={[styles.card, !isCompact && styles.cardDesktop]}>
+        <View style={styles.cardAccent} />
         {/* Zona de información del producto - clickeable para ver detalle */}
         <TouchableOpacity
           onPress={onPress}
@@ -67,6 +70,7 @@ export default function ProductCard({
             style={[
               styles.mainContent,
               isCompact ? styles.mainContentCompact : styles.mainContentDesktop,
+              isNarrow && styles.mainContentNarrow,
             ]}
           >
             <View
@@ -75,6 +79,7 @@ export default function ProductCard({
                 isCompact
                   ? styles.imageContainerCompact
                   : styles.imageContainerDesktop,
+                isNarrow && styles.imageContainerNarrow,
               ]}
             >
               {producto.imagenes && producto.imagenes.length > 0 ? (
@@ -111,6 +116,7 @@ export default function ProductCard({
                 isCompact
                   ? styles.detailsColumnCompact
                   : styles.detailsColumnDesktop,
+                isNarrow && styles.detailsColumnNarrow,
               ]}
             >
               <View>
@@ -118,14 +124,14 @@ export default function ProductCard({
                 style={[
                   styles.stockBadge,
                   {
-                    backgroundColor: producto.stock.disponible
+                    backgroundColor: hasStock
                       ? COLORS.success
-                      : COLORS.warning,
+                      : COLORS.accent,
                   },
                 ]}
               >
                 <ThemedText style={styles.stockText}>
-                  {producto.stock.disponible
+                  {hasStock
                     ? `Disponible · ${producto.stock.cantidad}`
                     : "Sin stock"}
                 </ThemedText>
@@ -171,6 +177,7 @@ export default function ProductCard({
               {onInstagramStory && (
                 <IconActionButton
                   label={`Crear historia de Instagram de ${producto.marca} ${producto.modelo}`}
+                  visibleLabel={isNarrow ? undefined : "Historia"}
                   icon="photo-camera"
                   onPress={onInstagramStory}
                   color={COLORS.instagram}
@@ -181,6 +188,7 @@ export default function ProductCard({
               {onEdit && (
                 <IconActionButton
                   label={`Editar ${producto.marca} ${producto.modelo}`}
+                  visibleLabel={isNarrow ? undefined : "Editar"}
                   icon="edit"
                   onPress={onEdit}
                   color={COLORS.text}
@@ -191,6 +199,7 @@ export default function ProductCard({
               {onDelete && (
                 <IconActionButton
                   label={`Eliminar ${producto.marca} ${producto.modelo}`}
+                  visibleLabel={isNarrow ? undefined : "Eliminar"}
                   icon="delete-outline"
                   onPress={onDelete}
                   color={COLORS.errorStrong}
@@ -215,11 +224,15 @@ const styles = StyleSheet.create({
     ...SHADOWS.md,
     overflow: "hidden",
     height: Platform.OS === "web" ? "auto" : "auto", // Altura automática para web
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  cardAccent: {
+    height: 4,
+    backgroundColor: COLORS.primary,
   },
   cardDesktop: {
     minHeight: 360,
-    borderWidth: 1,
-    borderColor: COLORS.border,
     shadowOpacity: 0.05,
     shadowRadius: 8,
   },
@@ -237,6 +250,10 @@ const styles = StyleSheet.create({
     alignItems: "stretch",
     gap: SPACING.md,
   },
+  mainContentNarrow: {
+    flexDirection: "column",
+    gap: SPACING.md,
+  },
   mainContentDesktop: {
     flexDirection: "row",
     alignItems: "stretch",
@@ -248,11 +265,10 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS.md,
     overflow: "hidden",
     marginBottom: SPACING.sm,
-    backgroundColor: COLORS.surface,
+    backgroundColor: COLORS.cardBackground,
     justifyContent: "center",
     alignItems: "center",
     padding: SPACING.xs, // Padding para separar la imagen de los bordes
-    ...SHADOWS.md, // Sombra más pronunciada
     borderWidth: 1,
     borderColor: COLORS.border,
   },
@@ -261,6 +277,12 @@ const styles = StyleSheet.create({
     height: 150,
     flexShrink: 0,
     marginBottom: 0,
+  },
+  imageContainerNarrow: {
+    width: "100%",
+    height: 220,
+    marginBottom: 0,
+    padding: SPACING.md,
   },
   imageContainerDesktop: {
     width: "44%",
@@ -275,6 +297,10 @@ const styles = StyleSheet.create({
   detailsColumnCompact: {
     minWidth: 0,
     justifyContent: "center",
+  },
+  detailsColumnNarrow: {
+    width: "100%",
+    justifyContent: "flex-start",
   },
   detailsColumnDesktop: {
     minWidth: 0,
@@ -320,13 +346,13 @@ const styles = StyleSheet.create({
   stockBadge: {
     alignSelf: "flex-start",
     borderRadius: RADIUS.sm,
-    paddingHorizontal: SPACING.xs,
-    paddingVertical: 2,
-    marginBottom: SPACING.xs,
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: SPACING.xs,
+    marginBottom: SPACING.sm,
   },
   stockText: {
-    fontSize: 10,
-    fontWeight: "600",
+    fontSize: 11,
+    fontWeight: "700",
     color: COLORS.text,
   },
   productInfo: {
@@ -389,7 +415,8 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: SPACING.md,
+    paddingVertical: SPACING.sm,
+    paddingHorizontal: SPACING.sm,
     backgroundColor: COLORS.cardBackground,
     borderRadius: RADIUS.md,
   },
