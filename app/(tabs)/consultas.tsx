@@ -52,6 +52,7 @@ export default function ConsultasScreen() {
   const [pushState, setPushState] = useState<WebPushState | null>(null);
   const [pushLoading, setPushLoading] = useState(false);
   const [pushTestLoading, setPushTestLoading] = useState(false);
+  const [pushErrorMessage, setPushErrorMessage] = useState('');
 
   useEffect(() => {
     if (user?.rol !== 'admin') return;
@@ -134,13 +135,16 @@ export default function ConsultasScreen() {
   const togglePush = async () => {
     if (pushLoading || !pushState?.supported) return;
     setPushLoading(true);
+    setPushErrorMessage('');
     try {
       const next = pushState.subscribed
         ? await webPushService.unsubscribe()
         : await webPushService.subscribe();
       setPushState(next);
     } catch (pushError: any) {
-      Alert.alert('No pudimos activar los avisos', pushError.response?.data?.message || pushError.message || 'Intentá nuevamente.');
+      const message = pushError.response?.data?.message || pushError.message || 'Intentá nuevamente.';
+      setPushErrorMessage(message);
+      Alert.alert('No pudimos activar los avisos', message);
       setPushState(await webPushService.getState().catch(() => pushState));
     } finally {
       setPushLoading(false);
@@ -205,6 +209,7 @@ export default function ConsultasScreen() {
                     ? 'Este dispositivo recibirá un aviso cuando llegue una consulta.'
                     : 'Activá los avisos en este dispositivo. La bandeja seguirá disponible aunque estén desactivados.'}
             </Text>
+            {!!pushErrorMessage && <Text style={styles.pushError}>{pushErrorMessage}</Text>}
           </View>
           {pushState.supported && pushState.permission !== 'denied' && (
             <View style={styles.pushActions}>
@@ -328,6 +333,7 @@ const styles = StyleSheet.create({
   pushCopy: { flex: 1, minWidth: 220 },
   pushTitle: { color: COLORS.text, fontSize: 15, fontWeight: '800' },
   pushDescription: { marginTop: 3, color: COLORS.textSecondary, fontSize: 13, lineHeight: 19 },
+  pushError: { marginTop: SPACING.sm, color: COLORS.errorStrong, fontSize: 12, fontWeight: '700', lineHeight: 17 },
   pushButton: { minHeight: 44, alignItems: 'center', justifyContent: 'center', paddingHorizontal: SPACING.md, borderRadius: RADIUS.md, backgroundColor: COLORS.primary },
   pushActions: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.sm },
   pushButtonSecondary: { minHeight: 44, alignItems: 'center', justifyContent: 'center', paddingHorizontal: SPACING.md, borderRadius: RADIUS.md, backgroundColor: COLORS.cardBackground },

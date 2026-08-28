@@ -24,10 +24,39 @@ function isSupported() {
 }
 
 function applicationServerKey(value: string) {
-  const padding = '='.repeat((4 - value.length % 4) % 4);
-  const base64 = (value + padding).replace(/-/g, '+').replace(/_/g, '/');
-  const bytes = Uint8Array.from(window.atob(base64), character => character.charCodeAt(0));
-  return bytes.buffer;
+  const normalized = value.trim();
+  try {
+    const padding = '='.repeat((4 - normalized.length % 4) % 4);
+    const base64 = (normalized + padding).replace(/-/g, '+').replace(/_/g, '/');
+    const bytes = Uint8Array.from(window.atob(base64), character => character.charCodeAt(0));
+    if (bytes.byteLength !== 65 || bytes[0] !== 4) throw new Error('invalid P-256 key');
+    return bytes.buffer;
+  } catch {
+    throw new Error('La clave pública de notificaciones configurada no es válida. Revisá VAPID_PUBLIC_KEY en Render.');
+  }
+}
+
+function sameKey(current: ArrayBuffer | null, expected: ArrayBuffer) {
+  if (!current) return true;
+  const currentBytes = new Uint8Array(current);
+  const expectedBytes = new Uint8Array(expected);
+  return currentBytes.byteLength === expectedBytes.byteLength
+    && currentBytes.every((value, index) => value === expectedBytes[index]);
+}
+
+function subscriptionError(error: unknown) {
+  const name = error instanceof DOMException ? error.name : '';
+  if (name === 'NotAllowedError') {
+    return new Error('Chrome bloqueó la suscripción. Revisá que las notificaciones estén permitidas para este sitio.');
+  }
+  if (name === 'AbortError') {
+    return new Error('Chrome no pudo registrar este dispositivo en el servicio Push (AbortError). Reintentá en unos segundos.');
+  }
+  if (name === 'InvalidAccessError' || name === 'InvalidCharacterError') {
+    return new Error('La clave pública VAPID configurada en el servidor no es compatible con el navegador.');
+  }
+  const detail = error instanceof Error && error.message ? `: ${error.message}` : '';
+  return new Error(`Chrome no pudo crear la suscripción${name ? ` (${name})` : ''}${detail}`);
 }
 
 async function getState(): Promise<WebPushState> {
@@ -54,13 +83,28 @@ async function subscribe() {
     apiClient.get<ApiResponse<{ publicKey: string }>>('/push/public-key'),
     navigator.serviceWorker.ready,
   ]);
+  const expectedKey = applicationServerKey(data.data.publicKey);
   let subscription = await registration.pushManager.getSubscription();
-  subscription ||= await registration.pushManager.subscribe({
-    userVisibleOnly: true,
-    applicationServerKey: applicationServerKey(data.data.publicKey),
-  });
+  if (subscription && !sameKey(subscription.options.applicationServerKey, expectedKey)) {
+    await subscription.unsubscribe();
+    subscription = null;
+  }
+  if (!subscription) {
+    try {
+      subscription = await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: expectedKey,
+      });
+    } catch (error) {
+      throw subscriptionError(error);
+    }
+  }
 
   const serialized = subscription.toJSON();
+  if (!serialized.keys?.p256dh || !serialized.keys.auth) {
+    await subscription.unsubscribe();
+    throw new Error('Chrome creó una suscripción incompleta. Volvé a activar los avisos.');
+  }
   await apiClient.post('/push/subscriptions', {
     endpoint: subscription.endpoint,
     keys: serialized.keys,
