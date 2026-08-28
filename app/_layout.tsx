@@ -1,12 +1,14 @@
 import { DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
 import { Stack, useRouter, useSegments } from 'expo-router';
+import Head from 'expo-router/head';
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import 'react-native-reanimated';
 
 import GoogleOAuthRoot from '@/components/auth/GoogleOAuthRoot';
+import WebAppSetup from '@/components/pwa/WebAppSetup';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 
 function AuthenticatedNavigator() {
@@ -54,11 +56,25 @@ export default function RootLayout() {
   if (!loaded) return null;
 
   return (
-    <GoogleOAuthRoot>
-      <AuthProvider>
-        <AuthenticatedNavigator />
-      </AuthProvider>
-    </GoogleOAuthRoot>
+    <>
+      <Head>
+        <title>Hogar Conectado</title>
+        <meta name="description" content="Catálogo y operación comercial de Hogar Conectado" />
+        <meta name="theme-color" content="#9BA8FF" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        <meta name="apple-mobile-web-app-title" content="Hogar Conectado" />
+        <link rel="manifest" href="/manifest.webmanifest" />
+        <link rel="icon" href="/pwa-icon.svg" type="image/svg+xml" />
+        <link rel="apple-touch-icon" href="/pwa-icon.png" />
+      </Head>
+      <WebAppSetup />
+      <GoogleOAuthRoot>
+        <AuthProvider>
+          <AuthenticatedNavigator />
+        </AuthProvider>
+      </GoogleOAuthRoot>
+    </>
   );
 }
 

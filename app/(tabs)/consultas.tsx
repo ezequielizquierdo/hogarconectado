@@ -2,7 +2,7 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import * as Clipboard from 'expo-clipboard';
 import { Image } from 'expo-image';
 import { useFocusEffect } from 'expo-router';
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Alert, Linking, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { DataStatePanel } from '@/components/ui/DataStatePanel';
@@ -11,6 +11,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useConsultasResumen } from '@/contexts/ConsultasContext';
 import consultasService from '@/services/consultasService';
 import { ConsultaComercial, ConsultaEstado } from '@/services/types';
+import webPushService, { WebPushState } from '@/services/webPushService';
 
 const ESTADOS: { value: ConsultaEstado | 'todas'; label: string }[] = [
   { value: 'todas', label: 'Todas' },
@@ -48,22 +49,55 @@ export default function ConsultasScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [processingId, setProcessingId] = useState<string | null>(null);
+  const [pushState, setPushState] = useState<WebPushState | null>(null);
+  const [pushLoading, setPushLoading] = useState(false);
+  const [pushTestLoading, setPushTestLoading] = useState(false);
 
-  const load = useCallback(async () => {
+  useEffect(() => {
     if (user?.rol !== 'admin') return;
-    setLoading(true);
-    setError('');
+    void webPushService.getState().then(setPushState).catch(() => undefined);
+  }, [user?.rol]);
+
+  const load = useCallback(async (silent = false) => {
+    if (user?.rol !== 'admin') return;
+    if (!silent) {
+      setLoading(true);
+      setError('');
+    }
     try {
       setConsultas(await consultasService.listar(filtro === 'todas' ? undefined : filtro));
       await refreshSummary();
     } catch {
-      setError('No pudimos cargar las consultas.');
+      if (!silent) setError('No pudimos cargar las consultas.');
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, [filtro, refreshSummary, user?.rol]);
 
   useFocusEffect(useCallback(() => { void load(); }, [load]));
+
+  useEffect(() => {
+    if (Platform.OS !== 'web' || user?.rol !== 'admin') return;
+
+    const refreshVisible = () => {
+      if (document.visibilityState === 'visible') void load(true);
+    };
+    const handlePushMessage = (event: MessageEvent) => {
+      if (event.data?.type === 'HC_CONSULTA_NUEVA') void load(true);
+    };
+    const intervalId = window.setInterval(refreshVisible, 30_000);
+
+    document.addEventListener('visibilitychange', refreshVisible);
+    window.addEventListener('focus', refreshVisible);
+    navigator.serviceWorker?.addEventListener('message', handlePushMessage);
+
+    return () => {
+      window.clearInterval(intervalId);
+      document.removeEventListener('visibilitychange', refreshVisible);
+      window.removeEventListener('focus', refreshVisible);
+      navigator.serviceWorker?.removeEventListener('message', handlePushMessage);
+    };
+  }, [load, user?.rol]);
 
   const totals = useMemo(() => ({
     nuevas: consultas.filter(item => item.estado === 'nueva').length,
@@ -97,6 +131,46 @@ export default function ConsultasScreen() {
     Alert.alert('Teléfono copiado', 'Ya podés pegarlo donde lo necesites.');
   };
 
+  const togglePush = async () => {
+    if (pushLoading || !pushState?.supported) return;
+    setPushLoading(true);
+    try {
+      const next = pushState.subscribed
+        ? await webPushService.unsubscribe()
+        : await webPushService.subscribe();
+      setPushState(next);
+    } catch (pushError: any) {
+      Alert.alert('No pudimos activar los avisos', pushError.response?.data?.message || pushError.message || 'Intentá nuevamente.');
+      setPushState(await webPushService.getState().catch(() => pushState));
+    } finally {
+      setPushLoading(false);
+    }
+  };
+
+  const testPush = async () => {
+    if (pushTestLoading) return;
+    setPushTestLoading(true);
+    try {
+      const result = await webPushService.sendTest();
+      Alert.alert(
+        'El proveedor aceptó la prueba',
+        `Envíos aceptados: ${result.sent}. Si no apareció el aviso, probá la comprobación local.`,
+      );
+    } catch (pushError: any) {
+      Alert.alert('La prueba no llegó al proveedor', pushError.response?.data?.message || 'Intentá desactivar y volver a activar los avisos.');
+    } finally {
+      setPushTestLoading(false);
+    }
+  };
+
+  const testLocalNotification = async () => {
+    try {
+      await webPushService.showLocalTest();
+    } catch (notificationError: any) {
+      Alert.alert('No pudimos mostrar el aviso local', notificationError.message || 'Revisá los permisos del navegador.');
+    }
+  };
+
   if (user?.rol !== 'admin') return (
     <View style={styles.center}>
       <DataStatePanel status="error" title="Acceso restringido" message="Solo los administradores pueden gestionar consultas." />
@@ -117,6 +191,47 @@ export default function ConsultasScreen() {
         </View>
       </View>
 
+      {Platform.OS === 'web' && pushState && (
+        <View style={styles.pushCard}>
+          <View style={styles.pushIcon}><MaterialIcons name="notifications-active" size={23} color={COLORS.primaryDark} /></View>
+          <View style={styles.pushCopy}>
+            <Text style={styles.pushTitle}>{pushState.subscribed ? 'Avisos activados' : 'Avisos de nuevas consultas'}</Text>
+            <Text style={styles.pushDescription}>
+              {!pushState.supported
+                ? 'En iPhone, agregá Hogar Conectado a la pantalla de inicio y abrilo desde su icono para activar avisos.'
+                : pushState.permission === 'denied'
+                  ? 'Los avisos están bloqueados en la configuración del navegador o del dispositivo.'
+                  : pushState.subscribed
+                    ? 'Este dispositivo recibirá un aviso cuando llegue una consulta.'
+                    : 'Activá los avisos en este dispositivo. La bandeja seguirá disponible aunque estén desactivados.'}
+            </Text>
+          </View>
+          {pushState.supported && pushState.permission !== 'denied' && (
+            <View style={styles.pushActions}>
+              {pushState.subscribed && (
+                <>
+                  <Pressable onPress={() => void testLocalNotification()} style={styles.pushButtonSecondary}>
+                    <Text style={styles.pushButtonText}>Prueba local</Text>
+                  </Pressable>
+                  <Pressable disabled={pushTestLoading} onPress={() => void testPush()} style={styles.pushButton}>
+                    <Text style={styles.pushButtonText}>{pushTestLoading ? 'Enviando…' : 'Probar Push'}</Text>
+                  </Pressable>
+                </>
+              )}
+              <Pressable
+                disabled={pushLoading}
+                onPress={() => void togglePush()}
+                style={[styles.pushButton, pushState.subscribed && styles.pushButtonSecondary]}
+              >
+                <Text style={styles.pushButtonText}>
+                  {pushLoading ? 'Procesando…' : pushState.subscribed ? 'Desactivar' : 'Activar avisos'}
+                </Text>
+              </Pressable>
+            </View>
+          )}
+        </View>
+      )}
+
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filters}>
         {ESTADOS.map(option => (
           <Pressable
@@ -132,7 +247,7 @@ export default function ConsultasScreen() {
       {loading ? (
         <DataStatePanel status="loading" title="Cargando consultas…" message="Estamos buscando los contactos pendientes." />
       ) : error ? (
-        <DataStatePanel status="error" title="No pudimos cargar las consultas" message={error} actionLabel="Reintentar" onAction={load} />
+        <DataStatePanel status="error" title="No pudimos cargar las consultas" message={error} actionLabel="Reintentar" onAction={() => void load()} />
       ) : consultas.length === 0 ? (
         <DataStatePanel status="empty" title="No hay consultas en este estado" message="Cuando alguien consulte por un producto, aparecerá acá." />
       ) : (
@@ -208,6 +323,15 @@ const styles = StyleSheet.create({
   summaryCard: { minWidth: 110, padding: SPACING.md, borderRadius: RADIUS.md, backgroundColor: COLORS.surface, borderWidth: 1, borderColor: COLORS.border },
   summaryValue: { color: COLORS.primaryDark, fontSize: 22, fontWeight: '800' },
   summaryLabel: { color: COLORS.textSecondary, fontSize: 11 },
+  pushCard: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: SPACING.md, padding: SPACING.md, borderRadius: RADIUS.lg, borderWidth: 1, borderColor: COLORS.border, backgroundColor: COLORS.surface },
+  pushIcon: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', borderRadius: RADIUS.full, backgroundColor: COLORS.cardBackground },
+  pushCopy: { flex: 1, minWidth: 220 },
+  pushTitle: { color: COLORS.text, fontSize: 15, fontWeight: '800' },
+  pushDescription: { marginTop: 3, color: COLORS.textSecondary, fontSize: 13, lineHeight: 19 },
+  pushButton: { minHeight: 44, alignItems: 'center', justifyContent: 'center', paddingHorizontal: SPACING.md, borderRadius: RADIUS.md, backgroundColor: COLORS.primary },
+  pushActions: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.sm },
+  pushButtonSecondary: { minHeight: 44, alignItems: 'center', justifyContent: 'center', paddingHorizontal: SPACING.md, borderRadius: RADIUS.md, backgroundColor: COLORS.cardBackground },
+  pushButtonText: { color: COLORS.ink, fontWeight: '800' },
   filters: { gap: SPACING.sm, paddingVertical: SPACING.xs },
   filterChip: { minHeight: 42, justifyContent: 'center', paddingHorizontal: SPACING.md, borderRadius: RADIUS.full, borderWidth: 1, borderColor: COLORS.border, backgroundColor: COLORS.surface },
   filterChipActive: { borderColor: COLORS.primaryDark, backgroundColor: COLORS.cardBackground },

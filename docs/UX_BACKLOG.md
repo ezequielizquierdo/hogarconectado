@@ -584,7 +584,7 @@ Una tarea de interfaz se considera terminada cuando:
 
 ### AUTO-001 — Integración continua del frontend
 
-**Prioridad:** Alta  
+**Prioridad:** Alta
 **Estado:** Implementada
 
 - Ejecuta tests, lint, TypeScript y exportación web en cada pull request y push a `main`.
@@ -595,7 +595,7 @@ Una tarea de interfaz se considera terminada cuando:
 
 ### AUTO-002 — Integración continua del backend
 
-**Prioridad:** Alta  
+**Prioridad:** Alta
 **Estado:** Implementada
 
 - Ejecuta instalación reproducible, validación de sintaxis y pruebas del backend en cada pull request y push a `main`.
@@ -637,6 +637,20 @@ Una tarea de interfaz se considera terminada cuando:
 - Capturar superficies principales en escritorio y móvil.
 - Comparar contra referencias aprobadas.
 - Requerir decisión humana para aceptar diferencias.
+
+### UX-018 — PWA y notificaciones de consultas
+
+**Prioridad: Alta**
+
+**Estado:** En progreso — base instalable implementada
+
+- Publicar manifiesto, icono y service worker sin introducir cache offline de datos privados.
+- Verificar instalación en escritorio y mediante “Agregar a pantalla de inicio” en iPhone/iPad.
+- Solicitar permiso solamente a administradores y mediante una acción explícita.
+- Mantener la bandeja y su contador como fuente de verdad aunque las notificaciones estén desactivadas.
+- Al abrir una notificación, navegar a la bandeja administrativa de consultas.
+- Guardar y revocar suscripciones por usuario y dispositivo desde el backend.
+- Enviar la notificación después de persistir una consulta, sin hacer fallar el registro si el proveedor Push no responde.
 
 ---
 

@@ -1,0 +1,27 @@
+{
+  "id": "/",
+  "name": "Hogar Conectado",
+  "short_name": "Hogar",
+  "description": "Catálogo y operación comercial de Hogar Conectado",
+  "lang": "es-AR",
+  "start_url": "/productos",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#F8F7FF",
+  "theme_color": "#9BA8FF",
+  "icons": [
+    {
+      "src": "/pwa-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/pwa-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ]
+}

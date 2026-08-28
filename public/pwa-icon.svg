@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Hogar Conectado">
+  <circle cx="256" cy="256" r="240" fill="#58d0c8"/>
+  <path d="M119 254 256 125l137 129v139c0 14-11 25-25 25h-67v-91h-90v91h-67c-14 0-25-11-25-25V254Z" fill="none" stroke="#fff" stroke-width="30" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M224 236v54m64-54v54m-87 0h110v20c0 31-25 56-55 56s-55-25-55-56v-20Z" fill="#58d0c8" stroke="#fff" stroke-width="25" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

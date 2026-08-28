@@ -8,6 +8,7 @@ Aplicación universal para administrar productos, consultar stock, calcular prec
 
 - Expo 53, React 19, React Native y TypeScript.
 - Expo Router con rutas en `app/` y navegación principal en `app/(tabs)/`.
+- Base PWA web en `public/manifest.webmanifest`, `public/sw.js` y `components/pwa/`.
 - Componentes reutilizables en `components/`.
 - Acceso al backend exclusivamente mediante `services/`.
 - Estado de autenticación y permisos en `contexts/AuthContext.tsx`.
@@ -48,6 +49,7 @@ No incorporar secretos al frontend ni versionar archivos `.env` locales.
 - Visitantes y perfiles no administradores ven Productos como única solapa operativa; su acceso real también debe estar restringido por el backend.
 - El flujo público de consulta debe conservar contexto del producto, consentimiento explícito, validación visible y protección contra doble envío.
 - La bandeja de consultas, su contador y los cambios de estado son exclusivos de administradores; las cards conservan el snapshot comercial y muestran el responsable cuando una consulta ya fue tomada.
+- El permiso de notificaciones web debe solicitarse únicamente a administradores, después de una interacción explícita; no solicitar permisos al cargar la aplicación.
 - Respetar los estados de acceso `activo`, `pendiente` y `bloqueado`.
 - Las funciones administrativas deben respetar el rol del usuario; no confiar solamente en ocultar controles en la interfaz.
 - Todo cambio visual debe revisarse tanto en escritorio como en viewport móvil.

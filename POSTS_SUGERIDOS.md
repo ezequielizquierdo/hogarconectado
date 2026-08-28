@@ -485,6 +485,60 @@ Sumamos una bandeja con estados, responsable, historial y acceso a WhatsApp. El 
 
 ---
 
+## 18. Instalar una web no la convierte automáticamente en una app
+
+**Tema:** PWA, Web Push e implementación progresiva
+**Estado:** Borrador
+
+### LinkedIn
+
+En Hogar Conectado queremos avisar a los administradores cuando llega una nueva consulta, incluso si la web no está abierta.
+
+Antes de conectar notificaciones empezamos por la base: manifiesto, icono, modo standalone y service worker. Sin cachear datos privados ni pedir permisos apenas carga la página. La bandeja administrativa sigue siendo la fuente de verdad; la notificación será solamente una puerta de entrada.
+
+En iPhone hay una condición importante: Web Push está disponible para aplicaciones web agregadas a la pantalla de inicio, y el permiso debe solicitarse después de una interacción explícita de la persona.
+
+WebKit explica el comportamiento y los requisitos oficiales en [Web Push for Web Apps on iOS and iPadOS](https://webkit.org/blog/13878/web-push-for-web-apps-on-ios-and-ipados/). Expo, por su parte, documenta que los archivos de `public/` se incorporan al export web estático: [Publish websites — Expo](https://docs.expo.dev/guides/publishing-websites/).
+
+Aprendizaje: una PWA útil se construye por capas. Primero instalación confiable; después permisos; finalmente notificaciones con una alternativa operativa siempre disponible.
+
+### X
+
+Para sumar avisos de nuevas consultas no empezamos por el popup de permisos.
+
+Primero: manifiesto, icono, service worker y una bandeja que siga funcionando sin Push. Después llegará la suscripción voluntaria del administrador.
+
+**Referencias:** [Web Push en iOS — WebKit](https://webkit.org/blog/13878/web-push-for-web-apps-on-ios-and-ipados/) y [publicación web con Expo](https://docs.expo.dev/guides/publishing-websites/).
+
+---
+
+## 19. Push avisa; sincronizar mantiene la interfaz confiable
+
+**Tema:** Web Push, actualización silenciosa y experiencia operativa
+**Estado:** Borrador
+
+### LinkedIn
+
+Logramos que Hogar Conectado notificara al administrador cuando alguien consulta por un producto. Pero la primera prueba dejó otro aprendizaje: recibir el aviso no actualiza automáticamente la pantalla que ya estaba abierta.
+
+Completamos el circuito con tres capas: el evento Push llama la atención, el service worker informa a las ventanas activas y la bandeja se sincroniza silenciosamente cuando recupera visibilidad. Además dejamos una comprobación periódica liviana como respaldo.
+
+La Push API permite recibir mensajes mediante el service worker: [evento `push` — MDN](https://developer.mozilla.org/en-US/docs/Web/API/ServiceWorkerGlobalScope/push_event). Para detectar cuándo una pestaña vuelve a estar visible usamos la Page Visibility API: [`visibilitychange` — MDN](https://developer.mozilla.org/en-US/docs/Web/API/Document/visibilitychange_event).
+
+Aprendizaje: una notificación resuelve la atención; una estrategia de sincronización resuelve la confianza en lo que muestra la interfaz.
+
+### X
+
+Web Push nos avisó que había una nueva consulta, pero la bandeja abierta seguía mostrando datos anteriores.
+
+Sumamos mensaje del service worker, actualización al recuperar visibilidad y una comprobación periódica liviana.
+
+Push llama la atención. Sincronizar mantiene la interfaz confiable.
+
+**Referencias:** [evento Push — MDN](https://developer.mozilla.org/en-US/docs/Web/API/ServiceWorkerGlobalScope/push_event) y [Page Visibility — MDN](https://developer.mozilla.org/en-US/docs/Web/API/Document/visibilitychange_event).
+
+---
+
 ## Rutina editorial sugerida
 
 Al final de una jornada con cambios relevantes, responder:
