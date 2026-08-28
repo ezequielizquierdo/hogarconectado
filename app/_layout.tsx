@@ -10,17 +10,27 @@ import GoogleOAuthRoot from '@/components/auth/GoogleOAuthRoot';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 
 function AuthenticatedNavigator() {
-  const { state } = useAuth();
+  const { state, user } = useAuth();
   const segments = useSegments();
   const router = useRouter();
 
   useEffect(() => {
     if (state === 'loading') return;
     const route = segments[0];
-    if (state === 'unauthenticated' && route !== 'login') router.replace('/login');
+    const tab = segments[1];
+    const isPublicCatalog = route === '(tabs)' && tab === 'productos';
+    if (state === 'unauthenticated' && route !== 'login' && !isPublicCatalog) {
+      router.replace('/(tabs)/productos');
+    }
     if ((state === 'pending' || state === 'blocked') && route !== 'acceso-pendiente') router.replace('/acceso-pendiente');
-    if (state === 'authenticated' && (route === 'login' || route === 'acceso-pendiente')) router.replace('/(tabs)');
-  }, [router, segments, state]);
+    const isNonAdminAccountRoute = route === '(tabs)' && tab === 'perfil';
+    if (state === 'authenticated' && user?.rol !== 'admin' && route === '(tabs)' && tab !== 'productos' && !isNonAdminAccountRoute) {
+      router.replace('/(tabs)/productos');
+    }
+    if (state === 'authenticated' && (route === 'login' || route === 'acceso-pendiente')) {
+      router.replace(user?.rol === 'admin' ? '/(tabs)' : '/(tabs)/productos');
+    }
+  }, [router, segments, state, user]);
 
   if (state === 'loading') {
     return <View style={styles.loading}><ActivityIndicator size="large" /></View>;

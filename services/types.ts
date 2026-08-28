@@ -32,7 +32,7 @@ export interface Producto {
     marca: string;
     modelo: string;
     descripcion?: string;
-    precioBase: number;
+    precioBase?: number;
     porcentajeGanancia?: number;
     porcentajeGananciaAplicado?: number;
     precioConGanancia?: number;
@@ -41,12 +41,43 @@ export interface Producto {
         cantidad: number;
         disponible: boolean;
     };
-    tags: string[];
+    tags?: string[];
     imagenes: string[];
     imagenPublicIds?: string[];
-    activo: boolean;
+    activo?: boolean;
+    createdAt?: string;
+    updatedAt?: string;
+}
+
+export type ConsultaEstado = 'nueva' | 'en-gestion' | 'contactada' | 'cerrada';
+
+export interface ConsultaComercial {
+    _id: string;
+    producto: string;
+    productoSnapshot: {
+        categoria?: string;
+        marca: string;
+        modelo: string;
+        descripcion?: string;
+        imagen?: string;
+        precioContado?: number;
+    };
+    contacto: {
+        nombre: string;
+        telefono: string;
+    };
+    estado: ConsultaEstado;
+    asignadaA?: Pick<Usuario, '_id' | 'nombre' | 'email'> | null;
+    atendidaAt?: string | null;
+    cerradaAt?: string | null;
+    origen: 'catalogo-web';
     createdAt: string;
     updatedAt: string;
+}
+
+export interface ConsultaResumen {
+    nuevas: number;
+    totalAbiertas: number;
 }
 
 export interface ProductoConPrecios extends Producto {

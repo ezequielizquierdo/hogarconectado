@@ -345,11 +345,127 @@ Una tarea de interfaz se considera terminada cuando:
 - Las acciones se bloquean mientras una actualización está en curso y la cuenta propia queda identificada sin controles de riesgo.
 - La protección administrativa permanece en el backend y las sesiones pendientes o bloqueadas reciben mensajes específicos.
 
+### UX-012 — Catálogo público y consultas comerciales
+
+**Estado:** En implementación — etapas 1 a 3 y contador interno preparados
+**Objetivo:** permitir que cualquier persona explore los productos sin iniciar sesión y pueda dejar una consulta trazable que los administradores atiendan desde una bandeja propia.
+
+**Decisión funcional propuesta:** navegar el catálogo no crea automáticamente un usuario con rol `consulta`. La persona permanece como visitante público; autenticación, roles y permisos continúan reservados para la operación interna.
+
+**Historias de usuario:**
+
+- Como visitante, quiero ver los productos sin iniciar sesión para conocer rápidamente la oferta disponible.
+- Como visitante interesado, quiero dejar mi nombre y teléfono asociados a un producto para recibir una respuesta.
+- Como administrador, quiero recibir y gestionar las consultas desde una bandeja central para no perder oportunidades ni responderlas dos veces.
+
+**Acceso y navegación:**
+
+- La ruta pública inicial abre Productos sin exigir Google Login.
+- El catálogo público recibe de la API solo campos seguros: identificador, categoría, marca, modelo, descripción comercial, imagen, stock público y precio contado.
+- Crear, editar, eliminar, cotizar, calcular, consultar stock, administrar usuarios y acceder a consultas continúan protegidos por el backend.
+- Visitantes y usuarios no administradores ven únicamente Productos en la navegación principal.
+- Los administradores conservan toda la operación y obtienen una nueva sección `Consultas` con contador de pendientes.
+- La interfaz diferencia con claridad `Ingresar como administrador` de la navegación pública; cerrar sesión regresa al catálogo y no a una barrera de acceso.
+
+**Flujo público “Consultar”:**
+
+1. Cada card presenta una acción principal `Consultar` para visitantes y perfiles sin permisos administrativos.
+2. La acción abre un formulario contextual que conserva visible el producto e incluye nombre y teléfono obligatorios.
+3. Nombre se valida y normaliza; teléfono acepta un formato comprensible y conserva código de país cuando se ingresa.
+4. Antes de enviar aparece la confirmación `¿Querés consultar por este producto?`, con `Sí, enviar consulta` y `No, seguir mirando`.
+5. `No` cierra únicamente la confirmación y conserva la navegación. `Sí` crea la consulta una sola vez, aun ante doble toque o reintento.
+6. El éxito comunica `Recibimos tu consulta. Te contactaremos a la brevedad.` y permite continuar en el catálogo.
+7. Carga, validación, error de red y envío duplicado poseen estados visibles y accesibles; nunca se muestra información interna ni de administradores.
+
+**Bandeja administrativa de consultas:**
+
+- Nueva ruta protegida `/consultas`, visible únicamente para administradores.
+- Lista priorizada por consultas nuevas, con búsqueda y filtros por estado, fecha, producto y responsable.
+- Cada registro muestra producto consultado, imagen, marca/modelo, nombre, teléfono, fecha, origen y estado.
+- Estados mínimos: `nueva`, `en gestión`, `contactada` y `cerrada`; cada transición registra fecha y administrador responsable.
+- El detalle conserva una instantánea del producto para que la consulta siga siendo comprensible si después cambian el precio, la imagen o el stock.
+- Acciones rápidas: copiar teléfono, llamar, abrir WhatsApp y marcar estado; el sistema evita que dos administradores la gestionen sin advertencia.
+- El tablero distingue consultas pendientes mediante texto, contador y color, no solo con una notificación transitoria.
+
+**Notificaciones:**
+
+- Primera etapa: contador persistente en la navegación administrativa y aviso dentro de la aplicación al detectar una consulta nueva.
+- Segunda etapa: Web Push opt-in para administradores que instalen la web en la pantalla de inicio y concedan permiso mediante una acción explícita.
+- Texto inicial: `Tenés una consulta por responder`; puede incorporar marca y modelo sin incluir nombre ni teléfono en la pantalla bloqueada.
+- Tocar la notificación abre directamente `/consultas/:id`; si la sesión venció, solicita login y luego recupera ese destino.
+- Las suscripciones se asocian al administrador y al dispositivo, pueden revocarse y se eliminan cuando dejan de ser válidas.
+- La entrega push es complementaria: una consulta siempre queda disponible en la bandeja aunque la notificación falle.
+- Si en el futuro se adopta una app nativa, evaluar `expo-notifications`; su servicio no cubre Web Push, por lo que no debe mezclarse con la primera implementación web.
+
+**Seguridad, privacidad y abuso:**
+
+- Endpoint público específico para crear consultas; nunca reutiliza rutas administrativas ni confía en roles del frontend.
+- Validación y normalización en backend, límite de tamaño, rate limiting por IP/contexto e identificador idempotente por envío.
+- Honeypot y límites progresivos inicialmente; evaluar CAPTCHA solo si existe evidencia de abuso para no degradar el flujo normal.
+- Informar brevemente para qué se solicita el teléfono y limitar su uso a responder esa consulta.
+- Definir retención y eliminación de datos de contacto; no registrar teléfonos completos en logs ni incluirlos en notificaciones push.
+- La respuesta pública es genérica y no permite enumerar consultas, usuarios ni productos privados.
+
+**Modelo mínimo sugerido:**
+
+- `productoId` y `productoSnapshot`.
+- `nombreContacto` y `telefonoContactoNormalizado`.
+- `estado`, `createdAt`, `updatedAt`, `atendidaAt` y `cerradaAt`.
+- `asignadaA`, historial de estados y canal de origen.
+- Metadatos técnicos mínimos para idempotencia y prevención de abuso, sin almacenar información innecesaria.
+
+**Implementación por etapas:**
+
+1. Abrir lectura segura del catálogo y adaptar rutas/navegación por permisos.
+2. Crear modelo, endpoint público y flujo confirmado de consulta.
+3. Construir bandeja administrativa, detalle, estados y acciones de contacto.
+4. Incorporar contador y actualización dentro de la aplicación.
+5. Ejecutar un prototipo de Web Push/PWA en los dispositivos reales de los administradores antes de comprometer la entrega como requisito.
+
+**Etapa 1 preparada en código:**
+
+- Productos y categorías admiten lectura anónima; las mutaciones siguen exigiendo autenticación y rol en el backend.
+- La respuesta pública de productos excluye precio base, porcentaje de ganancia, identificadores de almacenamiento y metadatos internos.
+- Visitantes y perfiles no administradores son dirigidos al catálogo y no ven cotizaciones, stock interno, calculadora ni usuarios.
+- El catálogo conserva una entrada explícita al login y los usuarios autenticados mantienen el acceso a su cuenta sin agregar otra solapa operativa.
+
+**Etapa 2 preparada en código:**
+
+- Las cards públicas presentan `Consultar` y mantienen visible la imagen, marca, modelo y precio durante el flujo.
+- El formulario solicita nombre y teléfono, explica su finalidad y valida ambos campos antes de avanzar.
+- Una segunda vista pregunta `¿Querés consultar por este producto?`; volver no envía nada y conserva los datos ingresados.
+- El backend normaliza el contacto, limita la frecuencia, valida que el producto continúe activo y usa una clave idempotente para evitar duplicados.
+- La consulta guarda una instantánea comercial del producto y finaliza con `Te contactaremos a la brevedad`.
+- La visualización administrativa, los estados y las notificaciones permanecen pendientes para la etapa 3.
+
+**Etapa 3 preparada en código:**
+
+- La ruta administrativa `Consultas` lista los contactos por fecha y permite filtrar por nueva, en gestión, contactada y cerrada.
+- Cada card conserva la instantánea del producto, nombre, teléfono, fecha y accesos para copiar el número o iniciar una respuesta por WhatsApp.
+- Tomar una consulta asigna al administrador; cada transición agrega historial y las consultas atendidas o cerradas registran su fecha correspondiente.
+- Si otro administrador ya tomó el caso, el backend rechaza silencios de concurrencia y comunica que la consulta está siendo gestionada.
+- El menú administrativo muestra un contador persistente de consultas nuevas y lo actualiza al entrar o cambiar estados.
+- La notificación Web Push continúa pendiente de prototipo y no condiciona la disponibilidad de la bandeja.
+
+**Criterios de aceptación:**
+
+- Una ventana privada puede navegar Productos sin autenticación y no accede a ninguna ruta operativa.
+- Un visitante completa y confirma una consulta con teclado o interacción táctil sin envíos duplicados.
+- La consulta aparece en la bandeja administrativa con producto, nombre y teléfono correctos.
+- Un no administrador no ve ni puede consultar por API la bandeja, stock interno, calculadora, cotizaciones o usuarios.
+- El administrador puede abrir WhatsApp, cambiar el estado y reconocer quién gestiona la consulta.
+- La bandeja sigue siendo la fuente confiable aunque el push esté denegado, demorado o no disponible.
+- En iPhone se documenta que Web Push requiere una web agregada a la pantalla de inicio y permiso solicitado tras una acción del administrador.
+
+**Validación:** modo incógnito, sesión administrador y sesión no administradora; envío doble; teléfono inválido; error de red; dos administradores concurrentes; push permitido, denegado y no compatible; apertura profunda con sesión activa y vencida.
+
+**Referencias técnicas:** [Web Push para apps web en iOS/iPadOS — WebKit](https://webkit.org/blog/13878/web-push-for-web-apps-on-ios-and-ipados/) y [Using push notifications — Expo](https://docs.expo.dev/guides/using-push-notifications-services/).
+
 ---
 
 ## P3 — Calidad continua
 
-### UX-012 — Rendimiento del catálogo
+### UX-013 — Rendimiento del catálogo
 
 **Estado:** Pendiente  
 **Objetivo:** conservar fluidez con catálogos grandes y conexiones móviles.
@@ -361,7 +477,7 @@ Una tarea de interfaz se considera terminada cuando:
 - Buscar o filtrar no provoca solicitudes ni renders innecesarios.
 - Se documenta una línea base y una comparación posterior.
 
-### UX-013 — Consolidación de tokens y temas
+### UX-014 — Consolidación de tokens y temas
 
 **Estado:** En validación
 **Objetivo:** reducir inconsistencias y estilos aislados.
@@ -391,7 +507,7 @@ Una tarea de interfaz se considera terminada cuando:
 - El catálogo adopta capas tonales, acento lavanda, filtros con iconografía consistente y acciones administrativas con etiquetas visibles.
 - Los estados de stock, filtros activos y acciones conservan color funcional, texto explícito y contraste independiente de los emojis heredados.
 
-### UX-014 — Validación visual repetible
+### UX-015 — Validación visual repetible
 
 **Estado:** Pendiente  
 **Objetivo:** detectar regresiones en las pantallas principales antes del despliegue.
@@ -403,7 +519,7 @@ Una tarea de interfaz se considera terminada cuando:
 - Las diferencias se presentan para revisión humana; no se actualizan referencias automáticamente.
 - El procedimiento puede ejecutarse localmente y en integración continua.
 
-### UX-015 — Medición y retroalimentación
+### UX-016 — Medición y retroalimentación
 
 **Estado:** Pendiente  
 **Objetivo:** priorizar mejoras mediante uso real y no solo percepción visual.
@@ -415,7 +531,7 @@ Una tarea de interfaz se considera terminada cuando:
 - El backlog se revisa con evidencia de uso al menos una vez al mes durante la etapa activa.
 - Las tareas cerradas conservan una nota breve de validación y resultado.
 
-### UX-016 — Evolución del sistema visual
+### UX-017 — Evolución del sistema visual
 
 **Estado:** Pendiente  
 **Objetivo:** mejorar la calidad visual general sin comprometer la operación estable ni iniciar una migración tecnológica innecesaria.
@@ -533,7 +649,7 @@ Una tarea de interfaz se considera terminada cuando:
 5. `UX-005` — Carga y edición.
 6. `UX-006` — Accesibilidad transversal de las superficies anteriores.
 7. `AUTO-001` y `AUTO-002` — Validaciones automáticas antes de ampliar cambios.
-8. Bloque P2 en el orden definido.
+8. Bloque P2 en el orden definido, incluyendo el catálogo público y las consultas comerciales por etapas.
 9. Bloque P3 según evidencia de uso.
 
 ## Revisión del backlog

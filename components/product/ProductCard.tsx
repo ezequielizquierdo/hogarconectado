@@ -24,7 +24,9 @@ interface ProductCardProps {
   onEdit?: () => void;
   onDelete?: () => void;
   onInstagramStory?: () => void;
+  onConsult?: () => void;
   showAdminButtons?: boolean;
+  showConsultButton?: boolean;
 }
 
 export default function ProductCard({
@@ -36,7 +38,9 @@ export default function ProductCard({
   onEdit,
   onDelete,
   onInstagramStory,
+  onConsult,
   showAdminButtons = false,
+  showConsultButton = false,
 }: ProductCardProps) {
   const { width } = useWindowDimensions();
   const isCompact = Platform.OS !== "web" || width <= 768;
@@ -217,6 +221,21 @@ export default function ProductCard({
             </View>
           </>
         )}
+        {showConsultButton && onConsult && (
+          <>
+            <View style={styles.separator} />
+            <View style={styles.actionsSection}>
+              <IconActionButton
+                label={`Consultar por ${producto.marca} ${producto.modelo}`}
+                visibleLabel="Consultar"
+                icon="chat-bubble-outline"
+                onPress={onConsult}
+                color={COLORS.primaryDark}
+                style={[styles.actionButton, styles.consultButton]}
+              />
+            </View>
+          </>
+        )}
       </ThemedView>
     </View>
   );
@@ -238,6 +257,9 @@ const styles = StyleSheet.create({
   cardAccent: {
     height: 4,
     backgroundColor: COLORS.primary,
+  },
+  consultButton: {
+    backgroundColor: COLORS.cardBackground,
   },
   cardDesktop: {
     minHeight: 360,

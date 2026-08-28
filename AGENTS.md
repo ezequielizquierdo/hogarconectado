@@ -44,7 +44,10 @@ No incorporar secretos al frontend ni versionar archivos `.env` locales.
 - Utilizar `services/preciosService.ts` y `/api/precios/calcular` para cálculos dinámicos.
 - Para productos, el precio de venta mostrado es `producto.precios.contado`.
 - Las imágenes persistentes se cargan y eliminan mediante la API; Cloudinary se configura únicamente en el backend.
-- La autenticación utiliza Google y un JWT emitido por el backend.
+- La navegación del catálogo es pública; la autenticación utiliza Google y un JWT emitido por el backend para la operación interna.
+- Visitantes y perfiles no administradores ven Productos como única solapa operativa; su acceso real también debe estar restringido por el backend.
+- El flujo público de consulta debe conservar contexto del producto, consentimiento explícito, validación visible y protección contra doble envío.
+- La bandeja de consultas, su contador y los cambios de estado son exclusivos de administradores; las cards conservan el snapshot comercial y muestran el responsable cuando una consulta ya fue tomada.
 - Respetar los estados de acceso `activo`, `pendiente` y `bloqueado`.
 - Las funciones administrativas deben respetar el rol del usuario; no confiar solamente en ocultar controles en la interfaz.
 - Todo cambio visual debe revisarse tanto en escritorio como en viewport móvil.

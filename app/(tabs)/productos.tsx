@@ -44,6 +44,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useDesktopHeader } from "@/contexts/DesktopHeaderContext";
 import { captureWebStory } from "@/utils/captureWebStory";
 import { InstagramStoryRenderData } from "@/utils/instagramStoryRenderer";
+import { useRouter } from "expo-router";
+import { ConsultaProductoModal } from "@/components/modals/ConsultaProductoModal";
 
 // Funciones de utilidad
 const formatPrice = (price: number | string): string => {
@@ -112,7 +114,8 @@ const initialForm: ProductoForm = {
 
 export default function ProductosScreen() {
   const { setAction: setDesktopHeaderAction } = useDesktopHeader();
-  const { can } = useAuth();
+  const { can, state } = useAuth();
+  const router = useRouter();
   const canEdit = can("editor", "admin");
   const canDelete = can("admin");
   const {
@@ -145,6 +148,8 @@ export default function ProductosScreen() {
   const [instagramModalVisible, setInstagramModalVisible] = useState(false);
   const [filtersModalVisible, setFiltersModalVisible] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Producto | null>(null);
+  const [selectedConsultProduct, setSelectedConsultProduct] =
+    useState<Producto | null>(null);
   const [selectedProductForInstagram, setSelectedProductForInstagram] =
     useState<ProductoConPrecios | null>(null);
   const [instagramStoryOptions, setInstagramStoryOptions] = useState({
@@ -309,7 +314,7 @@ export default function ProductosScreen() {
       (p) => !p.stock.disponible || p.stock.cantidad === 0
     ).length,
     valorTotal: productos.reduce(
-      (sum, p) => sum + p.precioBase * p.stock.cantidad,
+      (sum, p) => sum + (p.precioBase ?? 0) * p.stock.cantidad,
       0
     ),
   };
@@ -331,7 +336,7 @@ export default function ProductosScreen() {
         modelo: producto.modelo,
         descripcion: producto.descripcion || "",
         categoria: categoriaId,
-        precioBase: producto.precioBase.toString(),
+        precioBase: (producto.precioBase ?? 0).toString(),
         porcentajeGanancia: String(
           producto.porcentajeGanancia ??
             producto.porcentajeGananciaAplicado ??
@@ -1253,14 +1258,14 @@ export default function ProductosScreen() {
   ): ProductoConPrecios => ({
     ...producto,
     precios: {
-      contado: producto.precioConGanancia ?? producto.precioBase,
+      contado: producto.precioConGanancia ?? producto.precioBase ?? 0,
       tresCuotas: {
-        total: producto.precioBase,
-        cuota: producto.precioBase / 3,
+        total: producto.precioBase ?? 0,
+        cuota: (producto.precioBase ?? 0) / 3,
       },
       seisCuotas: {
-        total: producto.precioBase,
-        cuota: producto.precioBase / 6,
+        total: producto.precioBase ?? 0,
+        cuota: (producto.precioBase ?? 0) / 6,
       },
     },
   });
@@ -1283,6 +1288,8 @@ export default function ProductosScreen() {
           onEdit={canEdit ? () => openModal(item) : undefined}
           onDelete={canDelete ? () => handleDelete(item) : undefined}
           onInstagramStory={canEdit ? () => openInstagramModal(item) : undefined}
+          showConsultButton={!canEdit}
+          onConsult={!canEdit ? () => setSelectedConsultProduct(item) : undefined}
         />
       </View>
     );
@@ -1390,8 +1397,14 @@ export default function ProductosScreen() {
           {/* Header móvil reutilizable */}
           <MobileHeader
             title="Productos"
-            subtitle="Gestiona tu inventario"
+            subtitle={canEdit ? "Gestiona tu inventario" : "Explorá el catálogo"}
             variant="solid"
+            actionLabel={state === "unauthenticated" ? "Ingresar" : !canEdit ? "Cuenta" : undefined}
+            onAction={state === "unauthenticated"
+              ? () => router.push('/login')
+              : !canEdit
+                ? () => router.push('/(tabs)/perfil')
+                : undefined}
           />
 
           <ScrollView
@@ -2109,6 +2122,12 @@ export default function ProductosScreen() {
         )}
       </Modal>
 
+      <ConsultaProductoModal
+        visible={Boolean(selectedConsultProduct)}
+        producto={selectedConsultProduct}
+        onClose={() => setSelectedConsultProduct(null)}
+      />
+
       {/* Modal de estadísticas detalladas */}
       <Modal
         visible={statsModalVisible}
@@ -2248,12 +2267,12 @@ export default function ProductosScreen() {
                         {selectedProduct.marca} {selectedProduct.modelo}
                       </ThemedText>
 
-                      <View style={styles.detailRow}>
+                      {canEdit && <View style={styles.detailRow}>
                         <ThemedText style={styles.detailLabel}>ID:</ThemedText>
                         <ThemedText style={styles.detailValue}>
                           #{selectedProduct._id.slice(-6)}
                         </ThemedText>
-                      </View>
+                      </View>}
 
                       <View style={styles.detailRow}>
                         <ThemedText style={styles.detailLabel}>
@@ -2295,16 +2314,16 @@ export default function ProductosScreen() {
                         </View>
                       )}
 
-                      <View style={styles.detailRow}>
+                      {canEdit && <View style={styles.detailRow}>
                         <ThemedText style={styles.detailLabel}>
                           Precio Base:
                         </ThemedText>
                         <ThemedText
                           style={[styles.detailValue, styles.priceText]}
                         >
-                          ${selectedProduct.precioBase.toLocaleString()}
+                          ${(selectedProduct.precioBase ?? 0).toLocaleString()}
                         </ThemedText>
-                      </View>
+                      </View>}
 
                       <View style={styles.detailRow}>
                         <ThemedText style={styles.detailLabel}>
@@ -2427,12 +2446,12 @@ export default function ProductosScreen() {
                       {selectedProduct.marca} {selectedProduct.modelo}
                     </ThemedText>
 
-                    <View style={styles.detailRow}>
+                    {canEdit && <View style={styles.detailRow}>
                       <ThemedText style={styles.detailLabel}>ID:</ThemedText>
                       <ThemedText style={styles.detailValue}>
                         #{selectedProduct._id.slice(-6)}
                       </ThemedText>
-                    </View>
+                    </View>}
 
                     <View style={styles.detailRow}>
                       <ThemedText style={styles.detailLabel}>Marca:</ThemedText>
@@ -2472,16 +2491,16 @@ export default function ProductosScreen() {
                       </View>
                     )}
 
-                    <View style={styles.detailRow}>
+                    {canEdit && <View style={styles.detailRow}>
                       <ThemedText style={styles.detailLabel}>
                         Precio Base:
                       </ThemedText>
                       <ThemedText
                         style={[styles.detailValue, styles.priceText]}
                       >
-                        ${selectedProduct.precioBase.toLocaleString()}
+                        ${(selectedProduct.precioBase ?? 0).toLocaleString()}
                       </ThemedText>
-                    </View>
+                    </View>}
 
                     <View style={styles.detailRow}>
                       <ThemedText style={styles.detailLabel}>Stock:</ThemedText>

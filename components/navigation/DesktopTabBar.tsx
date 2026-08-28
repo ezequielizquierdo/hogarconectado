@@ -1,14 +1,17 @@
 import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 import { Image } from "expo-image";
+import { useRouter } from "expo-router";
 import React from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 
 import { COLORS, RADIUS, SPACING } from "@/constants/theme";
 import { useDesktopHeader } from "@/contexts/DesktopHeaderContext";
+import { useConsultasResumen } from "@/contexts/ConsultasContext";
 
 type DesktopTabBarProps = BottomTabBarProps & {
-  showUsers: boolean;
+  isAdmin: boolean;
+  isAuthenticated: boolean;
 };
 
 type NavigationItemProps = {
@@ -17,9 +20,10 @@ type NavigationItemProps = {
   icon?: React.ReactNode;
   onPress: () => void;
   onLongPress: () => void;
+  badge?: number;
 };
 
-const PRIMARY_ROUTES = ["index", "explore_new", "productos", "calculadora"];
+const PRIMARY_ROUTES = ["index", "explore_new", "productos", "calculadora", "consultas"];
 const SECONDARY_ROUTES = ["usuarios", "perfil", "explore_clean"];
 
 const ACCOUNT_LABELS: Record<string, string> = {
@@ -34,6 +38,7 @@ function NavigationItem({
   icon,
   onPress,
   onLongPress,
+  badge = 0,
 }: NavigationItemProps) {
   const [hovered, setHovered] = React.useState(false);
   const [keyboardFocused, setKeyboardFocused] = React.useState(false);
@@ -64,6 +69,11 @@ function NavigationItem({
       >
         {label}
       </Text>
+      {badge > 0 && (
+        <View style={styles.badge}>
+          <Text style={styles.badgeText}>{badge > 99 ? "99+" : badge}</Text>
+        </View>
+      )}
     </Pressable>
   );
 }
@@ -72,16 +82,22 @@ export function DesktopTabBar({
   state,
   descriptors,
   navigation,
-  showUsers,
+  isAdmin,
+  isAuthenticated,
 }: DesktopTabBarProps) {
+  const router = useRouter();
   const { action } = useDesktopHeader();
+  const { nuevas } = useConsultasResumen();
   const [accountMenuOpen, setAccountMenuOpen] = React.useState(false);
   const routesByName = new Map(state.routes.map((route) => [route.name, route]));
 
-  const visibleRoutes = (routeNames: string[]) =>
-    routeNames.filter(
-      (routeName) => routeName !== "usuarios" || showUsers,
-    );
+  const visibleRoutes = (routeNames: string[]) => {
+    if (!isAdmin) {
+      if (routeNames === PRIMARY_ROUTES) return ["productos"];
+      return isAuthenticated ? ["perfil"] : [];
+    }
+    return routeNames;
+  };
 
   const navigate = (routeName: string) => {
     const route = routesByName.get(routeName);
@@ -121,6 +137,7 @@ export function DesktopTabBar({
             navigation.emit({ type: "tabLongPress", target: route.key })
           }
           icon={options.tabBarIcon?.({ focused, color, size: 22 })}
+          badge={routeName === "consultas" ? nuevas : 0}
         />
       );
     });
@@ -164,7 +181,13 @@ export function DesktopTabBar({
 
         <View style={styles.accountMenuContainer}>
           <Pressable
-            onPress={() => setAccountMenuOpen((current) => !current)}
+            onPress={() => {
+              if (!isAuthenticated) {
+                router.push('/login');
+                return;
+              }
+              setAccountMenuOpen((current) => !current);
+            }}
             accessibilityRole="button"
             accessibilityLabel="Abrir menú de cuenta"
             accessibilityState={{ expanded: accountMenuOpen }}
@@ -179,15 +202,17 @@ export function DesktopTabBar({
               size={24}
               color={COLORS.textSecondary}
             />
-            <Text style={styles.accountButtonLabel}>Cuenta</Text>
-            <MaterialIcons
-              name={accountMenuOpen ? "expand-less" : "expand-more"}
-              size={20}
-              color={COLORS.textSecondary}
-            />
+            <Text style={styles.accountButtonLabel}>
+              {isAuthenticated ? "Cuenta" : "Ingresar"}
+            </Text>
+            {isAuthenticated && <MaterialIcons
+                name={accountMenuOpen ? "expand-less" : "expand-more"}
+                size={20}
+                color={COLORS.textSecondary}
+              />}
           </Pressable>
 
-          {accountMenuOpen && (
+          {isAuthenticated && accountMenuOpen && (
             <View style={styles.accountMenu} accessibilityRole="menu">
               {visibleRoutes(SECONDARY_ROUTES).map((routeName) => {
                 const route = routesByName.get(routeName);
@@ -380,6 +405,20 @@ const styles = StyleSheet.create({
     width: 24,
     alignItems: "center",
     justifyContent: "center",
+  },
+  badge: {
+    minWidth: 20,
+    height: 20,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 5,
+    borderRadius: RADIUS.full,
+    backgroundColor: COLORS.error,
+  },
+  badgeText: {
+    color: COLORS.ink,
+    fontSize: 10,
+    fontWeight: "800",
   },
   itemLabel: {
     color: COLORS.textSecondary,

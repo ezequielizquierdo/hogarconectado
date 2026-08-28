@@ -1,7 +1,7 @@
 import { BottomTabBar } from "@react-navigation/bottom-tabs";
 import { Tabs } from "expo-router";
 import React from "react";
-import { Platform, useWindowDimensions } from "react-native";
+import { Platform, StyleSheet, Text, useWindowDimensions, View } from "react-native";
 
 import { HapticTab } from "@/components/HapticTab";
 import { DesktopTabBar } from "@/components/navigation/DesktopTabBar";
@@ -10,19 +10,41 @@ import TabBarBackground from "@/components/ui/TabBarBackground";
 import { COLORS, RADIUS, SPACING } from "@/constants/theme";
 import { useAuth } from "@/contexts/AuthContext";
 import { DesktopHeaderProvider } from "@/contexts/DesktopHeaderContext";
+import { ConsultasProvider, useConsultasResumen } from "@/contexts/ConsultasContext";
+
+function ConsultasTabIcon({ color }: { color: string }) {
+  const { nuevas } = useConsultasResumen();
+  return (
+    <View>
+      <IconSymbol size={28} name="bubble.left.and.bubble.right.fill" color={color} />
+      {nuevas > 0 && (
+        <View style={styles.badge}>
+          <Text style={styles.badgeText}>{nuevas > 9 ? "9+" : nuevas}</Text>
+        </View>
+      )}
+    </View>
+  );
+}
 
 export default function TabLayout() {
-  const { user } = useAuth();
+  const { state, user } = useAuth();
   const { width } = useWindowDimensions();
   const isDesktop = Platform.OS === "web" && width >= 1024;
-  const showUsersInNavigation = user?.rol === "admin" && isDesktop;
+  const isAdmin = user?.rol === "admin";
+  const isAuthenticated = state === "authenticated";
+  const showUsersInNavigation = isAdmin && isDesktop;
 
   return (
     <DesktopHeaderProvider>
+      <ConsultasProvider>
       <Tabs
       tabBar={(props) =>
         isDesktop ? (
-          <DesktopTabBar {...props} showUsers={user?.rol === "admin"} />
+          <DesktopTabBar
+            {...props}
+            isAdmin={isAdmin}
+            isAuthenticated={isAuthenticated}
+          />
         ) : (
           <BottomTabBar {...props} />
         )
@@ -72,6 +94,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
+          href: isAdmin ? undefined : null,
           title: "Cotizaciones",
           tabBarLabel: isDesktop ? "Cotizaciones" : "Cotizar",
           tabBarIcon: ({ color }) => (
@@ -82,6 +105,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="explore_new"
         options={{
+          href: isAdmin ? undefined : null,
           title: "Consulta Stock",
           tabBarLabel: isDesktop ? "Consulta Stock" : "Stock",
           tabBarIcon: ({ color }) => (
@@ -112,11 +136,21 @@ export default function TabLayout() {
       <Tabs.Screen
         name="calculadora"
         options={{
+          href: isAdmin ? undefined : null,
           title: "Calculadora",
           tabBarLabel: isDesktop ? "Calculadora" : "Calcular",
           tabBarIcon: ({ color }) => (
             <IconSymbol size={28} name="percent" color={color} />
           ),
+        }}
+      />
+      <Tabs.Screen
+        name="consultas"
+        options={{
+          href: isAdmin ? undefined : null,
+          title: "Consultas",
+          tabBarLabel: "Consultas",
+          tabBarIcon: ({ color }) => <ConsultasTabIcon color={color} />,
         }}
       />
       <Tabs.Screen
@@ -132,6 +166,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="perfil"
         options={{
+          href: isAdmin ? undefined : null,
           title: "Perfil",
           tabBarLabel: "Perfil",
           tabBarIcon: ({ color }) => (
@@ -146,6 +181,23 @@ export default function TabLayout() {
         }}
       />
       </Tabs>
+      </ConsultasProvider>
     </DesktopHeaderProvider>
   );
 }
+
+const styles = StyleSheet.create({
+  badge: {
+    position: "absolute",
+    top: -5,
+    right: -10,
+    minWidth: 18,
+    height: 18,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 4,
+    borderRadius: RADIUS.full,
+    backgroundColor: COLORS.error,
+  },
+  badgeText: { color: COLORS.ink, fontSize: 9, fontWeight: "800" },
+});

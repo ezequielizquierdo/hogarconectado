@@ -1,5 +1,5 @@
 import React from "react";
-import { View, StyleSheet, Platform } from "react-native";
+import { View, StyleSheet, Platform, Pressable, Text } from "react-native";
 import { Image } from "expo-image";
 import { ThemedText } from "@/components/ThemedText";
 import { COLORS, RADIUS, SPACING, SHADOWS, TYPOGRAPHY } from "@/constants/theme";
@@ -8,12 +8,16 @@ interface MobileHeaderProps {
   title: string;
   subtitle?: string;
   variant?: "image" | "solid";
+  actionLabel?: string;
+  onAction?: () => void;
 }
 
 export default function MobileHeader({
   title,
   subtitle,
   variant = "image",
+  actionLabel,
+  onAction,
 }: MobileHeaderProps) {
   const isSolid = variant === "solid";
 
@@ -59,6 +63,20 @@ export default function MobileHeader({
             </ThemedText>
           )}
         </View>
+
+        {actionLabel && onAction && (
+          <Pressable
+            onPress={onAction}
+            accessibilityRole="button"
+            accessibilityLabel={actionLabel}
+            style={({ pressed }) => [
+              styles.headerAction,
+              pressed && styles.headerActionPressed,
+            ]}
+          >
+            <Text style={styles.headerActionText}>{actionLabel}</Text>
+          </Pressable>
+        )}
       </View>
     </View>
   );
@@ -126,6 +144,23 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "flex-start",
+  },
+  headerAction: {
+    minHeight: 40,
+    justifyContent: "center",
+    paddingHorizontal: SPACING.md,
+    borderRadius: RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.primaryDark,
+    backgroundColor: COLORS.surface,
+  },
+  headerActionPressed: {
+    opacity: 0.78,
+  },
+  headerActionText: {
+    color: COLORS.primaryDark,
+    fontSize: 13,
+    fontWeight: "700",
   },
   sectionTitle: {
     ...TYPOGRAPHY.headline,

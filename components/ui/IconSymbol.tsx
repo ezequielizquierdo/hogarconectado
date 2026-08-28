@@ -29,6 +29,7 @@ const MAPPING = {
   "person.crop.circle.fill": "account-circle",
   "exclamationmark.triangle.fill": "warning",
   "tray.fill": "inventory",
+  "bubble.left.and.bubble.right.fill": "forum",
 } as IconMapping;
 
 /**

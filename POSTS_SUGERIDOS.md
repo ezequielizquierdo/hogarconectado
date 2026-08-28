@@ -431,6 +431,60 @@ Sumamos un porcentaje opcional por producto y conservamos el valor global como r
 
 ---
 
+## 16. Quitar el login también es una decisión de seguridad
+
+**Tema:** catálogo público, permisos y consultas comerciales
+**Estado:** Borrador
+
+### LinkedIn
+
+En Hogar Conectado apareció una pregunta simple: si alguien solo quiere ver productos, ¿por qué debería iniciar sesión?
+
+La respuesta nos llevó a separar dos experiencias. Ya preparamos un catálogo público que devuelve solamente la ficha comercial; la operación interna —costos, porcentajes, stock operativo, cotizaciones y usuarios— sigue protegida por permisos reales en el backend.
+
+El desafío no consiste solamente en quitar una pantalla de login. Hay que diseñar qué datos expone la API y cómo evitar abuso en un formulario público. En la siguiente iteración incorporamos validación, confirmación antes de enviar, rate limiting y una clave idempotente para que un doble toque no genere dos consultas.
+
+Para los avisos en iPhone estamos evaluando Web Push. WebKit explica que las apps web agregadas a la pantalla de inicio pueden recibir notificaciones desde iOS/iPadOS 16.4, siempre que la persona conceda permiso después de una interacción explícita: [Web Push for Web Apps on iOS and iPadOS](https://webkit.org/blog/13878/web-push-for-web-apps-on-ios-and-ipados/).
+
+Aprendizaje: reducir fricción para quien visita no debe reducir la protección de quien administra.
+
+### X
+
+Si alguien solo quiere ver productos, el login agrega fricción.
+
+Estamos separando catálogo público de operación privada: navegación abierta, consultas trazables y permisos siempre controlados por el backend.
+
+Menos barreras no significa menos seguridad.
+
+**Referencia:** [Web Push en iOS/iPadOS — WebKit](https://webkit.org/blog/13878/web-push-for-web-apps-on-ios-and-ipados/).
+
+---
+
+## 17. Una notificación no reemplaza una bandeja de trabajo
+
+**Tema:** consultas comerciales, estados visibles y continuidad operativa
+**Estado:** Borrador
+
+### LinkedIn
+
+Cuando abrimos el catálogo de Hogar Conectado al público, recibir una consulta era solo la mitad del problema. La otra mitad era lograr que no se perdiera entre mensajes ni fuera respondida dos veces.
+
+Por eso construimos primero una bandeja administrativa: producto y contacto en contexto, estados visibles, responsable asignado, historial y acceso directo a WhatsApp. El contador ayuda a detectar novedades, pero la bandeja sigue siendo la fuente confiable incluso si una futura notificación push se demora o está desactivada.
+
+Esta decisión se relaciona con la primera heurística de Nielsen: mantener visible el estado del sistema para que las personas entiendan qué está ocurriendo y qué requiere atención. [Visibility of System Status — Nielsen Norman Group](https://www.nngroup.com/articles/visibility-system-status/).
+
+Aprendizaje: notificar llama la atención; diseñar el seguimiento evita perder el trabajo.
+
+### X
+
+Una notificación puede avisar que llegó una consulta. No puede reemplazar el seguimiento.
+
+Sumamos una bandeja con estados, responsable, historial y acceso a WhatsApp. El contador llama la atención; la bandeja conserva la verdad operativa.
+
+**Referencia:** [Visibility of System Status — NN/g](https://www.nngroup.com/articles/visibility-system-status/).
+
+---
+
 ## Rutina editorial sugerida
 
 Al final de una jornada con cambios relevantes, responder:
