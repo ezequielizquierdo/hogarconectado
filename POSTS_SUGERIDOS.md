@@ -539,6 +539,31 @@ Push llama la atención. Sincronizar mantiene la interfaz confiable.
 
 ---
 
+## 20. El código estaba bien; la configuración no
+
+**Tema:** Web Push, VAPID y diagnósticos seguros en producción
+**Estado:** Borrador
+
+### LinkedIn
+
+Una notificación Push puede fallar antes de enviar una sola solicitud de registro. Eso nos pasó en Hogar Conectado: el permiso del navegador estaba concedido y las pruebas locales funcionaban, pero producción volvía silenciosamente al botón “Activar avisos”.
+
+El cambio útil no fue esconder el error, sino hacerlo diagnosticable sin revelar secretos. Validamos la clave pública VAPID antes de suscribir el dispositivo, mostramos un mensaje seguro en la interfaz y normalizamos la configuración del servidor. Así descubrimos que `VAPID_PUBLIC_KEY` estaba mal cargada en el entorno productivo. Después de corregirla, una consulta real generó el aviso automáticamente.
+
+MDN explica que `PushManager.subscribe()` utiliza `applicationServerKey`, una clave pública ECDSA P-256, y que la suscripción debe iniciarse a partir de una acción de la persona: [PushManager.subscribe() — MDN](https://developer.mozilla.org/en-US/docs/Web/API/PushManager/subscribe). web.dev también recomienda generar y conservar como par las claves pública y privada VAPID: [Subscribe a user to push notifications — web.dev](https://web.dev/articles/push-notifications-subscribing-a-user).
+
+Aprendizaje: observar el estado HTTP no siempre alcanza. Un buen diagnóstico también debe señalar en qué capa se detuvo el flujo: navegador, suscripción, API o proveedor Push.
+
+### X
+
+Web Push funcionaba localmente, pero no en producción. El problema no estaba en el permiso ni en el service worker: `VAPID_PUBLIC_KEY` estaba mal configurada.
+
+Agregamos validación temprana, recuperación de suscripciones antiguas y errores visibles sin exponer secretos. La siguiente prueba real llegó correctamente.
+
+**Referencias:** [PushManager.subscribe() — MDN](https://developer.mozilla.org/en-US/docs/Web/API/PushManager/subscribe) y [claves VAPID — web.dev](https://web.dev/articles/push-notifications-subscribing-a-user).
+
+---
+
 ## Rutina editorial sugerida
 
 Al final de una jornada con cambios relevantes, responder:

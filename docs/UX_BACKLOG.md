@@ -347,7 +347,7 @@ Una tarea de interfaz se considera terminada cuando:
 
 ### UX-012 — Catálogo público y consultas comerciales
 
-**Estado:** En implementación — etapas 1 a 3 y contador interno preparados
+**Estado:** Completada — flujo público, bandeja, contador y Web Push validados en producción
 **Objetivo:** permitir que cualquier persona explore los productos sin iniciar sesión y pueda dejar una consulta trazable que los administradores atiendan desde una bandeja propia.
 
 **Decisión funcional propuesta:** navegar el catálogo no crea automáticamente un usuario con rol `consulta`. La persona permanece como visitante público; autenticación, roles y permisos continúan reservados para la operación interna.
@@ -445,7 +445,16 @@ Una tarea de interfaz se considera terminada cuando:
 - Tomar una consulta asigna al administrador; cada transición agrega historial y las consultas atendidas o cerradas registran su fecha correspondiente.
 - Si otro administrador ya tomó el caso, el backend rechaza silencios de concurrencia y comunica que la consulta está siendo gestionada.
 - El menú administrativo muestra un contador persistente de consultas nuevas y lo actualiza al entrar o cambiar estados.
-- La notificación Web Push continúa pendiente de prototipo y no condiciona la disponibilidad de la bandeja.
+- La notificación Web Push no condiciona la disponibilidad de la bandeja.
+
+**Etapas 4 y 5 validadas:**
+
+- El contador se actualiza mediante mensajes del service worker, recuperación de foco y una comprobación periódica liviana.
+- La PWA solicita permiso únicamente mediante la acción explícita `Activar avisos` de un administrador.
+- Se verificó en producción el registro del dispositivo, el envío de prueba y el aviso automático creado por una consulta real.
+- Una configuración VAPID inválida devuelve un error visible y seguro; las claves se validan antes de crear la suscripción.
+- Las notificaciones muestran marca y modelo, pero no nombre ni teléfono del contacto; los datos personales permanecen en la bandeja protegida.
+- Las suscripciones incompatibles con una clave VAPID reemplazada se regeneran automáticamente.
 
 **Criterios de aceptación:**
 
@@ -642,7 +651,7 @@ Una tarea de interfaz se considera terminada cuando:
 
 **Prioridad: Alta**
 
-**Estado:** En progreso — base instalable implementada
+**Estado:** Completada — instalación, suscripción, entrega y recuperación validadas en producción
 
 - Publicar manifiesto, icono y service worker sin introducir cache offline de datos privados.
 - Verificar instalación en escritorio y mediante “Agregar a pantalla de inicio” en iPhone/iPad.
@@ -651,6 +660,8 @@ Una tarea de interfaz se considera terminada cuando:
 - Al abrir una notificación, navegar a la bandeja administrativa de consultas.
 - Guardar y revocar suscripciones por usuario y dispositivo desde el backend.
 - Enviar la notificación después de persistir una consulta, sin hacer fallar el registro si el proveedor Push no responde.
+- Validar el formato de la clave pública VAPID, recuperar suscripciones antiguas incompatibles y comunicar errores sin exponer secretos.
+- Evitar datos personales en el aviso visible fuera de la bandeja autenticada.
 
 ---
 
