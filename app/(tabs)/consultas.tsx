@@ -3,7 +3,7 @@ import * as Clipboard from 'expo-clipboard';
 import { Image } from 'expo-image';
 import { useFocusEffect } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Alert, Linking, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Linking, Platform, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
 import { DataStatePanel } from '@/components/ui/DataStatePanel';
 import { COLORS, RADIUS, SHADOWS, SPACING } from '@/constants/theme';
@@ -43,12 +43,14 @@ function formatDate(value: string) {
 
 export default function ConsultasScreen() {
   const { user } = useAuth();
+  const { width } = useWindowDimensions();
   const { refresh: refreshSummary } = useConsultasResumen();
   const [consultas, setConsultas] = useState<ConsultaComercial[]>([]);
   const [filtro, setFiltro] = useState<ConsultaEstado | 'todas'>('todas');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [processingId, setProcessingId] = useState<string | null>(null);
+  const [statusFeedback, setStatusFeedback] = useState<{ id: string; message: string; error?: boolean } | null>(null);
   const [pushState, setPushState] = useState<WebPushState | null>(null);
   const [pushLoading, setPushLoading] = useState(false);
   const [pushTestLoading, setPushTestLoading] = useState(false);
@@ -108,12 +110,22 @@ export default function ConsultasScreen() {
   const updateStatus = async (item: ConsultaComercial, estado: ConsultaEstado) => {
     if (processingId || item.estado === estado) return;
     setProcessingId(item._id);
+    setStatusFeedback(null);
+    setConsultas(current => current.map(value => (
+      value._id === item._id ? { ...value, estado } : value
+    )));
     try {
       const updated = await consultasService.cambiarEstado(item._id, estado);
-      setConsultas(current => current.map(value => value._id === updated._id ? updated : value));
-      await refreshSummary();
+      if (updated.estado !== estado) throw new Error('El servidor no confirmó el nuevo estado.');
+      await load(true);
+      setStatusFeedback({ id: item._id, message: `Seguimiento actualizado a ${ESTADO_LABEL[estado].toLowerCase()}.` });
     } catch (requestError: any) {
-      Alert.alert('No se pudo actualizar', requestError.response?.data?.message || 'Intentá nuevamente.');
+      const message = requestError.response?.data?.message || requestError.message || 'Intentá nuevamente.';
+      setConsultas(current => current.map(value => (
+        value._id === item._id ? { ...value, estado: item.estado } : value
+      )));
+      setStatusFeedback({ id: item._id, message, error: true });
+      Alert.alert('No se pudo actualizar', message);
     } finally {
       setProcessingId(null);
     }
@@ -212,13 +224,13 @@ export default function ConsultasScreen() {
             {!!pushErrorMessage && <Text style={styles.pushError}>{pushErrorMessage}</Text>}
           </View>
           {pushState.supported && pushState.permission !== 'denied' && (
-            <View style={styles.pushActions}>
+            <View style={[styles.pushActions, width < 520 && styles.pushActionsCompact]}>
               {pushState.subscribed && (
                 <>
-                  <Pressable onPress={() => void testLocalNotification()} style={styles.pushButtonSecondary}>
+                  <Pressable onPress={() => void testLocalNotification()} style={[styles.pushButtonSecondary, width < 520 && styles.pushButtonCompact]}>
                     <Text style={styles.pushButtonText}>Prueba local</Text>
                   </Pressable>
-                  <Pressable disabled={pushTestLoading} onPress={() => void testPush()} style={styles.pushButton}>
+                  <Pressable disabled={pushTestLoading} onPress={() => void testPush()} style={[styles.pushButton, width < 520 && styles.pushButtonCompact]}>
                     <Text style={styles.pushButtonText}>{pushTestLoading ? 'Enviando…' : 'Probar Push'}</Text>
                   </Pressable>
                 </>
@@ -226,7 +238,7 @@ export default function ConsultasScreen() {
               <Pressable
                 disabled={pushLoading}
                 onPress={() => void togglePush()}
-                style={[styles.pushButton, pushState.subscribed && styles.pushButtonSecondary]}
+                style={[styles.pushButton, pushState.subscribed && styles.pushButtonSecondary, width < 520 && styles.pushButtonCompact]}
               >
                 <Text style={styles.pushButtonText}>
                   {pushLoading ? 'Procesando…' : pushState.subscribed ? 'Desactivar' : 'Activar avisos'}
@@ -309,6 +321,11 @@ export default function ConsultasScreen() {
                 ))}
               </View>
               {processingId === item._id && <Text style={styles.processing}>Guardando estado…</Text>}
+              {statusFeedback?.id === item._id && processingId !== item._id && (
+                <Text style={[styles.statusFeedback, statusFeedback.error && styles.statusFeedbackError]}>
+                  {statusFeedback.message}
+                </Text>
+              )}
             </View>
           ))}
         </View>
@@ -335,7 +352,9 @@ const styles = StyleSheet.create({
   pushDescription: { marginTop: 3, color: COLORS.textSecondary, fontSize: 13, lineHeight: 19 },
   pushError: { marginTop: SPACING.sm, color: COLORS.errorStrong, fontSize: 12, fontWeight: '700', lineHeight: 17 },
   pushButton: { minHeight: 44, alignItems: 'center', justifyContent: 'center', paddingHorizontal: SPACING.md, borderRadius: RADIUS.md, backgroundColor: COLORS.primary },
-  pushActions: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.sm },
+  pushActions: { width: '100%', flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.sm },
+  pushActionsCompact: { flexDirection: 'column' },
+  pushButtonCompact: { width: '100%' },
   pushButtonSecondary: { minHeight: 44, alignItems: 'center', justifyContent: 'center', paddingHorizontal: SPACING.md, borderRadius: RADIUS.md, backgroundColor: COLORS.cardBackground },
   pushButtonText: { color: COLORS.ink, fontWeight: '800' },
   filters: { gap: SPACING.sm, paddingVertical: SPACING.xs },
@@ -376,4 +395,6 @@ const styles = StyleSheet.create({
   statusButtonText: { color: COLORS.textSecondary, fontSize: 13, fontWeight: '700' },
   statusButtonTextActive: { color: COLORS.ink },
   processing: { color: COLORS.textSecondary, fontSize: 12 },
+  statusFeedback: { color: COLORS.primaryDark, fontSize: 12, fontWeight: '700' },
+  statusFeedbackError: { color: COLORS.errorStrong },
 });
