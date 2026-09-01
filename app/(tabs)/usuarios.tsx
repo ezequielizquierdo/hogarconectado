@@ -2,9 +2,9 @@ import { useAuth } from '@/contexts/AuthContext';
 import { UserRole, Usuario } from '@/services/types';
 import { usuariosService } from '@/services/usuariosService';
 import React, { useCallback, useEffect, useState } from 'react';
-import { Alert, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Platform, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { DataStatePanel } from '@/components/ui/DataStatePanel';
-import { COLORS, RADIUS, SPACING } from '@/constants/theme';
+import { COLORS, RADIUS, SHADOWS, SPACING } from '@/constants/theme';
 
 const roles: UserRole[] = ['consulta', 'editor', 'admin'];
 const roleInfo: Record<UserRole, { label: string; description: string }> = {
@@ -20,6 +20,8 @@ const statusInfo: Record<Usuario['estado'], { label: string; description: string
 
 export default function UsuariosScreen() {
   const { user, logout } = useAuth();
+  const { width } = useWindowDimensions();
+  const isDesktop = Platform.OS === 'web' && width >= 1024;
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -91,19 +93,31 @@ export default function UsuariosScreen() {
   );
 
   return (
-    <ScrollView contentContainerStyle={styles.page}>
+    <ScrollView contentContainerStyle={[styles.page, isDesktop && styles.pageDesktop]}>
+      <View style={styles.shell}>
       <View style={styles.header}>
-        <View><Text style={styles.title}>Usuarios</Text><Text style={styles.subtitle}>Aprobá accesos y asigná permisos.</Text></View>
-        <Pressable style={styles.secondaryButton} onPress={logout}><Text>Cerrar sesión</Text></Pressable>
+        <View style={styles.headerCopy}>
+          <Text style={styles.eyebrow}>ACCESOS Y PERMISOS</Text>
+          <Text style={styles.title}>Usuarios</Text>
+          <Text style={styles.subtitle}>Aprobá accesos, asigná roles y revisá el estado de cada cuenta.</Text>
+        </View>
+        <Pressable style={({ pressed }) => [styles.secondaryButton, pressed && styles.buttonPressed]} onPress={logout}>
+          <Text style={styles.secondaryButtonText}>Cerrar sesión</Text>
+        </Pressable>
       </View>
       <View style={styles.roleGuide}>
-        <Text style={styles.guideTitle}>Qué permite cada rol</Text>
-        {roles.map((rol) => (
-          <View key={rol} style={styles.guideItem}>
-            <Text style={styles.guideRole}>{roleInfo[rol].label}</Text>
-            <Text style={styles.guideDescription}>{roleInfo[rol].description}</Text>
-          </View>
-        ))}
+        <View style={styles.guideHeading}>
+          <Text style={styles.guideEyebrow}>GUÍA RÁPIDA</Text>
+          <Text style={styles.guideTitle}>Qué permite cada rol</Text>
+        </View>
+        <View style={[styles.guideGrid, isDesktop && styles.guideGridDesktop]}>
+          {roles.map((rol) => (
+            <View key={rol} style={styles.guideItem}>
+              <Text style={styles.guideRole}>{roleInfo[rol].label}</Text>
+              <Text style={styles.guideDescription}>{roleInfo[rol].description}</Text>
+            </View>
+          ))}
+        </View>
       </View>
       {loading ? (
         <DataStatePanel
@@ -125,7 +139,7 @@ export default function UsuariosScreen() {
           title="No hay usuarios para mostrar"
           message="Las nuevas solicitudes de acceso aparecerán en esta sección."
         />
-      ) : usuarios.map(item => (
+      ) : <View style={[styles.userGrid, isDesktop && styles.userGridDesktop]}>{usuarios.map(item => (
         <View key={item._id} style={styles.card}>
           <View style={styles.userInfo}>
             <View style={styles.userHeading}>
@@ -172,39 +186,52 @@ export default function UsuariosScreen() {
             {processingId === item._id && <Text style={styles.processingText}>Guardando cambio…</Text>}
           </View>
         </View>
-      ))}
+      ))}</View>}
+      </View>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  page: { padding: SPACING.lg, gap: SPACING.md, backgroundColor: COLORS.background, minHeight: '100%' },
+  page: { padding: SPACING.md, backgroundColor: COLORS.background, minHeight: '100%' },
+  pageDesktop: { paddingHorizontal: SPACING.xl, paddingVertical: SPACING.lg },
+  shell: { width: '100%', maxWidth: 1460, alignSelf: 'center', gap: SPACING.md },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: SPACING.lg, backgroundColor: COLORS.background },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 16 },
-  title: { fontSize: 30, fontWeight: '700', color: COLORS.text }, subtitle: { color: COLORS.textSecondary },
-  roleGuide: { backgroundColor: COLORS.surface, borderRadius: RADIUS.md, padding: SPACING.md, gap: SPACING.sm, borderWidth: 1, borderColor: COLORS.border },
-  guideTitle: { color: COLORS.text, fontSize: 16, fontWeight: '700' },
-  guideItem: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.sm },
-  guideRole: { color: COLORS.primaryDark, fontWeight: '700', minWidth: 110 },
-  guideDescription: { color: COLORS.textSecondary, flex: 1, minWidth: 220 },
-  card: { backgroundColor: COLORS.surface, borderRadius: RADIUS.md, padding: 18, gap: 14, borderWidth: 1, borderColor: COLORS.border }, userInfo: { gap: SPACING.xs },
+  header: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'flex-end', gap: SPACING.md },
+  headerCopy: { flex: 1, minWidth: 250 },
+  eyebrow: { color: COLORS.primaryDark, fontSize: 11, fontWeight: '800', letterSpacing: 1 },
+  title: { fontSize: 30, lineHeight: 36, fontWeight: '800', color: COLORS.text },
+  subtitle: { color: COLORS.textSecondary, lineHeight: 20 },
+  roleGuide: { backgroundColor: COLORS.cardBackground, borderRadius: RADIUS.lg, padding: SPACING.md, gap: SPACING.md, borderWidth: 1, borderColor: COLORS.border },
+  guideHeading: { gap: 2 },
+  guideEyebrow: { color: COLORS.primaryDark, fontSize: 10, fontWeight: '800', letterSpacing: 1 },
+  guideTitle: { color: COLORS.text, fontSize: 17, fontWeight: '700' },
+  guideGrid: { gap: SPACING.sm },
+  guideGridDesktop: { flexDirection: 'row' },
+  guideItem: { flex: 1, minWidth: 220, backgroundColor: COLORS.surface, borderRadius: RADIUS.md, padding: 12, gap: 3, borderWidth: 1, borderColor: COLORS.border },
+  guideRole: { color: COLORS.primaryDark, fontWeight: '800' },
+  guideDescription: { color: COLORS.textSecondary, fontSize: 13, lineHeight: 18 },
+  userGrid: { gap: SPACING.md },
+  userGridDesktop: { flexDirection: 'row', flexWrap: 'wrap' },
+  card: { flexGrow: 1, flexBasis: 430, backgroundColor: COLORS.surface, borderRadius: RADIUS.lg, padding: SPACING.md, gap: 12, borderWidth: 1, borderTopWidth: 4, borderColor: COLORS.border, borderTopColor: COLORS.primary, ...SHADOWS.sm }, userInfo: { gap: SPACING.xs },
   userHeading: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: SPACING.sm },
   name: { fontSize: 18, fontWeight: '700', color: COLORS.text },
   email: { color: COLORS.textSecondary },
   youBadge: { color: COLORS.primaryDark, backgroundColor: COLORS.background, paddingHorizontal: SPACING.sm, paddingVertical: SPACING.xs, borderRadius: RADIUS.sm, fontSize: 12, fontWeight: '700' },
-  statusBadge: { alignSelf: 'flex-start', borderRadius: RADIUS.sm, paddingHorizontal: SPACING.sm, paddingVertical: SPACING.xs, marginTop: SPACING.xs },
+  statusBadge: { alignSelf: 'flex-start', borderRadius: RADIUS.full, paddingHorizontal: 10, paddingVertical: SPACING.xs, marginTop: SPACING.xs },
   status_pendiente: { backgroundColor: COLORS.warning },
   status_activo: { backgroundColor: COLORS.success },
   status_bloqueado: { backgroundColor: COLORS.error },
   statusText: { color: COLORS.text, fontSize: 12, fontWeight: '700' },
   statusDescription: { color: COLORS.textSecondary, fontSize: 13 },
   currentRole: { color: COLORS.text, fontWeight: '600', marginTop: SPACING.xs },
-  actions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  button: { backgroundColor: COLORS.secondaryDark, borderRadius: RADIUS.sm, paddingHorizontal: 12, paddingVertical: 10, minHeight: 44, justifyContent: 'center' },
-  roleButton: { backgroundColor: COLORS.primaryDark, borderRadius: RADIUS.sm, paddingHorizontal: 12, paddingVertical: 10, minHeight: 44, justifyContent: 'center' },
-  dangerButton: { backgroundColor: COLORS.error, borderRadius: RADIUS.sm, paddingHorizontal: 12, paddingVertical: 10, minHeight: 44, justifyContent: 'center' },
+  actions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingTop: SPACING.sm, borderTopWidth: 1, borderTopColor: COLORS.border },
+  button: { backgroundColor: COLORS.secondary, borderRadius: RADIUS.md, paddingHorizontal: 12, paddingVertical: 8, minHeight: 40, justifyContent: 'center' },
+  roleButton: { backgroundColor: COLORS.cardBackground, borderWidth: 1, borderColor: COLORS.primary, borderRadius: RADIUS.md, paddingHorizontal: 12, paddingVertical: 8, minHeight: 40, justifyContent: 'center' },
+  dangerButton: { backgroundColor: COLORS.error, borderRadius: RADIUS.md, paddingHorizontal: 12, paddingVertical: 8, minHeight: 40, justifyContent: 'center' },
   buttonPressed: { opacity: 0.65 },
   buttonText: { color: COLORS.text, fontWeight: '700' },
   processingText: { color: COLORS.textSecondary, alignSelf: 'center' },
-  secondaryButton: { borderWidth: 1, borderColor: COLORS.border, borderRadius: RADIUS.sm, padding: 10, minHeight: 44, justifyContent: 'center' }
+  secondaryButton: { borderWidth: 1, borderColor: COLORS.border, backgroundColor: COLORS.surface, borderRadius: RADIUS.md, paddingHorizontal: SPACING.md, paddingVertical: 8, minHeight: 40, justifyContent: 'center' },
+  secondaryButtonText: { color: COLORS.text, fontWeight: '700' },
 });
