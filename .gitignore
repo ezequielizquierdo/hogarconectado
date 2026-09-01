@@ -39,4 +39,8 @@ yarn-error.*
 # typescript
 *.tsbuildinfo
 
+# Playwright runtime artifacts (approved visual references live in tests/visual)
+playwright-report/
+test-results/
+
 app-example
