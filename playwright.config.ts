@@ -12,7 +12,8 @@ export default defineConfig({
   expect: {
     toHaveScreenshot: {
       animations: 'disabled',
-      maxDiffPixelRatio: 0.01,
+      // Small font-rasterization differences are expected between local and CI macOS runners.
+      maxDiffPixelRatio: 0.025,
     },
   },
   use: {

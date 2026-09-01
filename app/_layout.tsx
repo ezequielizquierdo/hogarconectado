@@ -14,7 +14,7 @@ import { QuoteDraftProvider } from '@/contexts/QuoteDraftContext';
 
 function AuthenticatedNavigator() {
   const { state, user } = useAuth();
-  const segments = useSegments();
+  const segments = useSegments() as string[];
   const router = useRouter();
 
   useEffect(() => {
