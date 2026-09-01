@@ -55,6 +55,8 @@ export default function ConsultasScreen() {
   const [pushLoading, setPushLoading] = useState(false);
   const [pushTestLoading, setPushTestLoading] = useState(false);
   const [pushErrorMessage, setPushErrorMessage] = useState('');
+  const [showPushTools, setShowPushTools] = useState(false);
+  const isDesktop = Platform.OS === 'web' && width >= 1024;
 
   useEffect(() => {
     if (user?.rol !== 'admin') return;
@@ -106,6 +108,16 @@ export default function ConsultasScreen() {
     nuevas: consultas.filter(item => item.estado === 'nueva').length,
     abiertas: consultas.filter(item => ['nueva', 'en-gestion'].includes(item.estado)).length,
   }), [consultas]);
+
+  const filterButtons = ESTADOS.map(option => (
+    <Pressable
+      key={option.value}
+      onPress={() => setFiltro(option.value)}
+      style={[styles.filterChip, filtro === option.value && styles.filterChipActive]}
+    >
+      <Text style={[styles.filterText, filtro === option.value && styles.filterTextActive]}>{option.label}</Text>
+    </Pressable>
+  ));
 
   const updateStatus = async (item: ConsultaComercial, estado: ConsultaEstado) => {
     if (processingId || item.estado === estado) return;
@@ -224,42 +236,44 @@ export default function ConsultasScreen() {
             {!!pushErrorMessage && <Text style={styles.pushError}>{pushErrorMessage}</Text>}
           </View>
           {pushState.supported && pushState.permission !== 'denied' && (
-            <View style={[styles.pushActions, width < 520 && styles.pushActionsCompact]}>
-              {pushState.subscribed && (
-                <>
-                  <Pressable onPress={() => void testLocalNotification()} style={[styles.pushButtonSecondary, width < 520 && styles.pushButtonCompact]}>
-                    <Text style={styles.pushButtonText}>Prueba local</Text>
-                  </Pressable>
-                  <Pressable disabled={pushTestLoading} onPress={() => void testPush()} style={[styles.pushButton, width < 520 && styles.pushButtonCompact]}>
-                    <Text style={styles.pushButtonText}>{pushTestLoading ? 'Enviando…' : 'Probar Push'}</Text>
-                  </Pressable>
-                </>
-              )}
+            <View style={styles.pushMainActions}>
               <Pressable
                 disabled={pushLoading}
                 onPress={() => void togglePush()}
-                style={[styles.pushButton, pushState.subscribed && styles.pushButtonSecondary, width < 520 && styles.pushButtonCompact]}
+                style={[styles.pushButton, pushState.subscribed && styles.pushButtonSecondary]}
               >
                 <Text style={styles.pushButtonText}>
-                  {pushLoading ? 'Procesando…' : pushState.subscribed ? 'Desactivar' : 'Activar avisos'}
+                  {pushLoading ? 'Procesando…' : pushState.subscribed ? 'Desactivar avisos' : 'Activar avisos'}
                 </Text>
+              </Pressable>
+              {pushState.subscribed && (
+                <Pressable onPress={() => setShowPushTools(current => !current)} style={styles.pushToolsToggle}>
+                  <Text style={styles.pushToolsText}>{showPushTools ? 'Ocultar pruebas' : 'Herramientas de prueba'}</Text>
+                  <MaterialIcons name={showPushTools ? 'expand-less' : 'expand-more'} size={19} color={COLORS.textSecondary} />
+                </Pressable>
+              )}
+            </View>
+          )}
+          {pushState.subscribed && showPushTools && (
+            <View style={styles.pushDiagnostics}>
+              <Pressable onPress={() => void testLocalNotification()} style={styles.pushButtonSecondary}>
+                <Text style={styles.pushButtonText}>Prueba local</Text>
+              </Pressable>
+              <Pressable disabled={pushTestLoading} onPress={() => void testPush()} style={styles.pushButton}>
+                <Text style={styles.pushButtonText}>{pushTestLoading ? 'Enviando…' : 'Probar Push'}</Text>
               </Pressable>
             </View>
           )}
         </View>
       )}
 
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filters}>
-        {ESTADOS.map(option => (
-          <Pressable
-            key={option.value}
-            onPress={() => setFiltro(option.value)}
-            style={[styles.filterChip, filtro === option.value && styles.filterChipActive]}
-          >
-            <Text style={[styles.filterText, filtro === option.value && styles.filterTextActive]}>{option.label}</Text>
-          </Pressable>
-        ))}
-      </ScrollView>
+      {isDesktop ? (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filters}>
+          {filterButtons}
+        </ScrollView>
+      ) : (
+        <View style={styles.filtersMobile}>{filterButtons}</View>
+      )}
 
       {loading ? (
         <DataStatePanel status="loading" title="Cargando consultas…" message="Estamos buscando los contactos pendientes." />
@@ -270,7 +284,7 @@ export default function ConsultasScreen() {
       ) : (
         <View style={styles.list}>
           {consultas.map(item => (
-            <View key={item._id} style={[styles.card, item.estado === 'nueva' && styles.cardNew]}>
+            <View key={item._id} style={[styles.card, isDesktop && styles.cardDesktop, item.estado === 'nueva' && styles.cardNew]}>
               <View style={styles.productRow}>
                 <View style={styles.imageBox}>
                   {item.productoSnapshot.imagen
@@ -335,7 +349,7 @@ export default function ConsultasScreen() {
 }
 
 const styles = StyleSheet.create({
-  page: { minHeight: '100%', padding: SPACING.lg, gap: SPACING.md, backgroundColor: COLORS.background },
+  page: { width: '100%', maxWidth: 1460, minHeight: '100%', alignSelf: 'center', padding: SPACING.lg, paddingBottom: 110, gap: SPACING.md, backgroundColor: COLORS.background },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: SPACING.lg, backgroundColor: COLORS.background },
   header: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'flex-end', gap: SPACING.md },
   eyebrow: { color: COLORS.primaryDark, fontSize: 11, fontWeight: '800', letterSpacing: 1 },
@@ -352,18 +366,21 @@ const styles = StyleSheet.create({
   pushDescription: { marginTop: 3, color: COLORS.textSecondary, fontSize: 13, lineHeight: 19 },
   pushError: { marginTop: SPACING.sm, color: COLORS.errorStrong, fontSize: 12, fontWeight: '700', lineHeight: 17 },
   pushButton: { minHeight: 44, alignItems: 'center', justifyContent: 'center', paddingHorizontal: SPACING.md, borderRadius: RADIUS.md, backgroundColor: COLORS.primary },
-  pushActions: { width: '100%', flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.sm },
-  pushActionsCompact: { flexDirection: 'column' },
-  pushButtonCompact: { width: '100%' },
+  pushMainActions: { alignItems: 'flex-end', gap: SPACING.xs },
+  pushToolsToggle: { minHeight: 36, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 2, paddingHorizontal: SPACING.sm },
+  pushToolsText: { color: COLORS.textSecondary, fontSize: 12, fontWeight: '700' },
+  pushDiagnostics: { width: '100%', flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.sm, paddingTop: SPACING.sm, borderTopWidth: 1, borderTopColor: COLORS.border },
   pushButtonSecondary: { minHeight: 44, alignItems: 'center', justifyContent: 'center', paddingHorizontal: SPACING.md, borderRadius: RADIUS.md, backgroundColor: COLORS.cardBackground },
   pushButtonText: { color: COLORS.ink, fontWeight: '800' },
   filters: { gap: SPACING.sm, paddingVertical: SPACING.xs },
+  filtersMobile: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.sm, paddingVertical: SPACING.xs },
   filterChip: { minHeight: 42, justifyContent: 'center', paddingHorizontal: SPACING.md, borderRadius: RADIUS.full, borderWidth: 1, borderColor: COLORS.border, backgroundColor: COLORS.surface },
   filterChipActive: { borderColor: COLORS.primaryDark, backgroundColor: COLORS.cardBackground },
   filterText: { color: COLORS.textSecondary, fontWeight: '700' },
   filterTextActive: { color: COLORS.primaryDark },
-  list: { gap: SPACING.md },
-  card: { padding: SPACING.md, gap: SPACING.md, borderRadius: RADIUS.lg, borderWidth: 1, borderColor: COLORS.border, backgroundColor: COLORS.surface, ...SHADOWS.sm },
+  list: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.md },
+  card: { width: '100%', padding: SPACING.md, gap: SPACING.md, borderRadius: RADIUS.lg, borderWidth: 1, borderColor: COLORS.border, backgroundColor: COLORS.surface, ...SHADOWS.sm },
+  cardDesktop: { width: '49%' },
   cardNew: { borderTopWidth: 4, borderTopColor: COLORS.primaryDark },
   productRow: { flexDirection: 'row', alignItems: 'center', gap: SPACING.md },
   imageBox: { width: 104, height: 104, alignItems: 'center', justifyContent: 'center', borderRadius: RADIUS.md, backgroundColor: COLORS.cardBackground },

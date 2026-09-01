@@ -515,6 +515,8 @@ Una tarea de interfaz se considera terminada cuando:
 - La adopción continuará por superficie para retirar valores aislados sin alterar de forma masiva pantallas estables, comenzando por catálogo, cotizaciones, calculadora, stock, usuarios y perfil.
 - El catálogo adopta capas tonales, acento lavanda, filtros con iconografía consistente y acciones administrativas con etiquetas visibles.
 - Los estados de stock, filtros activos y acciones conservan color funcional, texto explícito y contraste independiente de los emojis heredados.
+- La Calculadora elimina el encabezado fotográfico duplicado y adopta el encabezado operativo integrado de Cotizaciones; en mobile reduce la altura de campos y estados vacíos para acercar los resultados sin alterar cálculos ni acciones de copia.
+- La bandeja de Consultas compacta el bloque de avisos, conserva las pruebas push bajo un control desplegable, muestra todos los filtros sin desplazamiento lateral en mobile y utiliza una grilla de dos columnas en escritorio para reducir espacio vacío.
 
 ### UX-015 — Validación visual repetible
 

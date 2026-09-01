@@ -1,5 +1,3 @@
-import Header from "@/components/layout/Header";
-import MobileHeader from "@/components/MobileHeader";
 import { COLORS, RADIUS, SHADOWS, SPACING } from "@/constants/theme";
 import { useCalculoPrecios } from "@/hooks/useCalculoPrecios";
 import * as Clipboard from "expo-clipboard";
@@ -144,24 +142,21 @@ export default function CalculadoraScreen() {
 
   return (
     <View style={styles.page}>
-      {isDesktop ? (
-        <Header
-          sectionTitle="Calculadora de porcentajes"
-          sectionSubtitle="Resultados rápidos para cada modalidad"
-        />
-      ) : (
-        <MobileHeader
-          title="Calculadora"
-          subtitle="Porcentajes y formas de pago"
-        />
-      )}
-
       <ScrollView
         style={styles.scroll}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, isDesktop && styles.scrollContentDesktop]}
         keyboardShouldPersistTaps="handled"
       >
-        <View style={[styles.content, isDesktop && styles.contentDesktop]}>
+        <View style={styles.shell}>
+          <View style={styles.screenHeader}>
+            <Text style={styles.screenEyebrow}>OPERACIÓN COMERCIAL</Text>
+            <Text style={styles.screenTitle}>Calculadora</Text>
+            <Text style={styles.screenSubtitle}>
+              Calculá precios y copiá cada modalidad en pocos pasos.
+            </Text>
+          </View>
+
+          <View style={[styles.content, isDesktop && styles.contentDesktop]}>
           <View style={[styles.inputPanel, isDesktop && styles.inputPanelDesktop]}>
             <Text style={styles.eyebrow}>CÁLCULO RÁPIDO</Text>
             <Text style={styles.heading}>Ingresá los datos</Text>
@@ -235,7 +230,7 @@ export default function CalculadoraScreen() {
             </Text>
 
             {!valorInicial ? (
-              <View style={styles.emptyState}>
+              <View style={[styles.emptyState, isDesktop && styles.emptyStateDesktop]}>
                 <Text style={styles.emptyIcon}>％</Text>
                 <Text style={styles.emptyTitle}>Ingresá un valor inicial</Text>
                 <Text style={styles.emptyText}>
@@ -243,19 +238,19 @@ export default function CalculadoraScreen() {
                 </Text>
               </View>
             ) : valorError || porcentajeError ? (
-              <View style={styles.emptyState}>
+              <View style={[styles.emptyState, isDesktop && styles.emptyStateDesktop]}>
                 <Text style={styles.emptyIcon}>!</Text>
                 <Text style={styles.emptyTitle}>Revisá los datos ingresados</Text>
                 <Text style={styles.emptyText}>{valorError || porcentajeError}</Text>
               </View>
             ) : loading ? (
-              <View style={styles.emptyState}>
+              <View style={[styles.emptyState, isDesktop && styles.emptyStateDesktop]}>
                 <Text style={styles.emptyIcon}>⌛</Text>
                 <Text style={styles.emptyTitle}>Calculando valores</Text>
                 <Text style={styles.emptyText}>Estamos aplicando las fórmulas oficiales.</Text>
               </View>
             ) : error || !resultados ? (
-              <View style={styles.emptyState}>
+              <View style={[styles.emptyState, isDesktop && styles.emptyStateDesktop]}>
                 <Text style={styles.emptyIcon}>⚠️</Text>
                 <Text style={styles.emptyTitle}>No pudimos calcular</Text>
                 <Text style={styles.emptyText}>{error || "Revisá los valores ingresados."}</Text>
@@ -346,6 +341,7 @@ export default function CalculadoraScreen() {
               </View>
             )}
           </View>
+          </View>
         </View>
       </ScrollView>
     </View>
@@ -356,8 +352,14 @@ const styles = StyleSheet.create({
   page: { flex: 1, backgroundColor: COLORS.background },
   scroll: { flex: 1 },
   scrollContent: { padding: SPACING.md, paddingBottom: 110 },
-  content: { width: "100%", maxWidth: 1280, alignSelf: "center", gap: SPACING.md },
-  contentDesktop: { flexDirection: "row", alignItems: "flex-start", padding: SPACING.lg },
+  scrollContentDesktop: { padding: SPACING.xl, paddingBottom: 120 },
+  shell: { width: "100%", maxWidth: 1280, alignSelf: "center" },
+  screenHeader: { marginBottom: SPACING.lg },
+  screenEyebrow: { color: COLORS.primaryDark, fontSize: 12, fontWeight: "800", letterSpacing: 1.2 },
+  screenTitle: { color: COLORS.text, fontSize: 34, lineHeight: 42, fontWeight: "800" },
+  screenSubtitle: { color: COLORS.textSecondary, fontSize: 16, lineHeight: 23 },
+  content: { width: "100%", gap: SPACING.md },
+  contentDesktop: { flexDirection: "row", alignItems: "flex-start" },
   inputPanel: {
     backgroundColor: COLORS.surface,
     borderRadius: RADIUS.lg,
@@ -378,12 +380,12 @@ const styles = StyleSheet.create({
   },
   eyebrow: { fontSize: 11, fontWeight: "800", letterSpacing: 1, color: COLORS.primaryDark },
   heading: { fontSize: 23, fontWeight: "800", color: COLORS.text, marginTop: 4 },
-  helper: { fontSize: 14, lineHeight: 20, color: COLORS.textSecondary, marginTop: SPACING.sm, marginBottom: SPACING.lg },
+  helper: { fontSize: 14, lineHeight: 20, color: COLORS.textSecondary, marginTop: SPACING.xs, marginBottom: SPACING.md },
   field: { marginBottom: SPACING.md },
   label: { fontSize: 13, fontWeight: "700", color: COLORS.text, marginBottom: SPACING.sm },
   fieldError: { marginTop: SPACING.xs, color: COLORS.error, fontSize: 12, fontWeight: "600" },
   moneyInputRow: {
-    minHeight: 58,
+    minHeight: 50,
     flexDirection: "row",
     alignItems: "center",
     borderWidth: 1,
@@ -392,9 +394,9 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.cardBackground,
     paddingHorizontal: SPACING.md,
   },
-  inputPrefix: { fontSize: 22, fontWeight: "700", color: COLORS.textSecondary, marginRight: SPACING.sm },
-  inputSuffix: { fontSize: 20, fontWeight: "700", color: COLORS.textSecondary },
-  moneyInput: { flex: 1, fontSize: 22, fontWeight: "700", color: COLORS.text, outlineStyle: "none" } as any,
+  inputPrefix: { fontSize: 19, fontWeight: "700", color: COLORS.textSecondary, marginRight: SPACING.sm },
+  inputSuffix: { fontSize: 18, fontWeight: "700", color: COLORS.textSecondary },
+  moneyInput: { flex: 1, fontSize: 19, fontWeight: "700", color: COLORS.text, outlineStyle: "none" } as any,
   clearButton: { alignItems: "center", paddingVertical: SPACING.sm, marginTop: SPACING.xs },
   clearText: { color: COLORS.textSecondary, fontWeight: "600" },
   resultsHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: SPACING.lg },
@@ -408,7 +410,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    minHeight: 96,
+    minHeight: 82,
     padding: SPACING.md,
     backgroundColor: COLORS.cardBackground,
     borderRadius: RADIUS.md,
@@ -423,7 +425,8 @@ const styles = StyleSheet.create({
   copyText: { fontSize: 11, fontWeight: "700", color: COLORS.primaryDark, marginTop: 2 },
   installmentCard: { padding: SPACING.md, borderRadius: RADIUS.lg, backgroundColor: COLORS.primary + "12", borderWidth: 1, borderColor: COLORS.primary + "45", gap: SPACING.sm },
   installmentTitle: { fontSize: 18, fontWeight: "800", color: COLORS.text, marginBottom: SPACING.xs },
-  emptyState: { minHeight: 380, alignItems: "center", justifyContent: "center", padding: SPACING.xl },
+  emptyState: { minHeight: 250, alignItems: "center", justifyContent: "center", padding: SPACING.lg },
+  emptyStateDesktop: { minHeight: 380 },
   emptyIcon: { fontSize: 54, color: COLORS.primary, marginBottom: SPACING.md },
   emptyTitle: { fontSize: 20, fontWeight: "800", color: COLORS.text, textAlign: "center" },
   emptyText: { maxWidth: 390, fontSize: 14, lineHeight: 21, color: COLORS.textSecondary, textAlign: "center", marginTop: SPACING.sm },
