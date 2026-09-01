@@ -7,6 +7,7 @@ import {
   ActivityIndicator,
   TextInput,
   View,
+  Pressable,
 } from "react-native";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
@@ -46,9 +47,14 @@ export default function EditableDropdown({
   const [isFocused, setIsFocused] = useState(false);
   const [customValue, setCustomValue] = useState("");
   const [showCustomInput, setShowCustomInput] = useState(false);
+  const [query, setQuery] = useState("");
+
+  const normalizedQuery = query.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
 
   const dropdownOptions: DropdownOption[] = [
-    ...options.map((option) => ({ label: option, value: option })),
+    ...options
+      .filter(option => !normalizedQuery || option.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().includes(normalizedQuery))
+      .map((option) => ({ label: option, value: option })),
     { label: "Escribir nueva marca...", value: "__custom__" },
   ];
 
@@ -59,6 +65,7 @@ export default function EditableDropdown({
     } else {
       onSelect(value);
       setIsVisible(false);
+      setQuery("");
     }
   };
 
@@ -110,7 +117,13 @@ export default function EditableDropdown({
           (loading || disabled) && styles.dropdownDisabled,
           isFocused && styles.dropdownFocused,
         ]}
-        onPress={() => !loading && !disabled && setIsVisible(true)}
+        onPress={() => {
+          if (!loading && !disabled) {
+            setQuery("");
+            setShowCustomInput(false);
+            setIsVisible(true);
+          }
+        }}
         onFocus={() => setIsFocused(true)}
         onBlur={() => setIsFocused(false)}
         disabled={loading || disabled}
@@ -144,10 +157,13 @@ export default function EditableDropdown({
         animationType="fade"
         onRequestClose={() => setIsVisible(false)}
       >
-        <TouchableOpacity
-          style={styles.modalOverlay}
-          onPress={() => setIsVisible(false)}
-        >
+        <View style={styles.modalOverlay}>
+          <Pressable
+            style={StyleSheet.absoluteFill}
+            onPress={() => setIsVisible(false)}
+            accessibilityRole="button"
+            accessibilityLabel="Cerrar selector"
+          />
           <ThemedView style={styles.modalContent}>
             {showCustomInput ? (
               <View style={styles.customInputContainer}>
@@ -183,16 +199,30 @@ export default function EditableDropdown({
                 </View>
               </View>
             ) : (
-              <FlatList
-                data={dropdownOptions}
-                keyExtractor={(item) => item.value}
-                renderItem={renderOption}
-                style={styles.optionsList}
-                showsVerticalScrollIndicator={false}
-              />
+              <>
+                <View style={styles.searchArea}>
+                  <TextInput
+                    autoFocus
+                    style={styles.searchInput}
+                    value={query}
+                    onChangeText={setQuery}
+                    placeholder="Buscar o escribir una marca"
+                    placeholderTextColor={COLORS.textLight}
+                    accessibilityLabel="Buscar marca"
+                  />
+                </View>
+                <FlatList
+                  data={dropdownOptions}
+                  keyExtractor={(item) => item.value}
+                  renderItem={renderOption}
+                  style={styles.optionsList}
+                  showsVerticalScrollIndicator={false}
+                  keyboardShouldPersistTaps="handled"
+                />
+              </>
             )}
           </ThemedView>
-        </TouchableOpacity>
+        </View>
       </Modal>
     </View>
   );
@@ -265,12 +295,15 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.surface,
     borderRadius: RADIUS.lg,
     width: "100%",
+    maxWidth: 560,
     maxHeight: "60%",
     ...SHADOWS.lg,
   },
   optionsList: {
     maxHeight: 300,
   },
+  searchArea: { padding: SPACING.md, paddingBottom: SPACING.sm },
+  searchInput: { minHeight: 44, borderWidth: 1, borderColor: COLORS.border, borderRadius: RADIUS.md, paddingHorizontal: SPACING.md, color: COLORS.text, backgroundColor: COLORS.cardBackground },
   option: {
     padding: SPACING.lg,
     borderBottomWidth: 1,

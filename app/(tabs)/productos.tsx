@@ -38,7 +38,7 @@ import { useCategorias } from "@/hooks/useCategorias";
 import { useProductos } from "@/hooks/useProductos";
 import { useMarcas } from "@/hooks/useMarcas";
 import { useDebounce } from "@/hooks/useDebounce";
-import { productosService } from "@/services";
+import { categoriasService, productosService } from "@/services";
 import { uploadService, UploadedImage } from "@/services/uploadService";
 import { Producto, ProductoConPrecios } from "@/services/types";
 import { COLORS, SPACING, RADIUS, SHADOWS } from "@/constants/theme";
@@ -189,6 +189,17 @@ export default function ProductosScreen() {
   const [formErrors, setFormErrors] = useState<Partial<Record<keyof ProductoForm, string>>>({});
   const initialFormSnapshot = useRef(JSON.stringify(initialForm));
   const productFormScrollRef = useRef<ScrollView>(null);
+
+  const createCategory = async (name: string) => {
+    const normalizedName = name.trim();
+    const existing = categorias.find(
+      categoria => categoria.nombre.localeCompare(normalizedName, "es", { sensitivity: "base" }) === 0
+    );
+    if (existing) return existing._id;
+    const created = await categoriasService.crearCategoria({ nombre: normalizedName, activo: true });
+    await recargarCategorias();
+    return created._id;
+  };
 
   // Referencia para capturar la vista de Instagram Story
   const instagramViewRef = useRef<View>(null);
@@ -1728,6 +1739,10 @@ export default function ProductosScreen() {
                     loading={categoriasLoading}
                     error={formErrors.categoria || categoriasError}
                     onRetry={categoriasError ? recargarCategorias : undefined}
+                    searchable
+                    searchPlaceholder="Buscar o crear categoría"
+                    createLabel="Crear categoría"
+                    onCreate={createCategory}
                   />
 
                   <View style={styles.formSectionHeader}>
@@ -1977,6 +1992,10 @@ export default function ProductosScreen() {
                   loading={categoriasLoading}
                   error={formErrors.categoria || categoriasError}
                   onRetry={categoriasError ? recargarCategorias : undefined}
+                  searchable
+                  searchPlaceholder="Buscar o crear categoría"
+                  createLabel="Crear categoría"
+                  onCreate={createCategory}
                 />
 
                 <View style={styles.formSectionHeader}>
@@ -3450,6 +3469,8 @@ export default function ProductosScreen() {
                 selectedValue={filtroCategoria}
                 onSelect={(value) => handleCategoriaChange(value)}
                 placeholder="Filtrar por categoría"
+                searchable
+                searchPlaceholder="Buscar categoría"
               />
             </View>
 
@@ -3466,6 +3487,8 @@ export default function ProductosScreen() {
                 selectedValue={filtroMarca}
                 onSelect={(value) => handleMarcaChange(value)}
                 placeholder="Filtrar por marca"
+                searchable
+                searchPlaceholder="Buscar marca"
               />
             </View>
 

@@ -195,6 +195,9 @@ Una tarea de interfaz se considera terminada cuando:
 - La imagen conserva acciones explícitas para agregar, reemplazar y eliminar.
 - Precio base y porcentaje comercial se editan por separado; el formulario muestra el porcentaje efectivo actual y valida un rango de 0 a 100.
 - Los productos existentes que aún no poseen un porcentaje propio conservan el porcentaje global como respaldo, sin exigir una migración masiva inmediata.
+- Los selectores de marca y categoría permiten buscar mientras se escribe, ignoran diferencias de mayúsculas y acentos y reducen la lista inmediatamente.
+- Una marca inexistente puede utilizarse desde el mismo selector; una categoría inexistente puede crearse sin cerrar el formulario y queda seleccionada al finalizar.
+- En escritorio, el panel de opciones se limita a un ancho compacto; en móvil conserva el ancho disponible.
 
 **Validación funcional parcial:** se confirmó en entorno local que modificar el porcentaje de un producto persiste el nuevo valor y actualiza su precio contado en el catálogo. Resta completar las pruebas del formulario con errores, cierre accidental y reemplazo de imagen.
 
@@ -293,6 +296,8 @@ Una tarea de interfaz se considera terminada cuando:
 - Contado destaca el total; las modalidades financiadas muestran cantidad de cuotas, valor de cuota y total financiado.
 - El mensaje para WhatsApp contiene cliente, producto, cantidad y solo la condición seleccionada, sin campos comerciales alternativos.
 - Existe una vista previa de texto independiente con acciones para copiar y abrir WhatsApp o WhatsApp Web.
+- En Safari/PWA móvil, el enlace universal reemplaza la vista actual para conservar la apertura de WhatsApp después de preparar el mensaje; en escritorio se reserva la pestaña durante el clic para evitar bloqueos del navegador.
+- El mensaje de éxito dejó de mostrarse ante una apertura bloqueada y el error ofrece `Copiar texto` como alternativa explícita.
 - La columna de escritorio ahora permite desplazamiento y conserva espacio inferior para evitar que el total o las acciones queden cortados.
 - La imagen generada utiliza la misma condición seleccionada que la cotización textual.
 
@@ -476,7 +481,7 @@ Una tarea de interfaz se considera terminada cuando:
 
 ### UX-013 — Rendimiento del catálogo
 
-**Estado:** Pendiente  
+**Estado:** En progreso — infraestructura y primeras superficies preparadas
 **Objetivo:** conservar fluidez con catálogos grandes y conexiones móviles.
 
 **Criterios de aceptación:**
@@ -530,6 +535,14 @@ Una tarea de interfaz se considera terminada cuando:
 - Cada superficie se captura al menos en escritorio y móvil.
 - Las diferencias se presentan para revisión humana; no se actualizan referencias automáticamente.
 - El procedimiento puede ejecutarse localmente y en integración continua.
+
+**Implementación preparada:**
+
+- Playwright captura Login, Productos, Calculadora, Cotizaciones, Usuarios y Perfil en 1440 × 900 y 390 × 844.
+- Las respuestas de API y la sesión administrativa utilizan fixtures deterministas sin credenciales ni datos reales.
+- CI compara contra referencias versionadas y publica diferencias como artefacto cuando falla; nunca reemplaza referencias automáticamente.
+- La aceptación de nuevas referencias queda limitada al comando local explícito `npm run test:visual:update`.
+- Queda pendiente incorporar el detalle/modal de producto y el compositor de Historia de Instagram para completar todas las superficies definidas.
 
 ### UX-016 — Medición y retroalimentación
 

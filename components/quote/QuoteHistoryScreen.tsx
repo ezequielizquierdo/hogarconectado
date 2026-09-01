@@ -198,31 +198,48 @@ export function QuoteHistoryScreen() {
   };
 
   const share = async (quote: Cotizacion, openWhatsApp: boolean) => {
+    let reservedWindow: Window | null = null;
+    if (openWhatsApp && Platform.OS === "web" && isDesktop) {
+      reservedWindow = window.open("about:blank", "_blank");
+      if (reservedWindow) reservedWindow.opener = null;
+    }
     setProcessingId(quote._id);
     setFeedback("");
     try {
       const result = await cotizacionesService.generarMensajeWhatsApp(quote._id);
       if (openWhatsApp) {
-        await Linking.openURL(result.urlWhatsApp);
+        let successMessage = "WhatsApp abierto con la cotización preparada.";
         if (quote.estado === "pendiente") {
           try {
             const updated = await cotizacionesService.actualizarEstadoCotizacion(quote._id, "enviada");
             setQuotes((current) => current.map((item) => item._id === quote._id ? updated : item));
             setSelected((current) => current?._id === quote._id ? updated : current);
-            setFeedback("WhatsApp abierto y cotización marcada como enviada.");
+            successMessage = "WhatsApp abierto y cotización marcada como enviada.";
           } catch {
-            setFeedback("WhatsApp se abrió, pero no pudimos actualizar el estado. Podés marcarla como enviada desde el detalle.");
+            successMessage = "WhatsApp se abrió, pero no pudimos actualizar el estado. Podés marcarla como enviada desde el detalle.";
+          }
+        }
+
+        if (Platform.OS === "web") {
+          if (reservedWindow && !reservedWindow.closed) {
+            reservedWindow.location.replace(result.urlWhatsApp);
+          } else {
+            window.location.assign(result.urlWhatsApp);
           }
         } else {
-          setFeedback("WhatsApp abierto con la cotización preparada.");
+          const canOpen = await Linking.canOpenURL(result.urlWhatsApp);
+          if (!canOpen) throw new Error("WhatsApp no disponible");
+          await Linking.openURL(result.urlWhatsApp);
         }
+        setFeedback(successMessage);
       }
       else {
         await Clipboard.setStringAsync(result.mensaje);
         setFeedback("Texto de la cotización copiado.");
       }
     } catch {
-      setFeedback("No pudimos preparar el mensaje de la cotización.");
+      if (reservedWindow && !reservedWindow.closed) reservedWindow.close();
+      setFeedback("No pudimos abrir WhatsApp. Podés usar Copiar texto para enviar la cotización manualmente.");
     } finally {
       setProcessingId(null);
     }

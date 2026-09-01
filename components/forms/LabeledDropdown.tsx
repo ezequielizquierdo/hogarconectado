@@ -20,6 +20,10 @@ interface LabeledDropdownProps {
   loading?: boolean;
   error?: string | null;
   onRetry?: () => void;
+  searchable?: boolean;
+  searchPlaceholder?: string;
+  createLabel?: string;
+  onCreate?: (label: string) => Promise<string | void>;
 }
 
 export default function LabeledDropdown({
@@ -33,6 +37,10 @@ export default function LabeledDropdown({
   loading = false,
   error = null,
   onRetry,
+  searchable = false,
+  searchPlaceholder,
+  createLabel,
+  onCreate,
 }: LabeledDropdownProps) {
   return (
     <View style={styles.container}>
@@ -52,6 +60,10 @@ export default function LabeledDropdown({
         error={error}
         onRetry={onRetry}
         accessibilityLabel={`${label}${required ? ", obligatorio" : ""}`}
+        searchable={searchable}
+        searchPlaceholder={searchPlaceholder}
+        createLabel={createLabel}
+        onCreate={onCreate}
       />
     </View>
   );
