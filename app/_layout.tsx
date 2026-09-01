@@ -16,12 +16,12 @@ function AuthenticatedNavigator() {
   const { state, user } = useAuth();
   const segments = useSegments() as string[];
   const router = useRouter();
+  const route = segments[0];
+  const tab = segments[1];
+  const isPublicCatalog = route === '(tabs)' && tab === 'productos';
 
   useEffect(() => {
     if (state === 'loading') return;
-    const route = segments[0];
-    const tab = segments[1];
-    const isPublicCatalog = route === '(tabs)' && tab === 'productos';
     if (state === 'unauthenticated' && route !== 'login' && !isPublicCatalog) {
       router.replace('/(tabs)/productos');
     }
@@ -33,9 +33,11 @@ function AuthenticatedNavigator() {
     if (state === 'authenticated' && (route === 'login' || route === 'acceso-pendiente')) {
       router.replace(user?.rol === 'admin' ? '/(tabs)' : '/(tabs)/productos');
     }
-  }, [router, segments, state, user]);
+  }, [isPublicCatalog, route, router, state, tab, user]);
 
-  if (state === 'loading') {
+  // El catálogo es público: no debe quedar bloqueado por la validación remota
+  // de una sesión guardada cuando el backend está iniciándose.
+  if (state === 'loading' && !isPublicCatalog) {
     return <AppLaunchScreen />;
   }
 

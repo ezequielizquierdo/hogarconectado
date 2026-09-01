@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { Animated, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { Image } from 'expo-image';
 
 import { COLORS, RADIUS, SPACING } from '@/constants/theme';
 
@@ -17,11 +18,44 @@ function SkeletonBlock({ style }: { style?: any }) {
 }
 
 export function AppLaunchScreen() {
+  const rotation = useRef(new Animated.Value(0)).current;
+  const pulse = useRef(new Animated.Value(0.72)).current;
+
+  useEffect(() => {
+    const rotateAnimation = Animated.loop(Animated.timing(rotation, {
+      toValue: 1, duration: 1300, useNativeDriver: true,
+    }));
+    const pulseAnimation = Animated.loop(Animated.sequence([
+      Animated.timing(pulse, { toValue: 1, duration: 700, useNativeDriver: true }),
+      Animated.timing(pulse, { toValue: 0.72, duration: 700, useNativeDriver: true }),
+    ]));
+    rotateAnimation.start();
+    pulseAnimation.start();
+    return () => { rotateAnimation.stop(); pulseAnimation.stop(); };
+  }, [pulse, rotation]);
+
+  const spin = rotation.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] });
   return <View style={styles.launch} accessibilityLabel="Cargando Hogar Conectado">
-    <View style={styles.launchMark}><Text style={styles.launchIcon}>⌂</Text></View>
+    <View style={styles.launchBrand}>
+      <Animated.View style={[styles.launchRing, { transform: [{ rotate: spin }] }]} />
+      <Animated.View style={[styles.launchLogoFrame, { opacity: pulse }]}>
+        <Image
+          source={require('@/assets/images/logo-transparent-circle.png')}
+          style={styles.launchLogo}
+          contentFit="contain"
+          cachePolicy="memory-disk"
+          accessibilityLabel="Logo de Hogar Conectado"
+        />
+      </Animated.View>
+    </View>
     <Text style={styles.launchTitle}>Hogar Conectado</Text>
-    <Text style={styles.launchSubtitle}>Preparando tu vidriera operativa…</Text>
-    <View style={styles.launchTrack}><SkeletonBlock style={styles.launchProgress} /></View>
+    <Text style={styles.launchSubtitle}>Conectando con tu vidriera…</Text>
+    <View style={styles.launchDots}>
+      <SkeletonBlock style={styles.launchDot} />
+      <SkeletonBlock style={styles.launchDot} />
+      <SkeletonBlock style={styles.launchDot} />
+    </View>
+    <Text style={styles.launchHint}>Esto puede demorar unos segundos si el servicio está iniciando.</Text>
   </View>;
 }
 
@@ -57,12 +91,15 @@ export function CardListSkeleton({ count = 3 }: { count?: number }) {
 const styles = StyleSheet.create({
   block: { backgroundColor: '#e9edff', borderRadius: RADIUS.sm },
   launch: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: SPACING.xl, backgroundColor: COLORS.background },
-  launchMark: { width: 72, height: 72, alignItems: 'center', justifyContent: 'center', borderRadius: RADIUS.full, backgroundColor: COLORS.secondary, borderWidth: 1, borderColor: COLORS.border },
-  launchIcon: { color: COLORS.primaryDark, fontSize: 38, fontWeight: '700' },
+  launchBrand: { width: 112, height: 112, alignItems: 'center', justifyContent: 'center' },
+  launchRing: { position: 'absolute', width: 106, height: 106, borderRadius: RADIUS.full, borderWidth: 4, borderColor: COLORS.border, borderTopColor: COLORS.primaryDark, borderRightColor: COLORS.secondaryDark },
+  launchLogoFrame: { width: 84, height: 84, alignItems: 'center', justifyContent: 'center', borderRadius: RADIUS.full, backgroundColor: COLORS.surface },
+  launchLogo: { width: 76, height: 76 },
   launchTitle: { marginTop: SPACING.md, color: COLORS.text, fontSize: 24, fontWeight: '700' },
   launchSubtitle: { marginTop: SPACING.xs, color: COLORS.textSecondary, fontSize: 14 },
-  launchTrack: { width: 180, height: 4, marginTop: SPACING.lg, overflow: 'hidden', borderRadius: RADIUS.full, backgroundColor: COLORS.border },
-  launchProgress: { width: '70%', height: '100%', backgroundColor: COLORS.primaryDark },
+  launchDots: { flexDirection: 'row', gap: SPACING.sm, marginTop: SPACING.lg },
+  launchDot: { width: 9, height: 9, borderRadius: RADIUS.full, backgroundColor: COLORS.primaryDark },
+  launchHint: { maxWidth: 290, marginTop: SPACING.lg, color: COLORS.textLight, fontSize: 12, lineHeight: 18, textAlign: 'center' },
   loadingBar: { minHeight: 34, flexDirection: 'row', alignItems: 'center', gap: SPACING.sm, paddingHorizontal: SPACING.md, borderRadius: RADIUS.md, backgroundColor: COLORS.cardBackground },
   loadingBarPulse: { width: 42, height: 5, borderRadius: RADIUS.full, backgroundColor: COLORS.primaryDark },
   loadingBarText: { color: COLORS.textSecondary, fontSize: 12, fontWeight: '600' },
