@@ -1,4 +1,5 @@
-import React from "react";
+import MaterialIcons from "@expo/vector-icons/MaterialIcons";
+import React, { useState } from "react";
 import {
   View,
   TouchableOpacity,
@@ -24,6 +25,9 @@ interface ProductCardProps {
   onEdit?: () => void;
   onDelete?: () => void;
   onInstagramStory?: () => void;
+  onQuote?: () => void;
+  onStockQuery?: () => void;
+  isQuoted?: boolean;
   onConsult?: () => void;
   showAdminButtons?: boolean;
   showConsultButton?: boolean;
@@ -38,6 +42,9 @@ export default function ProductCard({
   onEdit,
   onDelete,
   onInstagramStory,
+  onQuote,
+  onStockQuery,
+  isQuoted = false,
   onConsult,
   showAdminButtons = false,
   showConsultButton = false,
@@ -47,6 +54,7 @@ export default function ProductCard({
   const isNarrow = width <= 480;
   const hasStock = producto.stock.disponible && producto.stock.cantidad > 0;
   const hasImage = Boolean(producto.imagenes?.length);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat("es-AR", {
@@ -66,6 +74,80 @@ export default function ProductCard({
         ]}
       >
         <View style={styles.cardAccent} />
+        {showAdminButtons && (onEdit || onDelete || onInstagramStory || onStockQuery) && (
+          <View style={styles.cardControls} pointerEvents="box-none">
+            {onEdit ? (
+              <TouchableOpacity
+                accessibilityRole="button"
+                accessibilityLabel={`Editar ${producto.marca} ${producto.modelo}`}
+                hitSlop={6}
+                onPress={onEdit}
+                style={styles.cardControlButton}
+              >
+                <MaterialIcons name="edit" size={19} color={COLORS.text} />
+              </TouchableOpacity>
+            ) : <View />}
+
+            {(onDelete || onInstagramStory || onStockQuery) && (
+              <TouchableOpacity
+                accessibilityRole="button"
+                accessibilityLabel={`Más acciones para ${producto.marca} ${producto.modelo}`}
+                accessibilityState={{ expanded: menuOpen }}
+                hitSlop={6}
+                onPress={() => setMenuOpen((current) => !current)}
+                style={styles.cardControlButton}
+              >
+                <MaterialIcons name="more-horiz" size={22} color={COLORS.text} />
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
+
+        {menuOpen && (
+          <View style={styles.moreMenu} accessibilityRole="menu">
+            {onInstagramStory && (
+              <TouchableOpacity
+                accessibilityRole="menuitem"
+                onPress={() => {
+                  setMenuOpen(false);
+                  onInstagramStory();
+                }}
+                style={styles.moreMenuItem}
+              >
+                <MaterialIcons name="photo-camera" size={19} color={COLORS.instagram} />
+                <ThemedText style={styles.moreMenuLabel}>Crear historia</ThemedText>
+              </TouchableOpacity>
+            )}
+            {onStockQuery && (
+              <TouchableOpacity
+                accessibilityRole="menuitem"
+                onPress={() => {
+                  setMenuOpen(false);
+                  onStockQuery();
+                }}
+                style={styles.moreMenuItem}
+              >
+                <MaterialIcons name="content-copy" size={19} color={COLORS.text} />
+                <ThemedText style={styles.moreMenuLabel}>Copiar consulta de stock</ThemedText>
+              </TouchableOpacity>
+            )}
+            {onDelete && (
+              <TouchableOpacity
+                accessibilityRole="menuitem"
+                onPress={() => {
+                  setMenuOpen(false);
+                  onDelete();
+                }}
+                style={styles.moreMenuItem}
+              >
+                <MaterialIcons name="delete-outline" size={19} color={COLORS.errorStrong} />
+                <ThemedText style={[styles.moreMenuLabel, styles.moreMenuDeleteLabel]}>
+                  Eliminar producto
+                </ThemedText>
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
         {/* Zona de información del producto - clickeable para ver detalle */}
         <TouchableOpacity
           onPress={onPress}
@@ -182,42 +264,22 @@ export default function ProductCard({
         </TouchableOpacity>
 
         {/* Línea separatoria y zona de acciones */}
-        {showAdminButtons && (onEdit || onDelete || onInstagramStory) && (
+        {showAdminButtons && onQuote && (
           <>
             <View style={styles.separator} />
             <View style={styles.actionsSection}>
-              {onInstagramStory && (
-                <IconActionButton
-                  label={`Crear historia de Instagram de ${producto.marca} ${producto.modelo}`}
-                  visibleLabel={isNarrow ? undefined : "Historia"}
-                  icon="photo-camera"
-                  onPress={onInstagramStory}
-                  color={COLORS.instagram}
-                  style={[styles.actionButton, styles.instagramButton]}
-                />
-              )}
-
-              {onEdit && (
-                <IconActionButton
-                  label={`Editar ${producto.marca} ${producto.modelo}`}
-                  visibleLabel={isNarrow ? undefined : "Editar"}
-                  icon="edit"
-                  onPress={onEdit}
-                  color={COLORS.text}
-                  style={styles.actionButton}
-                />
-              )}
-
-              {onDelete && (
-                <IconActionButton
-                  label={`Eliminar ${producto.marca} ${producto.modelo}`}
-                  visibleLabel={isNarrow ? undefined : "Eliminar"}
-                  icon="delete-outline"
-                  onPress={onDelete}
-                  color={COLORS.errorStrong}
-                  style={[styles.actionButton, styles.deleteButton]}
-                />
-              )}
+              <IconActionButton
+                label={`${isQuoted ? "Quitar de" : "Agregar a"} la cotización ${producto.marca} ${producto.modelo}`}
+                visibleLabel={isQuoted ? "Agregado ✓" : "+ Cotizar"}
+                icon={isQuoted ? "check-circle" : "add-shopping-cart"}
+                onPress={onQuote}
+                color={isQuoted ? COLORS.text : COLORS.primaryDark}
+                style={[
+                  styles.actionButton,
+                  styles.quoteButton,
+                  isQuoted && styles.quoteButtonSelected,
+                ]}
+              />
             </View>
           </>
         )}
@@ -257,6 +319,57 @@ const styles = StyleSheet.create({
   cardAccent: {
     height: 4,
     backgroundColor: COLORS.primary,
+  },
+  cardControls: {
+    position: "absolute",
+    top: SPACING.sm,
+    left: SPACING.sm,
+    right: SPACING.sm,
+    zIndex: 5,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  cardControlButton: {
+    width: 40,
+    height: 40,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: RADIUS.full,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.surface,
+    ...SHADOWS.sm,
+  },
+  moreMenu: {
+    position: "absolute",
+    top: 54,
+    right: SPACING.sm,
+    zIndex: 10,
+    minWidth: 220,
+    padding: SPACING.xs,
+    borderRadius: RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.surface,
+    ...SHADOWS.md,
+  },
+  moreMenuItem: {
+    minHeight: 44,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: SPACING.sm,
+    paddingHorizontal: SPACING.sm,
+    borderRadius: RADIUS.sm,
+  },
+  moreMenuLabel: {
+    flex: 1,
+    color: COLORS.text,
+    fontSize: 13,
+    fontWeight: "600",
+  },
+  moreMenuDeleteLabel: {
+    color: COLORS.errorStrong,
   },
   consultButton: {
     backgroundColor: COLORS.cardBackground,
@@ -452,7 +565,6 @@ const styles = StyleSheet.create({
   actionsSection: {
     flexDirection: "row",
     padding: SPACING.sm,
-    gap: SPACING.sm,
   },
   actionButton: {
     flex: 1,
@@ -463,10 +575,10 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.cardBackground,
     borderRadius: RADIUS.md,
   },
-  deleteButton: {
-    backgroundColor: COLORS.error + "15", // Color rojizo muy suave
+  quoteButton: {
+    backgroundColor: COLORS.primary + "24",
   },
-  instagramButton: {
-    backgroundColor: COLORS.instagram + "15",
+  quoteButtonSelected: {
+    backgroundColor: COLORS.success,
   },
 });

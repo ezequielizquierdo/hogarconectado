@@ -120,27 +120,41 @@ export interface DatosContacto {
 }
 
 export interface ProductoCotizacion {
-    producto: string; // ID del producto
+    producto: string | {
+        _id: string;
+        marca?: string;
+        modelo?: string;
+        categoria?: string | Pick<Categoria, '_id' | 'nombre'>;
+        descripcion?: string;
+    };
     cantidad: number;
     detalles?: {
         categoria: string;
         marca: string;
         modelo: string;
         precioBase: number;
-        precios: any;
+        porcentajeAplicado?: number;
+        precios: {
+            contado: number;
+            tresCuotas: { total: number; cuota: number };
+            seisCuotas: { total: number; cuota: number };
+        };
     };
 }
+
+export type CotizacionEstado = 'pendiente' | 'enviada' | 'confirmada' | 'cancelada';
+export type CotizacionModalidad = 'contado' | '3-cuotas' | '6-cuotas';
 
 export interface Cotizacion {
     _id: string;
     datosContacto: DatosContacto;
     productos: ProductoCotizacion[];
-    modalidadPago: 'contado' | '3-cuotas' | '6-cuotas';
+    modalidadPago: CotizacionModalidad;
     totales: {
         subtotal: number;
         total: number;
     };
-    estado: 'pendiente' | 'enviada' | 'confirmada' | 'cancelada';
+    estado: CotizacionEstado;
     observaciones?: string;
     createdAt: string;
     updatedAt: string;
@@ -153,7 +167,7 @@ export interface CrearCotizacionData {
         cantidad: number;
         porcentajeAplicado?: number;
     }>;
-    modalidadPago: 'contado' | '3-cuotas' | '6-cuotas';
+    modalidadPago: CotizacionModalidad;
     observaciones?: string;
 }
 

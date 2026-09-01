@@ -19,6 +19,7 @@ import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
 import * as DocumentPicker from "expo-document-picker";
 import * as Sharing from "expo-sharing";
+import * as Clipboard from "expo-clipboard";
 import { captureRef } from "react-native-view-shot";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
@@ -30,6 +31,7 @@ import AnimatedButton from "@/components/ui/AnimatedButton";
 import { DataStatePanel } from "@/components/ui/DataStatePanel";
 import FadeInView from "@/components/ui/FadeInView";
 import ProductCard from "@/components/product/ProductCard";
+import { QuoteDraftBar } from "@/components/quote/QuoteDraftBar";
 import { SidebarFilters } from "@/components/filters";
 import { Pagination } from "@/components/Pagination";
 import { useCategorias } from "@/hooks/useCategorias";
@@ -42,6 +44,7 @@ import { Producto, ProductoConPrecios } from "@/services/types";
 import { COLORS, SPACING, RADIUS, SHADOWS } from "@/constants/theme";
 import { useAuth } from "@/contexts/AuthContext";
 import { useDesktopHeader } from "@/contexts/DesktopHeaderContext";
+import { useQuoteDraft } from "@/contexts/QuoteDraftContext";
 import { captureWebStory } from "@/utils/captureWebStory";
 import { InstagramStoryRenderData } from "@/utils/instagramStoryRenderer";
 import { useRouter } from "expo-router";
@@ -115,8 +118,10 @@ const initialForm: ProductoForm = {
 export default function ProductosScreen() {
   const { setAction: setDesktopHeaderAction } = useDesktopHeader();
   const { can, state } = useAuth();
+  const { contains, addProduct, removeProduct } = useQuoteDraft();
   const router = useRouter();
   const canEdit = can("editor", "admin");
+  const canQuote = can("admin");
   const canDelete = can("admin");
   const {
     categorias,
@@ -1270,6 +1275,31 @@ export default function ProductosScreen() {
     },
   });
 
+  const copiarConsultaStock = async (producto: Producto) => {
+    const categoriaNombre =
+      typeof producto.categoria === "string"
+        ? producto.categoria
+        : producto.categoria.nombre;
+    const mensaje = `Me confirmas si hay stock de:
+🆔 ID: ${producto._id}
+📦 Categoría: ${categoriaNombre}
+🏷️ Marca: ${producto.marca}
+📱 Modelo: ${producto.modelo}`;
+
+    try {
+      await Clipboard.setStringAsync(mensaje);
+      Alert.alert(
+        "Consulta copiada",
+        `Ya podés pegar la consulta de ${producto.marca} ${producto.modelo} donde la necesites.`
+      );
+    } catch {
+      Alert.alert(
+        "No pudimos copiarla",
+        "Intentá nuevamente o abrí el detalle del producto."
+      );
+    }
+  };
+
   const renderProducto = ({ item }: { item: Producto }) => {
     const productoConPrecios = convertirAProductoConPrecios(item);
 
@@ -1285,6 +1315,15 @@ export default function ProductosScreen() {
             setDetailModalVisible(true);
           }}
           showAdminButtons={canEdit}
+          isQuoted={contains(item._id)}
+          onQuote={canQuote ? () => {
+            if (contains(item._id)) {
+              removeProduct(item._id);
+              return;
+            }
+            addProduct(productoConPrecios);
+          } : undefined}
+          onStockQuery={canEdit ? () => copiarConsultaStock(item) : undefined}
           onEdit={canEdit ? () => openModal(item) : undefined}
           onDelete={canDelete ? () => handleDelete(item) : undefined}
           onInstagramStory={canEdit ? () => openInstagramModal(item) : undefined}
@@ -3474,6 +3513,8 @@ export default function ProductosScreen() {
           </View>
         </SafeAreaView>
       </Modal>
+
+      {canQuote && <QuoteDraftBar />}
     </>
   );
 }

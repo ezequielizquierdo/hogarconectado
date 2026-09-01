@@ -23,7 +23,7 @@ type NavigationItemProps = {
   badge?: number;
 };
 
-const PRIMARY_ROUTES = ["index", "explore_new", "productos", "calculadora", "consultas"];
+const PRIMARY_ROUTES = ["index", "productos", "calculadora", "consultas"];
 const SECONDARY_ROUTES = ["usuarios", "perfil", "explore_clean"];
 
 const ACCOUNT_LABELS: Record<string, string> = {

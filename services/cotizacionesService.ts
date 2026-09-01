@@ -4,6 +4,7 @@ import {
     CrearCotizacionData,
     CotizacionFiltros,
     CotizacionConMensaje,
+    CotizacionEstado,
     ApiResponse,
     ApiListResponse,
 } from './types';
@@ -59,7 +60,7 @@ class CotizacionesService {
     }
 
     // Actualizar estado de cotización
-    async actualizarEstadoCotizacion(id: string, estado: string): Promise<Cotizacion> {
+    async actualizarEstadoCotizacion(id: string, estado: CotizacionEstado): Promise<Cotizacion> {
         try {
             const response = await apiClient.put<ApiResponse<Cotizacion>>(`/cotizaciones/${id}/estado`, { estado });
             return response.data.data;

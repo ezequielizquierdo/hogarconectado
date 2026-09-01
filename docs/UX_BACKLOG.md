@@ -663,6 +663,32 @@ Una tarea de interfaz se considera terminada cuando:
 - Validar el formato de la clave pública VAPID, recuperar suscripciones antiguas incompatibles y comunicar errores sin exponer secretos.
 - Evitar datos personales en el aviso visible fuera de la bandeja autenticada.
 
+### UX-019 — Productos como centro operativo
+
+**Prioridad:** Alta
+
+**Estado:** En progreso — selección, compositor e historial multiproducto implementados
+
+**Objetivo:** reducir cambios de pantalla y selecciones repetidas al cotizar o administrar stock de un producto ya identificado en el catálogo.
+
+- La card administrativa ofrece una única acción principal: `+ Cotizar`. Al agregarlo cambia a `Agregado ✓` y permite quitarlo sin abandonar el catálogo.
+- La selección de cotización persiste entre recargas, evita duplicados y permite modificar cantidades, quitar productos o vaciar el borrador.
+- Una barra flotante resume productos, unidades y total contado estimado; abre un panel de revisión sin perder la posición del catálogo.
+- Cotizaciones recibe el identificador, consulta la fuente de verdad y precarga categoría, marca, modelo, descripción, precio base y porcentaje del producto.
+- Una nueva cotización del mismo producto vuelve a iniciar el flujo aunque la pantalla permanezca montada.
+- La card permite copiar una consulta de stock usando directamente el identificador, categoría, marca y modelo del producto visible.
+- Las acciones se agrupan por jerarquía: cotizar es la acción principal; editar se mantiene como acceso contextual visible; historia, copiar consulta de stock y eliminar viven en un menú secundario con confirmación para la acción destructiva.
+- La siguiente etapa evaluará si la actualización de cantidad de stock debe resolverse desde el detalle, preservando confirmación y permisos.
+- `Consulta Stock` se retiró de la navegación porque su utilidad quedó reemplazada por la consulta contextual del producto; su ruta permanece sin acceso visible durante la validación.
+- El borrador abre un compositor compacto con datos del cliente, una modalidad coherente para toda la propuesta, cantidades editables, subtotales y total.
+- Antes de guardar se presenta una vista previa modal con el contenido comercial definitivo; volver a editar no descarta la selección.
+- El guardado utiliza el contrato multiproducto existente y conserva el porcentaje aplicado de cada artículo para que el backend genere la instantánea comercial.
+- Cotizaciones funciona como historial y seguimiento: permite buscar por cliente o teléfono, filtrar por estado, revisar el snapshot multiproducto, copiar o abrir el mensaje de WhatsApp y actualizar el estado comercial.
+- La creación comienza desde Productos; la bandeja conserva una acción directa para regresar al catálogo sin duplicar el formulario anterior.
+- La eliminación permanece limitada a administradores y requiere confirmación explícita.
+
+**Validación pendiente:** comprobar visualmente en móvil y escritorio que la selección persiste, las cantidades y totales son correctos, la búsqueda recupera clientes y teléfonos, los cambios de estado se conservan y los modales no quedan tapados por la navegación.
+
 ---
 
 ## Secuencia sugerida de ejecución

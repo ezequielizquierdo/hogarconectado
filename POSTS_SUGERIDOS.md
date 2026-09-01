@@ -564,6 +564,110 @@ Agregamos validación temprana, recuperación de suscripciones antiguas y errore
 
 ---
 
+## 21. Menos páginas no significa poner todo en una pantalla
+
+**Tema:** flujos centrados en la tarea y reducción de pasos
+**Estado:** Borrador
+
+### LinkedIn
+
+En Hogar Conectado teníamos tres lugares relacionados con una misma tarea: Productos, Consulta Stock y Cotizaciones. El vendedor encontraba un producto en el catálogo y después debía volver a seleccionar categoría, marca y modelo para cotizarlo.
+
+Decidimos cambiar el centro del flujo. Ahora la cotización comienza desde la card del producto y reutiliza su identidad, precio base y porcentaje. La consulta de stock también se genera desde allí, sin volver a elegir categoría, marca y modelo. Las herramientas siguen existiendo, pero reciben el contexto que la persona ya había encontrado.
+
+El criterio no fue simplemente “reducir clics”. Nielsen Norman Group advierte que el costo de interacción también incluye esfuerzo mental y que una aparente simplificación puede fallar si rompe las expectativas: [Don’t Prioritize Efficiency Over Expectations](https://www.nngroup.com/articles/efficiency-vs-expectations/). Su artículo sobre flujos disruptivos también destaca el costo de obligar a una persona a recordar o reconstruir contexto entre pasos: [Disruptive Workflow Design](https://www.nngroup.com/articles/disruptive-workflow-design/).
+
+Aprendizaje: unificar no siempre significa amontonar funciones. A veces significa conservar cada herramienta, pero abrirla desde el lugar donde la intención ya está clara.
+
+### X
+
+Encontrar un producto y volver a elegir categoría, marca y modelo para cotizarlo era una fricción innecesaria.
+
+Ahora cotización y consulta de stock comienzan desde la card y conservan el contexto del producto. Menos repetición, sin convertir la card en un formulario gigante.
+
+**Referencias:** [eficiencia y expectativas — NN/G](https://www.nngroup.com/articles/efficiency-vs-expectations/) y [flujos disruptivos — NN/G](https://www.nngroup.com/articles/disruptive-workflow-design/).
+
+---
+
+## 22. Una cotización no debería obligarte a recordar el catálogo
+
+**Tema:** selección multiproducto, persistencia y reducción de fricción
+**Estado:** Borrador
+
+### LinkedIn
+
+En Hogar Conectado, cotizar varios productos implicaba repetir el mismo flujo una vez por artículo. El catálogo ayudaba a encontrarlos, pero no conservaba la intención de compra entre una card y la siguiente.
+
+Lo convertimos en un borrador persistente: cada producto tiene una sola acción principal, la selección sobrevive a una recarga y un panel permite cambiar cantidades, quitar artículos y anticipar el total contado. La cotización definitiva vendrá después; primero preservamos el contexto que la persona ya construyó.
+
+Baymard señala que el carrito debe permitir revisar productos y cantidades antes de avanzar, y que la edición del contenido es parte central de esa etapa: [Cart UX benchmark — Baymard Institute](https://baymard.com/checkout-usability/benchmark/step-type/cart). Su investigación de checkout también muestra cuánto pueden deteriorar la experiencia los pasos y fricciones acumuladas: [Current State of Checkout UX — Baymard Institute](https://baymard.com/blog/current-state-of-checkout-ux).
+
+Aprendizaje: persistir un borrador no es solamente una comodidad técnica. Es evitar que la interfaz le pida a la persona reconstruir una decisión que ya tomó.
+
+### X
+
+Cotizar varios productos no debería significar repetir el formulario varias veces.
+
+Sumamos una selección persistente desde el catálogo: agregar/quitar, cantidades y total estimado sin perder el contexto. Después viene el compositor; primero, conservar la intención.
+
+**Referencias:** [Cart UX — Baymard](https://baymard.com/checkout-usability/benchmark/step-type/cart) y [Checkout UX — Baymard](https://baymard.com/blog/current-state-of-checkout-ux).
+
+---
+
+## 23. Una vista previa también es una barrera contra errores
+
+**Tema:** cotizaciones multiproducto, revisión y prevención de errores
+**Estado:** Borrador
+
+### LinkedIn
+
+Después de conservar la selección de productos, el siguiente desafío en Hogar Conectado fue convertirla en una propuesta comercial sin volver a llenar un formulario por cada artículo.
+
+Armamos un compositor compacto: datos del cliente una sola vez, modalidad común, cantidades editables, subtotales y total. Antes de guardar aparece una vista previa con exactamente lo que recibirá el cliente. Si algo no cierra, se vuelve a editar sin perder la selección.
+
+El objetivo no era solamente ahorrar clics. Nielsen Norman Group explica que revisar información antes de una acción importante ayuda a prevenir errores y permite reconocerlos antes de que produzcan consecuencias: [Error-Prevention Guidelines — Nielsen Norman Group](https://www.nngroup.com/articles/slips/). El principio también coincide con la heurística de prevención de errores de su lista clásica: [10 Usability Heuristics](https://www.nngroup.com/articles/ten-usability-heuristics/).
+
+Aprendizaje: una buena vista previa no es decoración ni duplicación. Es el último espacio seguro para comprobar cantidades, modalidad y totales antes de crear una instantánea comercial.
+
+### X
+
+Una cotización multiproducto no debería guardarse a ciegas.
+
+Sumamos un compositor con cantidades, modalidad, subtotales y total; después, una vista previa exacta antes de confirmar. Volver a editar no borra el trabajo.
+
+Menos repetición y una barrera concreta contra errores.
+
+**Referencias:** [prevención de errores — NN/G](https://www.nngroup.com/articles/slips/) y [10 heurísticas de usabilidad — NN/G](https://www.nngroup.com/articles/ten-usability-heuristics/).
+
+---
+
+## 24. Crear y gestionar no son la misma tarea
+
+**Tema:** historial de cotizaciones y separación de responsabilidades
+**Estado:** Borrador
+
+### LinkedIn
+
+Cuando una cotización se guardaba en Hogar Conectado, técnicamente estaba resuelta: el backend conservaba cliente, productos, cantidades, precios y modalidad. Pero operativamente desaparecía. No había un lugar claro para encontrarla, compartirla o registrar qué ocurrió después.
+
+Separamos dos momentos. Productos sirve para construir una propuesta desde el contexto del catálogo. Cotizaciones pasó a ser una bandeja de trabajo: búsqueda por cliente o teléfono, filtros por estado, detalle del snapshot comercial y acciones para copiar o abrir WhatsApp. La misma información, presentada según la tarea actual.
+
+Nielsen Norman Group define la visibilidad del estado del sistema como una heurística fundamental: la interfaz debe mantener informada a la persona sobre qué está ocurriendo. También recomienda favorecer el reconocimiento por sobre el recuerdo. Una bandeja visible evita depender de MongoDB, de la memoria o de reconstruir una propuesta anterior: [10 Usability Heuristics — NN/G](https://www.nngroup.com/articles/ten-usability-heuristics/).
+
+Aprendizaje: guardar un registro no completa un flujo comercial. El dato empieza a ser útil cuando puede encontrarse, comprenderse y recibir seguimiento.
+
+### X
+
+Guardar una cotización no alcanza si después “desaparece” en la base.
+
+Separamos creación y gestión: Productos construye la propuesta; Cotizaciones permite buscarla, revisar su snapshot, compartirla por WhatsApp y actualizar su estado.
+
+Menos memoria, más visibilidad operativa.
+
+**Referencia:** [10 heurísticas de usabilidad — NN/G](https://www.nngroup.com/articles/ten-usability-heuristics/).
+
+---
+
 ## Rutina editorial sugerida
 
 Al final de una jornada con cambios relevantes, responder:

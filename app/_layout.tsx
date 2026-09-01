@@ -10,6 +10,7 @@ import 'react-native-reanimated';
 import GoogleOAuthRoot from '@/components/auth/GoogleOAuthRoot';
 import WebAppSetup from '@/components/pwa/WebAppSetup';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
+import { QuoteDraftProvider } from '@/contexts/QuoteDraftContext';
 
 function AuthenticatedNavigator() {
   const { state, user } = useAuth();
@@ -72,7 +73,9 @@ export default function RootLayout() {
       <WebAppSetup />
       <GoogleOAuthRoot>
         <AuthProvider>
-          <AuthenticatedNavigator />
+          <QuoteDraftProvider>
+            <AuthenticatedNavigator />
+          </QuoteDraftProvider>
         </AuthProvider>
       </GoogleOAuthRoot>
     </>

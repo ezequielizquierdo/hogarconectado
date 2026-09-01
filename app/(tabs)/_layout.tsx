@@ -105,7 +105,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="explore_new"
         options={{
-          href: isAdmin ? undefined : null,
+          href: null,
           title: "Consulta Stock",
           tabBarLabel: isDesktop ? "Consulta Stock" : "Stock",
           tabBarIcon: ({ color }) => (
