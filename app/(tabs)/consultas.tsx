@@ -6,6 +6,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Alert, Linking, Platform, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
 import { DataStatePanel } from '@/components/ui/DataStatePanel';
+import { CardListSkeleton, LoadingBar } from '@/components/ui/LoadingStates';
 import { COLORS, RADIUS, SHADOWS, SPACING } from '@/constants/theme';
 import { useAuth } from '@/contexts/AuthContext';
 import { useConsultasResumen } from '@/contexts/ConsultasContext';
@@ -275,8 +276,9 @@ export default function ConsultasScreen() {
         <View style={styles.filtersMobile}>{filterButtons}</View>
       )}
 
-      {loading ? (
-        <DataStatePanel status="loading" title="Cargando consultas…" message="Estamos buscando los contactos pendientes." />
+      {loading && consultas.length > 0 ? <LoadingBar label="Actualizando consultas…" /> : null}
+      {loading && consultas.length === 0 ? (
+        <CardListSkeleton />
       ) : error ? (
         <DataStatePanel status="error" title="No pudimos cargar las consultas" message={error} actionLabel="Reintentar" onAction={() => void load()} />
       ) : consultas.length === 0 ? (

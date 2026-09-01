@@ -4,6 +4,7 @@ import { usuariosService } from '@/services/usuariosService';
 import React, { useCallback, useEffect, useState } from 'react';
 import { Alert, Platform, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { DataStatePanel } from '@/components/ui/DataStatePanel';
+import { CardListSkeleton, LoadingBar } from '@/components/ui/LoadingStates';
 import { COLORS, RADIUS, SHADOWS, SPACING } from '@/constants/theme';
 
 const roles: UserRole[] = ['consulta', 'editor', 'admin'];
@@ -119,12 +120,9 @@ export default function UsuariosScreen() {
           ))}
         </View>
       </View>
-      {loading ? (
-        <DataStatePanel
-          status="loading"
-          title="Cargando usuarios…"
-          message="Estamos consultando accesos y permisos."
-        />
+      {loading && usuarios.length > 0 ? <LoadingBar label="Actualizando usuarios…" /> : null}
+      {loading && usuarios.length === 0 ? (
+        <CardListSkeleton />
       ) : error ? (
         <DataStatePanel
           status="error"

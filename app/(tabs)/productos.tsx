@@ -29,6 +29,7 @@ import EditableDropdown from "@/components/forms/EditableDropdown";
 import AnimatedInput from "@/components/forms/AnimatedInput";
 import AnimatedButton from "@/components/ui/AnimatedButton";
 import { DataStatePanel } from "@/components/ui/DataStatePanel";
+import { LoadingBar, ProductCatalogSkeleton } from "@/components/ui/LoadingStates";
 import FadeInView from "@/components/ui/FadeInView";
 import ProductCard from "@/components/product/ProductCard";
 import { QuoteDraftBar } from "@/components/quote/QuoteDraftBar";
@@ -1418,8 +1419,9 @@ export default function ProductosScreen() {
               >
                 {/* Lista de productos */}
                 <ThemedView style={styles.webProductsContainer}>
+                  {productosLoading && productosFiltrados.length > 0 ? <LoadingBar label="Actualizando catálogo…" /> : null}
                   {productosFiltrados.length === 0 ? (
-                    <DataStatePanel {...catalogState} />
+                    productosLoading ? <ProductCatalogSkeleton /> : <DataStatePanel {...catalogState} />
                   ) : (
                     <View style={styles.webGrid}>
                       {productosFiltrados.map((producto) =>
@@ -1636,8 +1638,9 @@ export default function ProductosScreen() {
               {/* Lista de productos móvil */}
               <FadeInView delay={400}>
                 <ThemedView style={styles.productListContainer}>
+                  {productosLoading && productosFiltrados.length > 0 ? <LoadingBar label="Actualizando catálogo…" /> : null}
                   {productosFiltrados.length === 0 ? (
-                    <DataStatePanel {...catalogState} />
+                    productosLoading ? <ProductCatalogSkeleton /> : <DataStatePanel {...catalogState} />
                   ) : (
                     <View style={styles.mobileList}>
                       {productosFiltrados.map((producto) =>

@@ -4,13 +4,13 @@ import { Stack, useRouter, useSegments } from 'expo-router';
 import Head from 'expo-router/head';
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect } from 'react';
-import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import 'react-native-reanimated';
 
 import GoogleOAuthRoot from '@/components/auth/GoogleOAuthRoot';
 import WebAppSetup from '@/components/pwa/WebAppSetup';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import { QuoteDraftProvider } from '@/contexts/QuoteDraftContext';
+import { AppLaunchScreen } from '@/components/ui/LoadingStates';
 
 function AuthenticatedNavigator() {
   const { state, user } = useAuth();
@@ -36,7 +36,7 @@ function AuthenticatedNavigator() {
   }, [router, segments, state, user]);
 
   if (state === 'loading') {
-    return <View style={styles.loading}><ActivityIndicator size="large" /></View>;
+    return <AppLaunchScreen />;
   }
 
   return (
@@ -54,7 +54,7 @@ function AuthenticatedNavigator() {
 
 export default function RootLayout() {
   const [loaded] = useFonts({ SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf') });
-  if (!loaded) return null;
+  if (!loaded) return <AppLaunchScreen />;
 
   return (
     <>
@@ -81,5 +81,3 @@ export default function RootLayout() {
     </>
   );
 }
-
-const styles = StyleSheet.create({ loading: { flex: 1, alignItems: 'center', justifyContent: 'center' } });

@@ -1,5 +1,8 @@
 import { defineConfig } from '@playwright/test';
 
+const visualTestPort = process.env.VISUAL_TEST_PORT || '8081';
+const visualTestBaseUrl = `http://127.0.0.1:${visualTestPort}`;
+
 export default defineConfig({
   testDir: './tests/visual',
   outputDir: 'test-results/visual',
@@ -17,7 +20,7 @@ export default defineConfig({
     },
   },
   use: {
-    baseURL: 'http://127.0.0.1:8081',
+    baseURL: visualTestBaseUrl,
     colorScheme: 'light',
     locale: 'es-AR',
     screenshot: 'only-on-failure',
@@ -28,8 +31,8 @@ export default defineConfig({
     { name: 'mobile', use: { viewport: { width: 390, height: 844 }, isMobile: true } },
   ],
   webServer: {
-    command: 'npx expo start --web --port 8081',
-    url: 'http://127.0.0.1:8081',
+    command: `npx expo start --web --port ${visualTestPort}`,
+    url: visualTestBaseUrl,
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
   },

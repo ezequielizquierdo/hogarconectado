@@ -18,6 +18,7 @@ import {
 } from "react-native";
 
 import { DataStatePanel } from "@/components/ui/DataStatePanel";
+import { CardListSkeleton, LoadingBar } from "@/components/ui/LoadingStates";
 import { COLORS, RADIUS, SHADOWS, SPACING } from "@/constants/theme";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQuoteDraft } from "@/contexts/QuoteDraftContext";
@@ -347,8 +348,9 @@ export function QuoteHistoryScreen() {
 
         {feedback ? <Text style={styles.feedback}>{feedback}</Text> : null}
 
-        {loading ? (
-          <DataStatePanel status="loading" title="Cargando cotizaciones" message="Buscando las propuestas guardadas." />
+        {loading && quotes.length > 0 ? <LoadingBar label="Actualizando cotizaciones…" /> : null}
+        {loading && quotes.length === 0 ? (
+          <CardListSkeleton />
         ) : error ? (
           <DataStatePanel status="error" title="No pudimos cargar la bandeja" message={error} actionLabel="Reintentar" onAction={() => void load()} />
         ) : quotes.length === 0 ? (
