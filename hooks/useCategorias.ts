@@ -2,16 +2,12 @@ import { useState, useEffect, useRef } from 'react';
 import { categoriasService, handleApiError } from '../services';
 import type { Categoria } from '../services';
 
-// Rate limiting para evitar múltiples requests
-const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-
 export const useCategorias = () => {
     const [categorias, setCategorias] = useState<Categoria[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
-    // Control de rate limiting
-    const lastRequestTime = useRef<number>(0);
+    // Evita duplicar la misma carga sin serializar recursos independientes.
     const isRequestInProgress = useRef<boolean>(false);
 
     const cargarCategorias = async () => {
@@ -21,16 +17,8 @@ export const useCategorias = () => {
             return;
         }
 
-        // Rate limiting
-        const now = Date.now();
-        const timeSinceLastRequest = now - lastRequestTime.current;
-        if (timeSinceLastRequest < 300) { // 300ms entre requests
-            await delay(300 - timeSinceLastRequest);
-        }
-
         try {
             isRequestInProgress.current = true;
-            lastRequestTime.current = Date.now();
             setLoading(true);
             setError(null);
 
@@ -51,7 +39,7 @@ export const useCategorias = () => {
     }, []);
 
     const recargar = () => {
-        cargarCategorias();
+        return cargarCategorias();
     };
 
     return {

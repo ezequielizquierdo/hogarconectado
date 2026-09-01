@@ -1,16 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
 import { productosService, handleApiError } from '../services';
 
-// Rate limiting para evitar múltiples requests
-const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-
 export const useMarcas = () => {
     const [marcas, setMarcas] = useState<string[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    // Control de rate limiting
-    const lastRequestTime = useRef<number>(0);
+    // Evita duplicar la misma carga sin serializar recursos independientes.
     const isRequestInProgress = useRef<boolean>(false);
 
     const cargarMarcas = async () => {
@@ -20,16 +16,8 @@ export const useMarcas = () => {
             return;
         }
 
-        // Rate limiting
-        const now = Date.now();
-        const timeSinceLastRequest = now - lastRequestTime.current;
-        if (timeSinceLastRequest < 300) { // 300ms entre requests
-            await delay(300 - timeSinceLastRequest);
-        }
-
         try {
             isRequestInProgress.current = true;
-            lastRequestTime.current = Date.now();
             setLoading(true);
             setError(null);
 
@@ -50,7 +38,7 @@ export const useMarcas = () => {
     }, []);
 
     const recargar = () => {
-        cargarMarcas();
+        return cargarMarcas();
     };
 
     return {

@@ -5,9 +5,6 @@ import { Platform } from 'react-native';
 // Función de delay para rate limiting
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-// Rate limiting variables
-let lastRequestTime = 0;
-const MIN_REQUEST_INTERVAL = 200; // 200ms entre requests
 let unauthorizedHandler: (() => void) | undefined;
 
 export const setUnauthorizedHandler = (handler?: () => void) => {
@@ -57,20 +54,10 @@ const apiClient = axios.create({
     },
 });
 
-// Interceptor para requests (agregar token si existe y rate limiting)
+// Interceptor para requests. Las lecturas independientes pueden salir en paralelo;
+// el backend conserva la protección real mediante rate limiting.
 apiClient.interceptors.request.use(
     async (config) => {
-        // Rate limiting: asegurar intervalo mínimo entre requests
-        const now = Date.now();
-        const timeSinceLastRequest = now - lastRequestTime;
-
-        if (timeSinceLastRequest < MIN_REQUEST_INTERVAL) {
-            const delayTime = MIN_REQUEST_INTERVAL - timeSinceLastRequest;
-            await delay(delayTime);
-        }
-
-        lastRequestTime = Date.now();
-
         try {
             const token = await AsyncStorage.getItem('auth_token');
             if (token) {

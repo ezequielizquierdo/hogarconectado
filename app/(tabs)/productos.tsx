@@ -229,17 +229,10 @@ export default function ProductosScreen() {
     }
   }, [buscar, debouncedSearchText, filtros.buscar]);
 
-  // Rate limiting: agregar delay entre operaciones
-  const delay = (ms: number) =>
-    new Promise((resolve) => setTimeout(resolve, ms));
-
   const onRefresh = async () => {
     setRefreshing(true);
     try {
-      // Agregar delay entre recarga de datos para evitar rate limiting
-      await recargar();
-      await delay(500); // 500ms de delay
-      await recargarMarcas();
+      await Promise.all([recargar(), recargarMarcas(), recargarCategorias()]);
     } catch (error) {
       console.error("Error al refrescar datos:", error);
     } finally {
@@ -807,11 +800,11 @@ export default function ProductosScreen() {
 
       resetAndCloseModal();
 
-      // Agregar delay antes de recargar para evitar rate limiting
-      await delay(500);
-      await recargar();
-      await delay(300);
-      await recargarMarcas(); // Recargar marcas para incluir la nueva marca si se agregó una
+      await Promise.all([
+        recargar(),
+        recargarMarcas(), // Incluir inmediatamente una marca recién agregada.
+        recargarCategorias(),
+      ]);
     } catch (error: any) {
       if (imagenSubida?.publicId) await uploadService.eliminarImagen(imagenSubida.publicId).catch(() => undefined);
       console.error("Error al guardar producto:", error);
@@ -842,7 +835,6 @@ export default function ProductosScreen() {
       try {
         await productosService.eliminarProducto(producto._id);
         if (Platform.OS !== "web") Alert.alert("Éxito", "Producto eliminado correctamente");
-        await delay(500);
         await recargar();
       } catch (error) {
         console.error("Error al eliminar producto:", error);
@@ -1312,7 +1304,7 @@ export default function ProductosScreen() {
     }
   };
 
-  const renderProducto = ({ item }: { item: Producto }) => {
+  const renderProducto = ({ item, index = 0 }: { item: Producto; index?: number }) => {
     const productoConPrecios = convertirAProductoConPrecios(item);
 
     return (
@@ -1322,6 +1314,7 @@ export default function ProductosScreen() {
       >
         <ProductCard
           producto={productoConPrecios}
+          imagePriority={index < 4 ? "high" : index < 8 ? "normal" : "low"}
           onPress={() => {
             setSelectedProduct(item);
             setDetailModalVisible(true);
@@ -1424,8 +1417,8 @@ export default function ProductosScreen() {
                     productosLoading ? <ProductCatalogSkeleton /> : <DataStatePanel {...catalogState} />
                   ) : (
                     <View style={styles.webGrid}>
-                      {productosFiltrados.map((producto) =>
-                        renderProducto({ item: producto })
+                      {productosFiltrados.map((producto, index) =>
+                        renderProducto({ item: producto, index })
                       )}
                     </View>
                   )}
@@ -1643,8 +1636,8 @@ export default function ProductosScreen() {
                     productosLoading ? <ProductCatalogSkeleton /> : <DataStatePanel {...catalogState} />
                   ) : (
                     <View style={styles.mobileList}>
-                      {productosFiltrados.map((producto) =>
-                        renderProducto({ item: producto })
+                      {productosFiltrados.map((producto, index) =>
+                        renderProducto({ item: producto, index })
                       )}
                     </View>
                   )}

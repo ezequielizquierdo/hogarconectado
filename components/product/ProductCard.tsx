@@ -17,6 +17,7 @@ import { IconSymbol } from "@/components/ui/IconSymbol";
 
 interface ProductCardProps {
   producto: ProductoConPrecios;
+  imagePriority?: "low" | "normal" | "high";
   onPress?: () => void;
   onAddToCart?: () => void;
   onFavorite?: () => void;
@@ -35,6 +36,7 @@ interface ProductCardProps {
 
 export default function ProductCard({
   producto,
+  imagePriority = "normal",
   onPress,
   onAddToCart,
   onFavorite,
@@ -181,6 +183,9 @@ export default function ProductCard({
                   source={{ uri: producto.imagenes[0] }}
                   style={styles.productImage}
                   contentFit="contain"
+                  cachePolicy="memory-disk"
+                  priority={imagePriority}
+                  transition={180}
                   accessibilityLabel={`Imagen de ${producto.marca} ${producto.modelo}`}
                 />
               ) : (
