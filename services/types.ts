@@ -36,6 +36,11 @@ export interface Producto {
     porcentajeGanancia?: number;
     porcentajeGananciaAplicado?: number;
     precioConGanancia?: number;
+    precios?: {
+        contado: number;
+        tresCuotas: { total: number; cuota: number };
+        seisCuotas: { total: number; cuota: number };
+    };
     especificaciones?: Record<string, any>;
     stock: {
         cantidad: number;

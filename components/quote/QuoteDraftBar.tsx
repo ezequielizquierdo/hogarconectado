@@ -42,6 +42,18 @@ export function QuoteDraftBar() {
   if (productCount === 0) return null;
 
   const confirmClear = () => {
+    const clearSelection = () => {
+      clear();
+      setVisible(false);
+    };
+
+    if (Platform.OS === "web") {
+      if (window.confirm("¿Querés quitar todos los productos de esta cotización?")) {
+        clearSelection();
+      }
+      return;
+    }
+
     Alert.alert(
       "Vaciar selección",
       "¿Querés quitar todos los productos de esta cotización?",
@@ -50,10 +62,7 @@ export function QuoteDraftBar() {
         {
           text: "Vaciar",
           style: "destructive",
-          onPress: () => {
-            clear();
-            setVisible(false);
-          },
+          onPress: clearSelection,
         },
       ]
     );

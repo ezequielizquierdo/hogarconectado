@@ -19,7 +19,8 @@ import {
   updateDraftQuantity,
 } from "@/utils/quoteDraft";
 
-const STORAGE_KEY = "hogar_conectado_quote_draft_v1";
+// v2 invalida borradores que guardaban precios de cuotas incompletos.
+const STORAGE_KEY = "hogar_conectado_quote_draft_v2";
 
 interface QuoteDraftContextValue {
   items: QuoteDraftItem[];

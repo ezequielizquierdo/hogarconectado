@@ -1266,7 +1266,7 @@ export default function ProductosScreen() {
     producto: Producto
   ): ProductoConPrecios => ({
     ...producto,
-    precios: {
+    precios: producto.precios ?? {
       contado: producto.precioConGanancia ?? producto.precioBase ?? 0,
       tresCuotas: {
         total: producto.precioBase ?? 0,
