@@ -27,7 +27,9 @@ function AuthenticatedNavigator() {
     }
     if ((state === 'pending' || state === 'blocked') && route !== 'acceso-pendiente') router.replace('/acceso-pendiente');
     const isNonAdminAccountRoute = route === '(tabs)' && tab === 'perfil';
-    const sellerRoutes = ['index', 'productos', 'consultas', 'perfil'];
+    // La ruta inicial de Tabs (Cotizaciones) no agrega un segundo segmento:
+    // useSegments() devuelve solo ['(tabs)'] y `tab` queda undefined.
+    const sellerRoutes = ['', 'index', 'productos', 'consultas', 'perfil'];
     if (state === 'authenticated' && user?.rol === 'vendedor' && route === '(tabs)' && !sellerRoutes.includes(tab || '')) {
       router.replace('/(tabs)/productos');
     } else if (state === 'authenticated' && !['admin', 'vendedor'].includes(user?.rol || '') && route === '(tabs)' && tab !== 'productos' && !isNonAdminAccountRoute) {
