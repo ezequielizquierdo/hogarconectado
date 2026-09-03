@@ -29,6 +29,7 @@ interface ProductCardProps {
   onQuote?: () => void;
   onStockQuery?: () => void;
   isQuoted?: boolean;
+  isConsultSelected?: boolean;
   onConsult?: () => void;
   showAdminButtons?: boolean;
   showConsultButton?: boolean;
@@ -47,6 +48,7 @@ export default function ProductCard({
   onQuote,
   onStockQuery,
   isQuoted = false,
+  isConsultSelected = false,
   onConsult,
   showAdminButtons = false,
   showConsultButton = false,
@@ -293,9 +295,9 @@ export default function ProductCard({
             <View style={styles.separator} />
             <View style={styles.actionsSection}>
               <IconActionButton
-                label={`Consultar por ${producto.marca} ${producto.modelo}`}
-                visibleLabel="Consultar"
-                icon="chat-bubble-outline"
+                label={`${isConsultSelected ? "Quitar" : "Agregar"} ${producto.marca} ${producto.modelo} de la consulta`}
+                visibleLabel={isConsultSelected ? "Agregado ✓" : "¡Lo quiero!"}
+                icon={isConsultSelected ? "check-circle" : "favorite-border"}
                 onPress={onConsult}
                 color={COLORS.primaryDark}
                 style={[styles.actionButton, styles.consultButton]}

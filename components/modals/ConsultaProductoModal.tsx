@@ -22,14 +22,29 @@ type Step = 'form' | 'confirm' | 'success';
 
 interface ConsultaProductoModalProps {
   visible: boolean;
-  producto: Producto | null;
+  productos: Producto[];
+  initialName?: string;
+  onRemoveProduct: (id: string) => void;
+  onSuccessClose: () => void;
   onClose: () => void;
 }
 
-export function ConsultaProductoModal({ visible, producto, onClose }: ConsultaProductoModalProps) {
+const PHONE_PREFIXES = [
+  { label: 'Argentina (+54)', value: '+54' },
+  { label: 'Uruguay (+598)', value: '+598' },
+  { label: 'Paraguay (+595)', value: '+595' },
+  { label: 'Chile (+56)', value: '+56' },
+  { label: 'Bolivia (+591)', value: '+591' },
+  { label: 'Brasil (+55)', value: '+55' },
+  { label: 'Perú (+51)', value: '+51' },
+];
+
+export function ConsultaProductoModal({ visible, productos, initialName = '', onRemoveProduct, onSuccessClose, onClose }: ConsultaProductoModalProps) {
   const [step, setStep] = useState<Step>('form');
   const [nombre, setNombre] = useState('');
   const [telefono, setTelefono] = useState('');
+  const [prefix, setPrefix] = useState('+54');
+  const [prefixOpen, setPrefixOpen] = useState(false);
   const [error, setError] = useState('');
   const [sending, setSending] = useState(false);
   const idempotencyKey = useRef<string | undefined>(undefined);
@@ -37,16 +52,18 @@ export function ConsultaProductoModal({ visible, producto, onClose }: ConsultaPr
   useEffect(() => {
     if (!visible) return;
     setStep('form');
-    setNombre('');
+    setNombre(initialName);
     setTelefono('');
+    setPrefix('+54');
+    setPrefixOpen(false);
     setError('');
     setSending(false);
     idempotencyKey.current = undefined;
-  }, [visible, producto?._id]);
+  }, [visible, initialName]);
 
   const validate = () => {
     const normalizedName = nombre.trim().replace(/\s+/g, ' ');
-    const digits = telefono.replace(/\D/g, '');
+    const digits = `${prefix}${telefono}`.replace(/\D/g, '');
     if (normalizedName.length < 2) {
       setError('Ingresá tu nombre para que podamos contactarte.');
       return false;
@@ -64,14 +81,14 @@ export function ConsultaProductoModal({ visible, producto, onClose }: ConsultaPr
   };
 
   const submit = async () => {
-    if (!producto || sending) return;
+    if (!productos.length || sending) return;
     setSending(true);
     setError('');
     try {
       const result = await consultasService.crear({
-        productoId: producto._id,
+        productoIds: productos.map(producto => producto._id),
         nombre: nombre.trim().replace(/\s+/g, ' '),
-        telefono: telefono.trim(),
+        telefono: `${prefix}${telefono.replace(/\D/g, '')}`,
       }, idempotencyKey.current);
       idempotencyKey.current = result.idempotencyKey;
       setStep('success');
@@ -82,7 +99,7 @@ export function ConsultaProductoModal({ visible, producto, onClose }: ConsultaPr
     }
   };
 
-  if (!producto) return null;
+  if (!productos.length) return null;
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
@@ -94,9 +111,9 @@ export function ConsultaProductoModal({ visible, producto, onClose }: ConsultaPr
         <View style={styles.dialog} accessibilityViewIsModal>
           <View style={styles.header}>
             <View>
-              <Text style={styles.eyebrow}>CONSULTA DE PRODUCTO</Text>
+              <Text style={styles.eyebrow}>LISTA DE INTERÉS</Text>
               <Text style={styles.title}>
-                {step === 'success' ? 'Consulta recibida' : '¿Te interesa este producto?'}
+                {step === 'success' ? 'Consulta recibida' : `Tus productos (${productos.length})`}
               </Text>
             </View>
             <Pressable
@@ -111,7 +128,8 @@ export function ConsultaProductoModal({ visible, producto, onClose }: ConsultaPr
           </View>
 
           <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.content}>
-            <View style={styles.productSummary}>
+            {productos.map(producto => (
+            <View key={producto._id} style={styles.productSummary}>
               <View style={styles.imageBox}>
                 {producto.imagenes?.[0] ? (
                   <Image source={{ uri: producto.imagenes[0] }} style={styles.image} contentFit="contain" />
@@ -126,7 +144,13 @@ export function ConsultaProductoModal({ visible, producto, onClose }: ConsultaPr
                   ${(producto.precioConGanancia ?? 0).toLocaleString('es-AR')}
                 </Text>
               </View>
+              {step === 'form' && productos.length > 1 ? (
+                <Pressable onPress={() => onRemoveProduct(producto._id)} style={styles.removeButton} accessibilityLabel={`Quitar ${producto.marca} ${producto.modelo}`}>
+                  <MaterialIcons name="close" size={20} color={COLORS.errorStrong} />
+                </Pressable>
+              ) : null}
             </View>
+            ))}
 
             {step === 'form' && (
               <>
@@ -139,17 +163,31 @@ export function ConsultaProductoModal({ visible, producto, onClose }: ConsultaPr
                   placeholderTextColor={COLORS.textLight}
                   autoComplete="name"
                   style={styles.input}
+                  editable={!initialName}
                 />
-                <Text style={styles.label}>Teléfono *</Text>
-                <TextInput
-                  value={telefono}
-                  onChangeText={setTelefono}
-                  placeholder="Ej. 11 5555 1234"
-                  placeholderTextColor={COLORS.textLight}
-                  keyboardType="phone-pad"
-                  autoComplete="tel"
-                  style={styles.input}
-                />
+                <Text style={styles.label}>País / prefijo *</Text>
+                <Pressable onPress={() => setPrefixOpen(current => !current)} style={styles.inputSelector}>
+                  <Text style={styles.selectorText}>{PHONE_PREFIXES.find(option => option.value === prefix)?.label}</Text>
+                  <MaterialIcons name={prefixOpen ? 'keyboard-arrow-up' : 'keyboard-arrow-down'} size={22} color={COLORS.textSecondary} />
+                </Pressable>
+                {prefixOpen ? <View style={styles.prefixMenu}>{PHONE_PREFIXES.map(option => (
+                  <Pressable key={option.value} onPress={() => { setPrefix(option.value); setPrefixOpen(false); }} style={styles.prefixOption}>
+                    <Text style={styles.selectorText}>{option.label}</Text>
+                  </Pressable>
+                ))}</View> : null}
+                <Text style={styles.label}>Número de teléfono *</Text>
+                <View style={styles.phoneRow}>
+                  <View style={styles.prefixBadge}><Text style={styles.prefixText}>{prefix}</Text></View>
+                  <TextInput
+                    value={telefono}
+                    onChangeText={setTelefono}
+                    placeholder="11 5555 1234"
+                    placeholderTextColor={COLORS.textLight}
+                    keyboardType="phone-pad"
+                    autoComplete="tel"
+                    style={[styles.input, styles.phoneInput]}
+                  />
+                </View>
                 {error ? <Text style={styles.error}>{error}</Text> : null}
                 <Pressable onPress={continueToConfirmation} style={styles.primaryButton}>
                   <Text style={styles.primaryButtonText}>Continuar</Text>
@@ -161,8 +199,8 @@ export function ConsultaProductoModal({ visible, producto, onClose }: ConsultaPr
               <>
                 <View style={styles.confirmBox}>
                   <MaterialIcons name="help-outline" size={28} color={COLORS.primaryDark} />
-                  <Text style={styles.confirmTitle}>¿Querés consultar por este producto?</Text>
-                  <Text style={styles.confirmText}>Te contactaremos al {telefono.trim()}.</Text>
+                  <Text style={styles.confirmTitle}>¿Querés consultar por {productos.length === 1 ? 'este producto' : `estos ${productos.length} productos`}?</Text>
+                  <Text style={styles.confirmText}>Te contactaremos al {prefix} {telefono.trim()}.</Text>
                 </View>
                 {error ? <Text style={styles.error}>{error}</Text> : null}
                 <View style={styles.buttonRow}>
@@ -183,7 +221,7 @@ export function ConsultaProductoModal({ visible, producto, onClose }: ConsultaPr
                 <MaterialIcons name="check-circle" size={52} color={COLORS.primaryDark} />
                 <Text style={styles.successTitle}>Te contactaremos a la brevedad</Text>
                 <Text style={styles.successText}>Tu consulta quedó registrada correctamente.</Text>
-                <Pressable onPress={onClose} style={styles.primaryButton}>
+                <Pressable onPress={onSuccessClose} style={styles.primaryButton}>
                   <Text style={styles.primaryButtonText}>Seguir mirando productos</Text>
                 </Pressable>
               </View>
@@ -210,9 +248,18 @@ const styles = StyleSheet.create({
   productBrand: { color: COLORS.text, fontSize: 16, fontWeight: '800' },
   productModel: { marginTop: 2, color: COLORS.textSecondary, fontSize: 14, fontWeight: '600' },
   productPrice: { marginTop: SPACING.sm, color: COLORS.primaryDark, fontSize: 19, fontWeight: '800' },
+  removeButton: { width: 36, height: 36, borderRadius: RADIUS.full, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.error },
   help: { marginVertical: SPACING.sm, color: COLORS.textSecondary, fontSize: 14, lineHeight: 20 },
   label: { marginTop: SPACING.xs, color: COLORS.text, fontSize: 14, fontWeight: '700' },
   input: { minHeight: 50, paddingHorizontal: SPACING.md, borderWidth: 1, borderColor: COLORS.border, borderRadius: RADIUS.md, backgroundColor: COLORS.surface, color: COLORS.text, fontSize: 16 },
+  inputSelector: { minHeight: 50, paddingHorizontal: SPACING.md, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderWidth: 1, borderColor: COLORS.border, borderRadius: RADIUS.md, backgroundColor: COLORS.surface },
+  selectorText: { color: COLORS.text, fontSize: 15, fontWeight: '600' },
+  prefixMenu: { borderWidth: 1, borderColor: COLORS.border, borderRadius: RADIUS.md, overflow: 'hidden', backgroundColor: COLORS.surface },
+  prefixOption: { minHeight: 42, paddingHorizontal: SPACING.md, justifyContent: 'center', borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: COLORS.border },
+  phoneRow: { flexDirection: 'row', gap: SPACING.sm },
+  prefixBadge: { minWidth: 70, minHeight: 50, paddingHorizontal: SPACING.sm, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: COLORS.border, borderRadius: RADIUS.md, backgroundColor: COLORS.cardBackground },
+  prefixText: { color: COLORS.text, fontSize: 16, fontWeight: '700' },
+  phoneInput: { flex: 1 },
   error: { color: COLORS.errorStrong, fontSize: 13, lineHeight: 18 },
   primaryButton: { width: '100%', minHeight: 50, marginTop: SPACING.sm, paddingHorizontal: SPACING.md, alignItems: 'center', justifyContent: 'center', borderRadius: RADIUS.md, backgroundColor: COLORS.primary },
   primaryButtonInline: { flex: 1, minHeight: 50, alignItems: 'center', justifyContent: 'center', borderRadius: RADIUS.md, backgroundColor: COLORS.primary },

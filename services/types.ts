@@ -61,6 +61,7 @@ export interface ProductImageDraft {
     categoriaSugerida: string;
     descripcion: string;
     precioBase: number | null;
+    porcentajeGanancia?: number;
     stockCantidad: number;
     stockDisponible: boolean;
     confianza: number;
@@ -80,6 +81,10 @@ export interface ConsultaComercial {
         imagen?: string;
         precioContado?: number;
     };
+    productos?: Array<{
+        producto: string;
+        productoSnapshot: ConsultaComercial['productoSnapshot'];
+    }>;
     contacto: {
         nombre: string;
         telefono: string;

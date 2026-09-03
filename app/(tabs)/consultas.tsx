@@ -302,8 +302,28 @@ export default function ConsultasScreen() {
                   {item.productoSnapshot.precioContado != null && (
                     <Text style={styles.price}>${item.productoSnapshot.precioContado.toLocaleString('es-AR')}</Text>
                   )}
+                  {(item.productos?.length || 0) > 1 ? (
+                    <Text style={styles.model}>+ {(item.productos?.length || 1) - 1} productos más</Text>
+                  ) : null}
                 </View>
               </View>
+
+              {(item.productos?.length || 0) > 1 ? (
+                <View style={styles.additionalProducts}>
+                  {item.productos?.slice(1).map(entry => (
+                    <View key={`${entry.producto}-${entry.productoSnapshot.modelo}`} style={styles.additionalProductRow}>
+                      <Text style={styles.additionalProductName} numberOfLines={1}>
+                        {entry.productoSnapshot.marca} {entry.productoSnapshot.modelo}
+                      </Text>
+                      {entry.productoSnapshot.precioContado != null ? (
+                        <Text style={styles.additionalProductPrice}>
+                          ${entry.productoSnapshot.precioContado.toLocaleString('es-AR')}
+                        </Text>
+                      ) : null}
+                    </View>
+                  ))}
+                </View>
+              ) : null}
 
               <View style={styles.contactBox}>
                 <View style={styles.contactCopy}>
@@ -385,6 +405,10 @@ const styles = StyleSheet.create({
   cardDesktop: { width: '49%' },
   cardNew: { borderTopWidth: 4, borderTopColor: COLORS.primaryDark },
   productRow: { flexDirection: 'row', alignItems: 'center', gap: SPACING.md },
+  additionalProducts: { gap: SPACING.xs, padding: SPACING.sm, borderRadius: RADIUS.md, backgroundColor: COLORS.cardBackground },
+  additionalProductRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: SPACING.sm },
+  additionalProductName: { flex: 1, color: COLORS.text, fontSize: 13, fontWeight: '700' },
+  additionalProductPrice: { color: COLORS.primaryDark, fontSize: 13, fontWeight: '800' },
   imageBox: { width: 104, height: 104, alignItems: 'center', justifyContent: 'center', borderRadius: RADIUS.md, backgroundColor: COLORS.cardBackground },
   image: { width: '100%', height: '100%' },
   productInfo: { flex: 1, alignItems: 'flex-start' },

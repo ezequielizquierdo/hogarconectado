@@ -12,7 +12,7 @@ type DraftItem = {
   id: string;
   uri: string;
   name: string;
-  status: 'pending' | 'analyzing' | 'ready' | 'error';
+  status: 'pending' | 'analyzing' | 'ready' | 'saving' | 'created' | 'error';
   draft?: ProductImageDraft;
   error?: string;
 };
@@ -20,12 +20,12 @@ type DraftItem = {
 type Props = {
   visible: boolean;
   onClose: () => void;
-  onUseDraft: (draft: ProductImageDraft, imageUri: string) => void;
+  onCreateDraft: (draft: ProductImageDraft, imageUri: string) => Promise<void>;
 };
 
 const getErrorMessage = (error: any) => error?.response?.data?.message || error?.message || 'No pudimos analizar esta imagen.';
 
-export function ProductImageImportModal({ visible, onClose, onUseDraft }: Props) {
+export function ProductImageImportModal({ visible, onClose, onCreateDraft }: Props) {
   const [items, setItems] = useState<DraftItem[]>([]);
   const [selecting, setSelecting] = useState(false);
 
@@ -88,7 +88,17 @@ export function ProductImageImportModal({ visible, onClose, onUseDraft }: Props)
   };
 
   const remove = (id: string) => setItems(current => current.filter(item => item.id !== id));
-  const busy = selecting || items.some(item => item.status === 'analyzing' || item.status === 'pending');
+  const createProduct = async (item: DraftItem) => {
+    if (!item.draft || item.status !== 'ready') return;
+    setItems(current => current.map(candidate => candidate.id === item.id ? { ...candidate, status: 'saving', error: undefined } : candidate));
+    try {
+      await onCreateDraft(item.draft, item.uri);
+      setItems(current => current.map(candidate => candidate.id === item.id ? { ...candidate, status: 'created' } : candidate));
+    } catch (error) {
+      setItems(current => current.map(candidate => candidate.id === item.id ? { ...candidate, status: 'ready', error: getErrorMessage(error) } : candidate));
+    }
+  };
+  const busy = selecting || items.some(item => item.status === 'analyzing' || item.status === 'pending' || item.status === 'saving');
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={busy ? undefined : onClose}>
@@ -133,6 +143,8 @@ export function ProductImageImportModal({ visible, onClose, onUseDraft }: Props)
                       <View style={styles.statusRow}><ActivityIndicator color={COLORS.primaryDark} /><ThemedText style={styles.statusText}>Leyendo producto…</ThemedText></View>
                     ) : item.status === 'error' ? (
                       <ThemedText style={styles.errorText}>{item.error}</ThemedText>
+                    ) : item.status === 'created' ? (
+                      <ThemedText style={styles.readyText}>Producto creado correctamente</ThemedText>
                     ) : (
                       <ThemedText style={styles.readyText}>Borrador listo · {Math.round((item.draft?.confianza || 0) * 100)}% de confianza</ThemedText>
                     )}
@@ -142,24 +154,29 @@ export function ProductImageImportModal({ visible, onClose, onUseDraft }: Props)
                   </TouchableOpacity>
                 </View>
 
-                {item.status === 'ready' && item.draft ? (
+                {(item.status === 'ready' || item.status === 'saving' || item.status === 'created') && item.draft ? (
                   <View style={styles.fields}>
-                    <View style={styles.fieldRow}>
-                      <TextInput style={[styles.input, styles.half]} value={item.draft.marca} placeholder="Marca" onChangeText={value => updateDraft(item.id, 'marca', value)} />
-                      <TextInput style={[styles.input, styles.half]} value={item.draft.modelo} placeholder="Modelo" onChangeText={value => updateDraft(item.id, 'modelo', value)} />
+                    <View style={styles.field}><ThemedText style={styles.label}>Marca *</ThemedText><TextInput editable={item.status === 'ready'} style={styles.input} value={item.draft.marca} placeholder="Marca" onChangeText={value => updateDraft(item.id, 'marca', value)} /></View>
+                    <View style={styles.field}><ThemedText style={styles.label}>Modelo *</ThemedText><TextInput editable={item.status === 'ready'} style={styles.input} value={item.draft.modelo} placeholder="Modelo" onChangeText={value => updateDraft(item.id, 'modelo', value)} /></View>
+                    <View style={styles.field}><ThemedText style={styles.label}>Categoría *</ThemedText><TextInput editable={item.status === 'ready'} style={styles.input} value={item.draft.categoriaSugerida} placeholder="Categoría sugerida" onChangeText={value => updateDraft(item.id, 'categoriaSugerida', value)} /></View>
+                    <View style={styles.field}><ThemedText style={styles.label}>Precio base *</ThemedText><TextInput editable={item.status === 'ready'} style={styles.input} value={item.draft.precioBase?.toString() || ''} placeholder="Precio base" keyboardType="numeric" onChangeText={value => updateDraft(item.id, 'precioBase', Number(value.replace(/\D/g, '')) || 0)} /></View>
+                    <View style={styles.field}><ThemedText style={styles.label}>Porcentaje para precio contado *</ThemedText><TextInput editable={item.status === 'ready'} style={styles.input} value={String(item.draft.porcentajeGanancia ?? 30)} placeholder="Ej.: 30" keyboardType="decimal-pad" onChangeText={value => updateDraft(item.id, 'porcentajeGanancia', Number(value.replace(',', '.')) || 0)} /></View>
+                    <View style={styles.field}><ThemedText style={styles.label}>Stock cantidad</ThemedText><TextInput editable={item.status === 'ready'} style={styles.input} value={String(item.draft.stockCantidad)} placeholder="Stock" keyboardType="numeric" onChangeText={value => updateDraft(item.id, 'stockCantidad', Number(value.replace(/\D/g, '')) || 0)} /></View>
+                    <View style={styles.field}>
+                      <ThemedText style={styles.label}>Stock disponible</ThemedText>
+                      <TouchableOpacity disabled={item.status !== 'ready'} style={styles.stockToggle} onPress={() => updateDraft(item.id, 'stockDisponible', !item.draft!.stockDisponible)}>
+                        <ThemedText style={styles.stockToggleText}>{item.draft.stockDisponible ? 'Disponible' : 'No disponible'}</ThemedText>
+                        <MaterialIcons name={item.draft.stockDisponible ? 'toggle-on' : 'toggle-off'} size={30} color={item.draft.stockDisponible ? '#21734b' : COLORS.textSecondary} />
+                      </TouchableOpacity>
                     </View>
-                    <TextInput style={styles.input} value={item.draft.categoriaSugerida} placeholder="Categoría sugerida" onChangeText={value => updateDraft(item.id, 'categoriaSugerida', value)} />
-                    <View style={styles.fieldRow}>
-                      <TextInput style={[styles.input, styles.half]} value={item.draft.precioBase?.toString() || ''} placeholder="Precio base" keyboardType="numeric" onChangeText={value => updateDraft(item.id, 'precioBase', Number(value.replace(/\D/g, '')) || 0)} />
-                      <TextInput style={[styles.input, styles.half]} value={String(item.draft.stockCantidad)} placeholder="Stock" keyboardType="numeric" onChangeText={value => updateDraft(item.id, 'stockCantidad', Number(value.replace(/\D/g, '')) || 0)} />
-                    </View>
-                    <TextInput style={[styles.input, styles.description]} value={item.draft.descripcion} placeholder="Descripción" multiline onChangeText={value => updateDraft(item.id, 'descripcion', value)} />
+                    <View style={styles.field}><ThemedText style={styles.label}>Descripción</ThemedText><TextInput editable={item.status === 'ready'} style={[styles.input, styles.description]} value={item.draft.descripcion} placeholder="Descripción" multiline onChangeText={value => updateDraft(item.id, 'descripcion', value)} /></View>
                     {item.draft.advertencias.length > 0 ? (
                       <View style={styles.warning}><MaterialIcons name="info-outline" size={18} color="#8a5b00" /><ThemedText style={styles.warningText}>{item.draft.advertencias.join(' ')}</ThemedText></View>
                     ) : null}
-                    <TouchableOpacity style={styles.reviewButton} onPress={() => onUseDraft(item.draft!, item.uri)}>
-                      <MaterialIcons name="edit" size={18} color={COLORS.ink} />
-                      <ThemedText style={styles.reviewButtonText}>Revisar y crear producto</ThemedText>
+                    {item.error ? <ThemedText style={styles.errorText}>{item.error}</ThemedText> : null}
+                    <TouchableOpacity disabled={item.status !== 'ready'} style={[styles.reviewButton, item.status !== 'ready' && styles.reviewButtonDisabled]} onPress={() => createProduct(item)}>
+                      {item.status === 'saving' ? <ActivityIndicator color={COLORS.ink} /> : <MaterialIcons name={item.status === 'created' ? 'check-circle' : 'add-circle'} size={18} color={COLORS.ink} />}
+                      <ThemedText style={styles.reviewButtonText}>{item.status === 'saving' ? 'Creando producto…' : item.status === 'created' ? 'Producto creado' : 'Crear producto'}</ThemedText>
                     </TouchableOpacity>
                   </View>
                 ) : null}
@@ -188,8 +205,9 @@ const styles = StyleSheet.create({
   card: { backgroundColor: COLORS.surface, borderRadius: RADIUS.lg, borderWidth: 1, borderColor: COLORS.border, padding: SPACING.md, ...SHADOWS.sm },
   cardTop: { flexDirection: 'row', alignItems: 'center', gap: SPACING.md }, thumbnail: { width: 78, height: 78, borderRadius: RADIUS.md, backgroundColor: COLORS.cardBackground }, cardStatus: { flex: 1 }, fileName: { color: COLORS.text, fontWeight: '700' },
   statusRow: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm, marginTop: SPACING.sm }, statusText: { color: COLORS.textSecondary, fontSize: 13 }, readyText: { color: '#21734b', fontSize: 13, marginTop: 5 }, errorText: { color: COLORS.errorStrong, fontSize: 13, marginTop: 5 },
-  fields: { gap: SPACING.sm, marginTop: SPACING.md }, fieldRow: { flexDirection: 'row', gap: SPACING.sm }, half: { flex: 1 },
+  fields: { gap: SPACING.md, marginTop: SPACING.md }, field: { gap: SPACING.xs }, label: { color: COLORS.text, fontSize: 13, fontWeight: '700' },
   input: { minHeight: 44, borderWidth: 1, borderColor: COLORS.border, borderRadius: RADIUS.md, backgroundColor: COLORS.cardBackground, color: COLORS.text, paddingHorizontal: SPACING.md, paddingVertical: SPACING.sm }, description: { minHeight: 70, textAlignVertical: 'top' },
+  stockToggle: { minHeight: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderWidth: 1, borderColor: COLORS.border, borderRadius: RADIUS.md, backgroundColor: COLORS.cardBackground, paddingHorizontal: SPACING.md }, stockToggleText: { color: COLORS.text, fontSize: 14 },
   warning: { flexDirection: 'row', alignItems: 'flex-start', gap: SPACING.sm, backgroundColor: '#fff7df', padding: SPACING.sm, borderRadius: RADIUS.md }, warningText: { flex: 1, color: '#6c4b08', fontSize: 12, lineHeight: 17 },
-  reviewButton: { minHeight: 46, backgroundColor: COLORS.secondary, borderRadius: RADIUS.md, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: SPACING.sm }, reviewButtonText: { color: COLORS.ink, fontWeight: '800' },
+  reviewButton: { minHeight: 46, backgroundColor: COLORS.secondary, borderRadius: RADIUS.md, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: SPACING.sm }, reviewButtonDisabled: { opacity: 0.7 }, reviewButtonText: { color: COLORS.ink, fontWeight: '800' },
 });

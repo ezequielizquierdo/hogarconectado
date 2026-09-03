@@ -119,7 +119,7 @@ const initialForm: ProductoForm = {
 
 export default function ProductosScreen() {
   const { setAction: setDesktopHeaderAction } = useDesktopHeader();
-  const { can, state } = useAuth();
+  const { can, state, user } = useAuth();
   const { contains, addProduct, removeProduct } = useQuoteDraft();
   const router = useRouter();
   const canEdit = can("editor", "admin");
@@ -156,8 +156,8 @@ export default function ProductosScreen() {
   const [instagramModalVisible, setInstagramModalVisible] = useState(false);
   const [filtersModalVisible, setFiltersModalVisible] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Producto | null>(null);
-  const [selectedConsultProduct, setSelectedConsultProduct] =
-    useState<Producto | null>(null);
+  const [consultProducts, setConsultProducts] = useState<Producto[]>([]);
+  const [consultModalVisible, setConsultModalVisible] = useState(false);
   const [selectedProductForInstagram, setSelectedProductForInstagram] =
     useState<ProductoConPrecios | null>(null);
   const [instagramStoryOptions, setInstagramStoryOptions] = useState({
@@ -382,29 +382,46 @@ export default function ProductosScreen() {
     setFormErrors({});
   };
 
-  const useAnalyzedDraft = (draft: ProductImageDraft, imageUri: string) => {
+  const createAnalyzedProduct = async (draft: ProductImageDraft, imageUri: string) => {
+    if (!draft.marca.trim()) throw new Error("Ingresá la marca del producto.");
+    if (!draft.modelo.trim()) throw new Error("Ingresá el modelo del producto.");
+    if (!draft.categoriaSugerida.trim()) throw new Error("Ingresá una categoría.");
+    if (!draft.precioBase || draft.precioBase <= 0) throw new Error("Ingresá un precio base mayor a 0.");
+    const porcentajeGanancia = Number(draft.porcentajeGanancia ?? 30);
+    if (!Number.isFinite(porcentajeGanancia) || porcentajeGanancia < 0 || porcentajeGanancia > 100) {
+      throw new Error("Ingresá un porcentaje entre 0 y 100.");
+    }
+    const duplicate = productos.find(product =>
+      formatModeloToUpperCase(product.modelo) === formatModeloToUpperCase(draft.modelo)
+    );
+    if (duplicate) throw new Error(`El modelo "${formatModeloToUpperCase(draft.modelo)}" ya existe.`);
+
     const matchedCategory = categorias.find(category =>
       category.nombre.localeCompare(draft.categoriaSugerida, "es", { sensitivity: "base" }) === 0
     );
-    const assistedForm: ProductoForm = {
+    const categoryId = matchedCategory?._id || await createCategory(draft.categoriaSugerida);
+
+    let uploadedImage: UploadedImage | null = null;
+    try {
+      uploadedImage = await uploadService.subirImagen(imageUri);
+      await productosService.crearProducto({
       marca: draft.marca,
       modelo: formatModeloToUpperCase(draft.modelo),
       descripcion: draft.descripcion,
-      categoria: matchedCategory?._id || "",
-      precioBase: draft.precioBase ? formatPrice(draft.precioBase) : "",
-      porcentajeGanancia: initialForm.porcentajeGanancia,
-      stockCantidad: String(draft.stockCantidad || 0),
-      stockDisponible: String(draft.stockDisponible),
-      imagen: imageUri,
-      imagenPublicId: "",
-    };
-    setImageImportVisible(false);
-    setEditingProduct(null);
-    setForm(assistedForm);
-    initialFormSnapshot.current = JSON.stringify(assistedForm);
-    setFormErrors(matchedCategory ? {} : { categoria: `Revisá la categoría sugerida: ${draft.categoriaSugerida || "sin identificar"}.` });
-    setModeloError("");
-    setModalVisible(true);
+        categoria: categoryId,
+        precioBase: draft.precioBase,
+        porcentajeGanancia,
+        stock: { cantidad: draft.stockCantidad || 0, disponible: draft.stockDisponible },
+        tags: [],
+        imagenes: [uploadedImage.url],
+        imagenPublicIds: [uploadedImage.publicId],
+        activo: true,
+      });
+      await Promise.all([recargar(), recargarMarcas(), recargarCategorias()]);
+    } catch (error) {
+      if (uploadedImage?.publicId) await uploadService.eliminarImagen(uploadedImage.publicId).catch(() => undefined);
+      throw error;
+    }
   };
 
   const requestCloseModal = () => {
@@ -1360,7 +1377,12 @@ export default function ProductosScreen() {
           onDelete={canDelete ? () => handleDelete(item) : undefined}
           onInstagramStory={canEdit ? () => openInstagramModal(item) : undefined}
           showConsultButton={!canEdit}
-          onConsult={!canEdit ? () => setSelectedConsultProduct(item) : undefined}
+          isConsultSelected={consultProducts.some(product => product._id === item._id)}
+          onConsult={!canEdit ? () => setConsultProducts(current => (
+            current.some(product => product._id === item._id)
+              ? current.filter(product => product._id !== item._id)
+              : [...current, item]
+          )) : undefined}
         />
       </View>
     );
@@ -1709,7 +1731,7 @@ export default function ProductosScreen() {
       <ProductImageImportModal
         visible={imageImportVisible}
         onClose={() => setImageImportVisible(false)}
-        onUseDraft={useAnalyzedDraft}
+        onCreateDraft={createAnalyzedProduct}
       />
 
       <Modal
@@ -2230,9 +2252,15 @@ export default function ProductosScreen() {
       </Modal>
 
       <ConsultaProductoModal
-        visible={Boolean(selectedConsultProduct)}
-        producto={selectedConsultProduct}
-        onClose={() => setSelectedConsultProduct(null)}
+        visible={consultModalVisible && consultProducts.length > 0}
+        productos={consultProducts}
+        initialName={state === 'authenticated' ? user?.nombre : ''}
+        onRemoveProduct={(id) => setConsultProducts(current => current.filter(product => product._id !== id))}
+        onSuccessClose={() => {
+          setConsultModalVisible(false);
+          setConsultProducts([]);
+        }}
+        onClose={() => setConsultModalVisible(false)}
       />
 
       {/* Modal de estadísticas detalladas */}
@@ -3587,11 +3615,37 @@ export default function ProductosScreen() {
       </Modal>
 
       {canQuote && <QuoteDraftBar />}
+      {!canEdit && consultProducts.length > 0 && !consultModalVisible ? (
+        <View style={styles.consultDraftBar}>
+          <View style={styles.consultDraftCopy}>
+            <ThemedText style={styles.consultDraftTitle}>
+              {consultProducts.length} {consultProducts.length === 1 ? 'producto elegido' : 'productos elegidos'}
+            </ThemedText>
+            <TouchableOpacity onPress={() => setConsultProducts([])} accessibilityRole="button">
+              <ThemedText style={styles.consultDraftClear}>Vaciar selección</ThemedText>
+            </TouchableOpacity>
+          </View>
+          <TouchableOpacity style={styles.consultDraftButton} onPress={() => setConsultModalVisible(true)} accessibilityRole="button">
+            <MaterialIcons name="favorite" size={20} color={COLORS.ink} />
+            <ThemedText style={styles.consultDraftButtonText}>Consultar lista</ThemedText>
+          </TouchableOpacity>
+        </View>
+      ) : null}
     </>
   );
 }
 
 const styles = StyleSheet.create({
+  consultDraftBar: {
+    position: 'absolute', left: SPACING.md, right: SPACING.md, bottom: Platform.OS === 'web' ? SPACING.md : 78,
+    maxWidth: 680, alignSelf: 'center', flexDirection: 'row', alignItems: 'center', gap: SPACING.md,
+    padding: SPACING.md, borderRadius: RADIUS.lg, backgroundColor: COLORS.surface, ...SHADOWS.lg,
+  },
+  consultDraftCopy: { flex: 1 },
+  consultDraftTitle: { color: COLORS.text, fontSize: 15, fontWeight: '800' },
+  consultDraftClear: { marginTop: 3, color: COLORS.errorStrong, fontSize: 12, fontWeight: '700' },
+  consultDraftButton: { minHeight: 46, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: SPACING.sm, paddingHorizontal: SPACING.md, borderRadius: RADIUS.md, backgroundColor: COLORS.secondary },
+  consultDraftButtonText: { color: COLORS.ink, fontSize: 14, fontWeight: '800' },
   container: {
     flex: 1,
   },
