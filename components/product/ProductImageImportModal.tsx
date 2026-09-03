@@ -15,6 +15,7 @@ type DraftItem = {
   status: 'pending' | 'analyzing' | 'ready' | 'saving' | 'created' | 'error';
   draft?: ProductImageDraft;
   error?: string;
+  duplicateConfirmed?: boolean;
 };
 
 type Props = {
@@ -83,13 +84,37 @@ export function ProductImageImportModal({ visible, onClose, onCreateDraft }: Pro
 
   const updateDraft = (id: string, field: keyof ProductImageDraft, value: string | number | boolean) => {
     setItems(current => current.map(item => item.id === id && item.draft
-      ? { ...item, draft: { ...item.draft, [field]: value } }
+      ? {
+          ...item,
+          duplicateConfirmed: field === 'marca' || field === 'modelo' ? false : item.duplicateConfirmed,
+          draft: {
+            ...item.draft,
+            [field]: value,
+            ...(field === 'marca' || field === 'modelo' ? { possibleDuplicates: [] } : {}),
+          },
+        }
       : item));
   };
 
   const remove = (id: string) => setItems(current => current.filter(item => item.id !== id));
   const createProduct = async (item: DraftItem) => {
     if (!item.draft || item.status !== 'ready') return;
+    if (!item.duplicateConfirmed) {
+      try {
+        const possibleDuplicates = await productAssistantService.buscarDuplicados(item.draft.marca, item.draft.modelo);
+        if (possibleDuplicates.length > 0) {
+          setItems(current => current.map(candidate => candidate.id === item.id && candidate.draft
+            ? { ...candidate, draft: { ...candidate.draft, possibleDuplicates }, duplicateConfirmed: false }
+            : candidate));
+          return;
+        }
+      } catch (error) {
+        setItems(current => current.map(candidate => candidate.id === item.id
+          ? { ...candidate, error: getErrorMessage(error) }
+          : candidate));
+        return;
+      }
+    }
     setItems(current => current.map(candidate => candidate.id === item.id ? { ...candidate, status: 'saving', error: undefined } : candidate));
     try {
       await onCreateDraft(item.draft, item.uri);
@@ -173,8 +198,30 @@ export function ProductImageImportModal({ visible, onClose, onCreateDraft }: Pro
                     {item.draft.advertencias.length > 0 ? (
                       <View style={styles.warning}><MaterialIcons name="info-outline" size={18} color="#8a5b00" /><ThemedText style={styles.warningText}>{item.draft.advertencias.join(' ')}</ThemedText></View>
                     ) : null}
+                    {(item.draft.possibleDuplicates?.length || 0) > 0 && !item.duplicateConfirmed ? (
+                      <View style={styles.duplicateWarning}>
+                        <View style={styles.duplicateHeading}>
+                          <MaterialIcons name="warning-amber" size={20} color={COLORS.errorStrong} />
+                          <ThemedText style={styles.duplicateTitle}>Este producto podría estar cargado</ThemedText>
+                        </View>
+                        {item.draft.possibleDuplicates?.map(product => (
+                          <ThemedText key={product._id} style={styles.duplicateProduct}>
+                            {product.marca} {product.modelo}
+                          </ThemedText>
+                        ))}
+                        <ThemedText style={styles.duplicateHelp}>Revisá la coincidencia para evitar cards repetidas.</ThemedText>
+                        <View style={styles.duplicateActions}>
+                          <TouchableOpacity style={styles.duplicateCancel} onPress={() => remove(item.id)}>
+                            <ThemedText style={styles.duplicateCancelText}>No crear</ThemedText>
+                          </TouchableOpacity>
+                          <TouchableOpacity style={styles.duplicateConfirm} onPress={() => setItems(current => current.map(candidate => candidate.id === item.id ? { ...candidate, duplicateConfirmed: true } : candidate))}>
+                            <ThemedText style={styles.duplicateConfirmText}>Crear de todos modos</ThemedText>
+                          </TouchableOpacity>
+                        </View>
+                      </View>
+                    ) : null}
                     {item.error ? <ThemedText style={styles.errorText}>{item.error}</ThemedText> : null}
-                    <TouchableOpacity disabled={item.status !== 'ready'} style={[styles.reviewButton, item.status !== 'ready' && styles.reviewButtonDisabled]} onPress={() => createProduct(item)}>
+                    <TouchableOpacity disabled={item.status !== 'ready' || ((item.draft.possibleDuplicates?.length || 0) > 0 && !item.duplicateConfirmed)} style={[styles.reviewButton, (item.status !== 'ready' || ((item.draft.possibleDuplicates?.length || 0) > 0 && !item.duplicateConfirmed)) && styles.reviewButtonDisabled]} onPress={() => createProduct(item)}>
                       {item.status === 'saving' ? <ActivityIndicator color={COLORS.ink} /> : <MaterialIcons name={item.status === 'created' ? 'check-circle' : 'add-circle'} size={18} color={COLORS.ink} />}
                       <ThemedText style={styles.reviewButtonText}>{item.status === 'saving' ? 'Creando producto…' : item.status === 'created' ? 'Producto creado' : 'Crear producto'}</ThemedText>
                     </TouchableOpacity>
@@ -209,5 +256,15 @@ const styles = StyleSheet.create({
   input: { minHeight: 44, borderWidth: 1, borderColor: COLORS.border, borderRadius: RADIUS.md, backgroundColor: COLORS.cardBackground, color: COLORS.text, paddingHorizontal: SPACING.md, paddingVertical: SPACING.sm }, description: { minHeight: 70, textAlignVertical: 'top' },
   stockToggle: { minHeight: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderWidth: 1, borderColor: COLORS.border, borderRadius: RADIUS.md, backgroundColor: COLORS.cardBackground, paddingHorizontal: SPACING.md }, stockToggleText: { color: COLORS.text, fontSize: 14 },
   warning: { flexDirection: 'row', alignItems: 'flex-start', gap: SPACING.sm, backgroundColor: '#fff7df', padding: SPACING.sm, borderRadius: RADIUS.md }, warningText: { flex: 1, color: '#6c4b08', fontSize: 12, lineHeight: 17 },
+  duplicateWarning: { gap: SPACING.sm, padding: SPACING.md, borderWidth: 1, borderColor: COLORS.error, borderRadius: RADIUS.md, backgroundColor: '#fff7f7' },
+  duplicateHeading: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm },
+  duplicateTitle: { flex: 1, color: COLORS.errorStrong, fontSize: 14, fontWeight: '800' },
+  duplicateProduct: { color: COLORS.text, fontSize: 14, fontWeight: '700' },
+  duplicateHelp: { color: COLORS.textSecondary, fontSize: 12, lineHeight: 17 },
+  duplicateActions: { flexDirection: 'row', gap: SPACING.sm },
+  duplicateCancel: { flex: 1, minHeight: 42, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: COLORS.border, borderRadius: RADIUS.md, backgroundColor: COLORS.surface },
+  duplicateCancelText: { color: COLORS.text, fontSize: 13, fontWeight: '700' },
+  duplicateConfirm: { flex: 1, minHeight: 42, alignItems: 'center', justifyContent: 'center', borderRadius: RADIUS.md, backgroundColor: COLORS.warning },
+  duplicateConfirmText: { color: COLORS.ink, fontSize: 13, fontWeight: '800', textAlign: 'center' },
   reviewButton: { minHeight: 46, backgroundColor: COLORS.secondary, borderRadius: RADIUS.md, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: SPACING.sm }, reviewButtonDisabled: { opacity: 0.7 }, reviewButtonText: { color: COLORS.ink, fontWeight: '800' },
 });

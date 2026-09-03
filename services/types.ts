@@ -66,6 +66,12 @@ export interface ProductImageDraft {
     stockDisponible: boolean;
     confianza: number;
     advertencias: string[];
+    possibleDuplicates?: Array<{
+        _id: string;
+        marca: string;
+        modelo: string;
+        imagen?: string;
+    }>;
 }
 
 export type ConsultaEstado = 'nueva' | 'en-gestion' | 'contactada' | 'cerrada';
