@@ -697,13 +697,82 @@ Una tarea de interfaz se considera terminada cuando:
 - La siguiente etapa evaluará si la actualización de cantidad de stock debe resolverse desde el detalle, preservando confirmación y permisos.
 - `Consulta Stock` se retiró de la navegación porque su utilidad quedó reemplazada por la consulta contextual del producto; su ruta permanece sin acceso visible durante la validación.
 - El borrador abre un compositor compacto con datos del cliente, una modalidad coherente para toda la propuesta, cantidades editables, subtotales y total.
+- El compositor diferencia contado, valor facturado en un pago con ganancia, 3 cuotas y 6 cuotas; en modalidades financiadas muestra valor de cada cuota y total financiado tanto en la edición como en la vista previa y el historial.
 - Antes de guardar se presenta una vista previa modal con el contenido comercial definitivo; volver a editar no descarta la selección.
 - El guardado utiliza el contrato multiproducto existente y conserva el porcentaje aplicado de cada artículo para que el backend genere la instantánea comercial.
 - Cotizaciones funciona como historial y seguimiento: permite buscar por cliente o teléfono, filtrar por estado, revisar el snapshot multiproducto, copiar o abrir el mensaje de WhatsApp y actualizar el estado comercial.
+- Al confirmar una cotización se registra quién la confirmó y cuándo; la card y el detalle muestran el dinero a rendir y la ganancia del vendedor calculados por el backend según la modalidad y congelados en el snapshot de confirmación.
 - La creación comienza desde Productos; la bandeja conserva una acción directa para regresar al catálogo sin duplicar el formulario anterior.
 - La eliminación permanece limitada a administradores y requiere confirmación explícita.
 
-**Validación pendiente:** comprobar visualmente en móvil y escritorio que la selección persiste, las cantidades y totales son correctos, la búsqueda recupera clientes y teléfonos, los cambios de estado se conservan y los modales no quedan tapados por la navegación.
+**Validación parcial en producción:** en escritorio se confirmó que dos productos pueden agregarse sin duplicados, que aumentar una cantidad actualiza unidades y total contado, que el borrador persiste después de recargar y que el compositor recibe los productos y cantidades correctos.
+
+**Validación pendiente:** comprobar en móvil la selección, cantidades, modalidades y modales; confirmar visualmente los totales de 3 y 6 cuotas; validar vaciado, búsqueda por cliente y teléfono, cambios de estado y que los modales no queden tapados por la navegación.
+
+---
+
+### UX-020 — Administración de marcas y categorías
+
+**Prioridad:** Media
+
+**Estado:** Pendiente
+
+**Objetivo:** permitir que administradores corrijan y consoliden marcas o categorías existentes sin editar producto por producto ni generar referencias duplicadas.
+
+**Criterios de aceptación:**
+
+- Marcas y categorías existentes pueden renombrarse desde una superficie administrativa clara.
+- Antes de guardar se informa cuántos productos serán afectados y se solicita confirmación explícita.
+- La comparación ignora diferencias accidentales de mayúsculas, espacios y acentos para prevenir duplicados equivalentes.
+- Si el nombre de destino ya existe, el flujo propone unificar ambas referencias y explica el impacto antes de continuar.
+- El cambio se aplica de forma consistente a todos los productos afectados y no deja actualizaciones parciales.
+- Los selectores, filtros, cards, cotizaciones nuevas y consultas de stock reflejan el nombre actualizado.
+- Las cotizaciones ya guardadas conservan su snapshot histórico y no se reescriben retroactivamente.
+- La operación está restringida a administradores, registra un resultado comprensible y ofrece recuperación ante errores.
+
+**Validación:** renombrado sin colisión, unificación con un nombre existente, nombre inválido, error de red, usuario sin permisos y verificación posterior en catálogo, filtros y formulario de producto.
+
+### UX-021 — Historias de Instagram en lote
+
+**Prioridad:** Media
+
+**Estado:** Pendiente de investigación
+
+**Objetivo:** seleccionar varios productos y generar una historia individual por cada uno, conservando el diseño y los controles actuales.
+
+**Criterios de aceptación:**
+
+- Productos permite activar selección múltiple, ordenar la selección y quitar elementos antes de generar.
+- Una configuración visual común puede aplicarse al lote sin impedir ajustes individuales.
+- Se genera y previsualiza una pieza independiente por producto, con progreso, errores y reintentos identificables.
+- En la primera etapa se pueden descargar o compartir todas las imágenes sin perder su orden.
+- Se investiga y documenta la mejor alternativa gratuita vigente para publicación automática, comparando límites, privacidad, mantenimiento y requisitos de Meta.
+- Si se utiliza la API oficial, los recursos temporales se alojan de forma segura, los tokens permanecen en el backend y se respetan permisos y límites de publicación.
+- Una falla en una historia no obliga a regenerar todo el lote.
+
+**Validación:** lotes de 2, 10 y 30 productos en escritorio y móvil; cancelación, reordenamiento, descarga, reintento parcial y publicación cuando la integración lo permita.
+
+### UX-022 — Alta de productos asistida por imágenes
+
+**Prioridad:** Alta — siguiente evolución prioritaria
+
+**Estado:** En investigación
+
+**Objetivo:** cargar una o varias imágenes de productos, extraer automáticamente su información y preparar cards editables antes de guardarlas.
+
+**Criterios de aceptación:**
+
+- El alta permite seleccionar varias imágenes desde archivos, galería o cámara.
+- El sistema distingue si las imágenes corresponden a productos diferentes o complementan un mismo producto y permite corregir el agrupamiento.
+- Se propone marca, modelo, categoría, descripción, precio base, stock visible y otros datos reconocibles, indicando campos dudosos o ausentes.
+- Cada propuesta conserva su imagen principal y permite elegir otra imagen del mismo grupo.
+- Ningún producto se guarda automáticamente: el usuario revisa, corrige, descarta o confirma cada card.
+- Se detectan posibles duplicados por marca, modelo y códigos reconocidos antes de guardar.
+- El procesamiento muestra progreso por imagen y permite reintentar solamente las fallidas.
+- Se investiga primero una solución gratuita o con nivel gratuito suficiente, evaluando precisión en español, privacidad, límites y costo operativo futuro.
+- Las credenciales y el procesamiento externo quedan exclusivamente en el backend.
+
+**Validación:** imágenes limpias, flyers con mucho texto, fotografías inclinadas, varias fotos del mismo producto, imágenes de productos diferentes y datos incompletos.
 
 ---
 
@@ -716,8 +785,10 @@ Una tarea de interfaz se considera terminada cuando:
 5. `UX-005` — Carga y edición.
 6. `UX-006` — Accesibilidad transversal de las superficies anteriores.
 7. `AUTO-001` y `AUTO-002` — Validaciones automáticas antes de ampliar cambios.
-8. Bloque P2 en el orden definido, incluyendo el catálogo público y las consultas comerciales por etapas.
-9. Bloque P3 según evidencia de uso.
+8. `UX-022` — Alta de productos asistida por imágenes.
+9. Bloque P2 en el orden definido, incluyendo el catálogo público y las consultas comerciales por etapas.
+10. `UX-021` — Historias de Instagram en lote.
+11. Bloque P3 según evidencia de uso.
 
 ## Revisión del backlog
 

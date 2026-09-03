@@ -29,6 +29,7 @@ const product = {
   imagenes: [],
   precios: {
     contado: 1917500,
+    factura: { costoBase: 1575000, unPago: 2047500 },
     tresCuotas: { total: 2109250, cuota: 703083 },
     seisCuotas: { total: 2301000, cuota: 383500 },
   },

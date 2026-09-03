@@ -5,10 +5,12 @@ import {
   addProductToDraft,
   getDraftCashTotal,
   getDraftItemSubtotal,
+  getDraftInstallmentCount,
   getDraftTotal,
   getDraftProductCount,
   getDraftUnitCount,
   removeProductFromDraft,
+  hasDraftPaymentMode,
   updateDraftQuantity,
 } from "./quoteDraft";
 
@@ -23,6 +25,7 @@ const product = (id: string, contado: number): ProductoConPrecios => ({
   imagenes: [],
   precios: {
     contado,
+    factura: { costoBase: contado * 0.9, unPago: contado },
     tresCuotas: { total: contado, cuota: contado / 3 },
     seisCuotas: { total: contado, cuota: contado / 6 },
   },
@@ -69,7 +72,11 @@ describe("quoteDraft", () => {
     const withQuantity = updateDraftQuantity(items, productA._id, 2);
 
     expect(getDraftItemSubtotal(withQuantity[0], "3-cuotas")).toBe(2400);
+    expect(getDraftTotal(withQuantity, "facturado")).toBe(2500);
     expect(getDraftTotal(withQuantity, "3-cuotas")).toBe(3000);
     expect(getDraftTotal(withQuantity, "6-cuotas")).toBe(3300);
+    expect(getDraftInstallmentCount("3-cuotas")).toBe(3);
+    expect(getDraftInstallmentCount("6-cuotas")).toBe(6);
+    expect(hasDraftPaymentMode(withQuantity, "facturado")).toBe(true);
   });
 });

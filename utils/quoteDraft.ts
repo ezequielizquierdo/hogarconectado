@@ -6,7 +6,7 @@ export interface QuoteDraftItem {
   porcentajeAplicado: number;
 }
 
-export type QuotePaymentMode = "contado" | "3-cuotas" | "6-cuotas";
+export type QuotePaymentMode = "contado" | "facturado" | "3-cuotas" | "6-cuotas";
 
 export const getProductPercentage = (producto: ProductoConPrecios) =>
   producto.porcentajeGananciaAplicado ?? producto.porcentajeGanancia ?? 10;
@@ -62,9 +62,23 @@ export const getDraftUnitPrice = (
   item: QuoteDraftItem,
   modalidad: QuotePaymentMode
 ) => {
+  if (modalidad === "facturado") {
+    return item.producto.precios.factura?.unPago ?? item.producto.precios.contado;
+  }
   if (modalidad === "3-cuotas") return item.producto.precios.tresCuotas.total;
   if (modalidad === "6-cuotas") return item.producto.precios.seisCuotas.total;
   return item.producto.precios.contado;
+};
+
+export const hasDraftPaymentMode = (
+  items: QuoteDraftItem[],
+  modalidad: QuotePaymentMode
+) => modalidad !== "facturado" || items.every((item) => !!item.producto.precios.factura);
+
+export const getDraftInstallmentCount = (modalidad: QuotePaymentMode) => {
+  if (modalidad === "3-cuotas") return 3;
+  if (modalidad === "6-cuotas") return 6;
+  return null;
 };
 
 export const getDraftItemSubtotal = (

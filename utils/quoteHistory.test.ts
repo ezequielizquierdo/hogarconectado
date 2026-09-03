@@ -17,6 +17,7 @@ const item = {
     precioBase: 250000,
     precios: {
       contado: 325000,
+      factura: { costoBase: 262500, unPago: 341250 },
       tresCuotas: { total: 360000, cuota: 120000 },
       seisCuotas: { total: 390000, cuota: 65000 },
     },
@@ -30,6 +31,7 @@ describe("quoteHistory", () => {
 
   it("elige el precio de la modalidad guardada", () => {
     expect(getQuoteItemUnitPrice(item, "contado")).toBe(325000);
+    expect(getQuoteItemUnitPrice(item, "facturado")).toBe(341250);
     expect(getQuoteItemUnitPrice(item, "3-cuotas")).toBe(360000);
     expect(getQuoteItemUnitPrice(item, "6-cuotas")).toBe(390000);
   });

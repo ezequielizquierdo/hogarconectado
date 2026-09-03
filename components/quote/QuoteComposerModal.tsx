@@ -19,8 +19,10 @@ import { useQuoteDraft } from "@/contexts/QuoteDraftContext";
 import { cotizacionesService } from "@/services";
 import {
   getDraftItemSubtotal,
+  getDraftInstallmentCount,
   getDraftTotal,
   getDraftUnitPrice,
+  hasDraftPaymentMode,
   type QuotePaymentMode,
 } from "@/utils/quoteDraft";
 
@@ -37,6 +39,7 @@ const paymentModes: {
   shortLabel: string;
 }[] = [
   { value: "contado", label: "Contado", shortLabel: "Contado" },
+  { value: "facturado", label: "Facturado", shortLabel: "Facturado" },
   { value: "3-cuotas", label: "3 cuotas", shortLabel: "3 cuotas" },
   { value: "6-cuotas", label: "6 cuotas", shortLabel: "6 cuotas" },
 ];
@@ -66,6 +69,8 @@ export function QuoteComposerModal({ visible, onClose }: QuoteComposerModalProps
     [items, paymentMode]
   );
   const paymentLabel = paymentModes.find((mode) => mode.value === paymentMode)?.label;
+  const installmentCount = getDraftInstallmentCount(paymentMode);
+  const installmentAmount = installmentCount ? total / installmentCount : null;
 
   const resetComposer = () => {
     setStep("form");
@@ -191,13 +196,15 @@ export function QuoteComposerModal({ visible, onClose }: QuoteComposerModalProps
                 <View style={styles.modeRow}>
                   {paymentModes.map((mode) => {
                     const selected = paymentMode === mode.value;
+                    const available = hasDraftPaymentMode(items, mode.value);
                     return (
                       <Pressable
                         key={mode.value}
                         accessibilityRole="radio"
-                        accessibilityState={{ checked: selected }}
+                        accessibilityState={{ checked: selected, disabled: !available }}
+                        disabled={!available}
                         onPress={() => setPaymentMode(mode.value)}
-                        style={[styles.modeButton, selected && styles.modeButtonSelected]}
+                        style={[styles.modeButton, !isDesktop && styles.modeButtonMobile, selected && styles.modeButtonSelected, !available && styles.disabled]}
                       >
                         <ThemedText style={[styles.modeText, selected && styles.modeTextSelected]}>
                           {mode.shortLabel}
@@ -206,6 +213,30 @@ export function QuoteComposerModal({ visible, onClose }: QuoteComposerModalProps
                     );
                   })}
                 </View>
+                <View style={styles.paymentSummary}>
+                  {installmentCount && installmentAmount !== null ? (
+                    <>
+                      <View>
+                        <ThemedText style={styles.paymentSummaryLabel}>{installmentCount} cuotas de</ThemedText>
+                        <ThemedText style={styles.paymentSummaryValue}>{formatPrice(installmentAmount)}</ThemedText>
+                      </View>
+                      <View style={styles.paymentSummaryAside}>
+                        <ThemedText style={styles.paymentSummaryLabel}>Total financiado</ThemedText>
+                        <ThemedText style={styles.paymentSummaryTotal}>{formatPrice(total)}</ThemedText>
+                      </View>
+                    </>
+                  ) : (
+                    <>
+                      <ThemedText style={styles.paymentSummaryLabel}>
+                        {paymentMode === "facturado" ? "Valor facturado en 1 cuota con ganancia" : "Total contado"}
+                      </ThemedText>
+                      <ThemedText style={styles.paymentSummaryTotal}>{formatPrice(total)}</ThemedText>
+                    </>
+                  )}
+                </View>
+                {!hasDraftPaymentMode(items, "facturado") && (
+                  <ThemedText style={styles.modeHint}>Quitá y volvé a agregar estos productos para obtener el costo facturado.</ThemedText>
+                )}
               </View>
 
               <View style={styles.section}>
@@ -227,7 +258,10 @@ export function QuoteComposerModal({ visible, onClose }: QuoteComposerModalProps
                         <ThemedText style={styles.productName} numberOfLines={1}>
                           {item.producto.marca} {item.producto.modelo}
                         </ThemedText>
-                        <ThemedText style={styles.unitPrice}>{formatPrice(getDraftUnitPrice(item, paymentMode))} c/u</ThemedText>
+                        <ThemedText style={styles.unitPrice}>
+                          {formatPrice(getDraftUnitPrice(item, paymentMode))} c/u
+                          {installmentCount ? ` · ${installmentCount} × ${formatPrice(getDraftUnitPrice(item, paymentMode) / installmentCount)}` : ""}
+                        </ThemedText>
                         <View style={styles.quantityRow}>
                           <Pressable disabled={item.cantidad <= 1} onPress={() => setQuantity(item.producto._id, item.cantidad - 1)} style={[styles.quantityButton, item.cantidad <= 1 && styles.disabled]}>
                             <MaterialIcons name="remove" size={17} color={COLORS.text} />
@@ -283,6 +317,11 @@ export function QuoteComposerModal({ visible, onClose }: QuoteComposerModalProps
                       <View style={styles.previewRowCopy}>
                         <ThemedText style={styles.previewProductName}>{item.producto.marca} {item.producto.modelo}</ThemedText>
                         <ThemedText style={styles.previewDetail}>{item.cantidad} × {formatPrice(getDraftUnitPrice(item, paymentMode))}</ThemedText>
+                        {installmentCount && (
+                          <ThemedText style={styles.previewDetail}>
+                            Por unidad: {installmentCount} cuotas de {formatPrice(getDraftUnitPrice(item, paymentMode) / installmentCount)}
+                          </ThemedText>
+                        )}
                       </View>
                       <ThemedText style={styles.previewSubtotal}>{formatPrice(getDraftItemSubtotal(item, paymentMode))}</ThemedText>
                     </View>
@@ -290,7 +329,12 @@ export function QuoteComposerModal({ visible, onClose }: QuoteComposerModalProps
                 </View>
                 {!!notes.trim() && <ThemedText style={styles.previewNotes}>{notes.trim()}</ThemedText>}
                 <View style={styles.previewTotalRow}>
-                  <ThemedText style={styles.previewTotalLabel}>TOTAL</ThemedText>
+                  <View>
+                    <ThemedText style={styles.previewTotalLabel}>{installmentCount ? "TOTAL FINANCIADO" : paymentMode === "facturado" ? "FACTURADO EN 1 CUOTA CON GANANCIA" : "TOTAL"}</ThemedText>
+                    {installmentCount && installmentAmount !== null && (
+                      <ThemedText style={styles.previewInstallment}>{installmentCount} cuotas de {formatPrice(installmentAmount)}</ThemedText>
+                    )}
+                  </View>
                   <ThemedText style={styles.previewTotal}>{formatPrice(total)}</ThemedText>
                 </View>
               </View>
@@ -368,9 +412,16 @@ const styles = StyleSheet.create({
   sectionMeta: { color: COLORS.primaryDark, fontSize: 15, fontWeight: "800" },
   modeRow: { flexDirection: "row", flexWrap: "wrap", gap: SPACING.sm },
   modeButton: { minHeight: 42, flexGrow: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: SPACING.md, borderWidth: 1, borderColor: COLORS.border, borderRadius: RADIUS.full, backgroundColor: COLORS.surface },
+  modeButtonMobile: { flexBasis: "46%" },
   modeButtonSelected: { borderColor: COLORS.primaryDark, backgroundColor: COLORS.primary },
   modeText: { color: COLORS.textSecondary, fontSize: 13, fontWeight: "700" },
   modeTextSelected: { color: COLORS.ink },
+  paymentSummary: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: SPACING.md, padding: SPACING.md, borderRadius: RADIUS.md, backgroundColor: COLORS.cardBackground },
+  paymentSummaryAside: { alignItems: "flex-end" },
+  paymentSummaryLabel: { color: COLORS.textSecondary, fontSize: 11, fontWeight: "700" },
+  paymentSummaryValue: { marginTop: 2, color: COLORS.primaryDark, fontSize: 18, fontWeight: "900" },
+  paymentSummaryTotal: { color: COLORS.primaryDark, fontSize: 16, fontWeight: "900" },
+  modeHint: { color: COLORS.textSecondary, fontSize: 11 },
   productsList: { gap: SPACING.sm },
   productRow: { flexDirection: "row", alignItems: "center", gap: SPACING.sm, padding: SPACING.sm, borderWidth: 1, borderColor: COLORS.border, borderRadius: RADIUS.md, backgroundColor: COLORS.cardBackground },
   thumbnail: { width: 58, height: 58, alignItems: "center", justifyContent: "center", borderRadius: RADIUS.sm, backgroundColor: COLORS.surface },
@@ -401,6 +452,7 @@ const styles = StyleSheet.create({
   previewNotes: { marginHorizontal: SPACING.lg, marginTop: SPACING.md, padding: SPACING.md, borderRadius: RADIUS.md, backgroundColor: COLORS.accent + "40", color: COLORS.textSecondary, fontSize: 12, lineHeight: 17 },
   previewTotalRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: SPACING.md, padding: SPACING.lg, backgroundColor: COLORS.ink },
   previewTotalLabel: { color: COLORS.heroTextMuted, fontSize: 12, fontWeight: "800", letterSpacing: 1 },
+  previewInstallment: { marginTop: 4, color: COLORS.heroTextMuted, fontSize: 12, fontWeight: "700" },
   previewTotal: { color: COLORS.surface, fontSize: 24, fontWeight: "900" },
   successContent: { alignItems: "center", padding: SPACING.xl, gap: SPACING.sm },
   successIcon: { width: 76, height: 76, alignItems: "center", justifyContent: "center", borderRadius: RADIUS.full, backgroundColor: COLORS.secondary },

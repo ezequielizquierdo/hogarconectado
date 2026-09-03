@@ -34,6 +34,8 @@ interface SidebarFiltersProps {
   loading?: boolean;
 }
 
+const ESSEN_CATEGORY_PREFIX = "Essen · ";
+
 const SidebarFilters: React.FC<SidebarFiltersProps> = ({
   categorias,
   marcas,
@@ -50,6 +52,7 @@ const SidebarFilters: React.FC<SidebarFiltersProps> = ({
   loading = false,
 }) => {
   const [categoriasCollapsed, setCategoriasCollapsed] = useState(false);
+  const [essenCollapsed, setEssenCollapsed] = useState(false);
   const [marcasCollapsed, setMarcasCollapsed] = useState(false);
   const [stockCollapsed, setStockCollapsed] = useState(false);
 
@@ -57,6 +60,16 @@ const SidebarFilters: React.FC<SidebarFiltersProps> = ({
     { label: "Disponible", value: "disponible" },
     { label: "Agotado", value: "agotado" },
   ];
+
+  const essenCategories = categorias
+    .filter((category) => category.label.startsWith(ESSEN_CATEGORY_PREFIX))
+    .map((category) => ({
+      ...category,
+      label: category.label.slice(ESSEN_CATEGORY_PREFIX.length),
+    }));
+  const generalCategories = categorias.filter(
+    (category) => !category.label.startsWith(ESSEN_CATEGORY_PREFIX)
+  );
 
   const renderFilterSection = (
     title: string,
@@ -208,12 +221,28 @@ const SidebarFilters: React.FC<SidebarFiltersProps> = ({
         {renderFilterSection(
           "Categorías",
           "category",
-          categorias,
+          generalCategories,
           selectedCategoria,
           onCategoriaChange,
           true,
           categoriasCollapsed,
           () => setCategoriasCollapsed(!categoriasCollapsed)
+        )}
+
+        {essenCategories.length > 0 && (
+          <>
+            <View style={styles.divider} />
+            {renderFilterSection(
+              "Essen",
+              "restaurant-menu",
+              essenCategories,
+              selectedCategoria,
+              onCategoriaChange,
+              true,
+              essenCollapsed,
+              () => setEssenCollapsed(!essenCollapsed)
+            )}
+          </>
         )}
 
         <View style={styles.divider} />

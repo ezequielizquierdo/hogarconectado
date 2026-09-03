@@ -35,6 +35,7 @@ import {
   quoteToDraftItems,
   QUOTE_MODE_LABEL,
 } from "@/utils/quoteHistory";
+import { getDraftInstallmentCount } from "@/utils/quoteDraft";
 
 const STATES: { value: CotizacionEstado | "todas"; label: string }[] = [
   { value: "todas", label: "Todas" },
@@ -107,6 +108,40 @@ function ProductLine({ item, quote }: { item: ProductoCotizacion; quote: Cotizac
   );
 }
 
+function ConfirmationSummary({ quote, detailed = false }: { quote: Cotizacion; detailed?: boolean }) {
+  if (quote.estado !== "confirmada") return null;
+  const confirmer = typeof quote.confirmadaPor === "string"
+    ? "Usuario sin detalle"
+    : quote.confirmadaPor?.nombre ?? "Usuario no registrado";
+  const summary = quote.resumenConfirmacion;
+
+  return (
+    <View style={[styles.confirmationBox, detailed && styles.confirmationBoxDetailed]}>
+      <View style={styles.confirmationHeader}>
+        <MaterialIcons name="verified" size={18} color={COLORS.primaryDark} />
+        <View style={styles.confirmationCopy}>
+          <Text style={styles.confirmationTitle}>Confirmó {confirmer}</Text>
+          {quote.confirmadaAt ? <Text style={styles.confirmationDate}>{formatDate(quote.confirmadaAt)}</Text> : null}
+        </View>
+      </View>
+      {summary ? (
+        <View style={styles.settlementRow}>
+          <View style={styles.settlementItem}>
+            <Text style={styles.settlementLabel}>Dinero a rendir</Text>
+            <Text style={styles.settlementValue}>{formatMoney(summary.dineroARendir)}</Text>
+          </View>
+          <View style={styles.settlementItem}>
+            <Text style={styles.settlementLabel}>Ganancia del vendedor</Text>
+            <Text style={styles.profitValue}>{formatMoney(summary.gananciaVendedor)}</Text>
+          </View>
+        </View>
+      ) : (
+        <Text style={styles.legacyConfirmation}>Confirmación anterior sin resumen financiero registrado.</Text>
+      )}
+    </View>
+  );
+}
+
 export function QuoteHistoryScreen() {
   const router = useRouter();
   const { user } = useAuth();
@@ -166,14 +201,24 @@ export function QuoteHistoryScreen() {
   ));
 
   const updateState = async (quote: Cotizacion, state: CotizacionEstado) => {
-    if (processingId || quote.estado === state) return;
+    const confirmationIsComplete = Boolean(
+      quote.confirmadaPor && quote.confirmadaAt && quote.resumenConfirmacion
+    );
+    if (
+      processingId ||
+      (quote.estado === state && (state !== "confirmada" || confirmationIsComplete))
+    ) return;
     setProcessingId(quote._id);
     setFeedback("");
     try {
       const updated = await cotizacionesService.actualizarEstadoCotizacion(quote._id, state);
       setQuotes((current) => current.map((item) => item._id === quote._id ? updated : item));
       setSelected((current) => current?._id === quote._id ? updated : current);
-      setFeedback(`Cotización marcada como ${STATE_LABEL[state].toLowerCase()}.`);
+      setFeedback(
+        state === "confirmada"
+          ? "Confirmación registrada con su resumen financiero."
+          : `Cotización marcada como ${STATE_LABEL[state].toLowerCase()}.`
+      );
     } catch {
       setFeedback("No pudimos actualizar el estado.");
     } finally {
@@ -390,10 +435,16 @@ export function QuoteHistoryScreen() {
                 <View style={styles.totalRow}>
                   <View>
                     <Text style={styles.modeLabel}>{QUOTE_MODE_LABEL[quote.modalidadPago]}</Text>
-                    <Text style={styles.unitsLabel}>{quote.productos.reduce((sum, item) => sum + item.cantidad, 0)} unidades</Text>
+                    <Text style={styles.unitsLabel}>
+                      {getDraftInstallmentCount(quote.modalidadPago)
+                        ? `${getDraftInstallmentCount(quote.modalidadPago)} cuotas de ${formatMoney(quote.totales.total / (getDraftInstallmentCount(quote.modalidadPago) ?? 1))}`
+                        : `${quote.productos.reduce((sum, item) => sum + item.cantidad, 0)} unidades`}
+                    </Text>
                   </View>
                   <Text style={styles.total}>{formatMoney(quote.totales.total)}</Text>
                 </View>
+
+                <ConfirmationSummary quote={quote} />
 
                 <View style={styles.actions}>
                   <Pressable onPress={() => void openDetail(quote)} style={styles.secondaryAction}>
@@ -453,10 +504,15 @@ export function QuoteHistoryScreen() {
                 <View style={styles.detailTotal}>
                   <View>
                     <Text style={styles.modeLabel}>{QUOTE_MODE_LABEL[selected.modalidadPago]}</Text>
-                    <Text style={styles.unitsLabel}>Total cotizado</Text>
+                    <Text style={styles.unitsLabel}>
+                      {getDraftInstallmentCount(selected.modalidadPago)
+                        ? `${getDraftInstallmentCount(selected.modalidadPago)} cuotas de ${formatMoney(selected.totales.total / (getDraftInstallmentCount(selected.modalidadPago) ?? 1))}`
+                        : "Total cotizado"}
+                    </Text>
                   </View>
                   <Text style={styles.detailTotalValue}>{formatMoney(selected.totales.total)}</Text>
                 </View>
+                <ConfirmationSummary quote={selected} detailed />
                 {selected.observaciones ? (
                   <View style={styles.notes}>
                     <Text style={styles.notesTitle}>Observaciones</Text>
@@ -561,6 +617,18 @@ const styles = StyleSheet.create({
   modeLabel: { color: COLORS.text, fontSize: 13, fontWeight: "800" },
   unitsLabel: { marginTop: 2, color: COLORS.textSecondary, fontSize: 12 },
   total: { color: COLORS.primaryDark, fontSize: 23, fontWeight: "800" },
+  confirmationBox: { gap: SPACING.sm, marginTop: SPACING.md, padding: SPACING.md, borderRadius: RADIUS.md, backgroundColor: COLORS.success + "24" },
+  confirmationBoxDetailed: { marginTop: SPACING.lg, borderWidth: 1, borderColor: COLORS.success },
+  confirmationHeader: { flexDirection: "row", alignItems: "center", gap: SPACING.sm },
+  confirmationCopy: { minWidth: 0, flex: 1 },
+  confirmationTitle: { color: COLORS.text, fontSize: 13, fontWeight: "800" },
+  confirmationDate: { marginTop: 1, color: COLORS.textSecondary, fontSize: 11 },
+  settlementRow: { flexDirection: "row", flexWrap: "wrap", gap: SPACING.sm },
+  settlementItem: { minWidth: 140, flex: 1, padding: SPACING.sm, borderRadius: RADIUS.sm, backgroundColor: COLORS.surface },
+  settlementLabel: { color: COLORS.textSecondary, fontSize: 10, fontWeight: "700" },
+  settlementValue: { marginTop: 2, color: COLORS.text, fontSize: 15, fontWeight: "900" },
+  profitValue: { marginTop: 2, color: COLORS.primaryDark, fontSize: 15, fontWeight: "900" },
+  legacyConfirmation: { color: COLORS.textSecondary, fontSize: 11, lineHeight: 16 },
   actions: { flexDirection: "row", gap: SPACING.sm, marginTop: SPACING.lg },
   secondaryAction: { minHeight: 43, flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: SPACING.xs, borderRadius: RADIUS.md, backgroundColor: COLORS.cardBackground },
   secondaryActionText: { color: COLORS.text, fontSize: 13, fontWeight: "800" },

@@ -17,7 +17,7 @@ const blobToDataUrl = (blob: Blob): Promise<string> => new Promise((resolve, rej
   reader.readAsDataURL(blob);
 });
 
-const uriToDataUrl = async (uri: string): Promise<string> => {
+export const uriToDataUrl = async (uri: string): Promise<string> => {
   if (uri.startsWith('data:')) return uri;
   if (Platform.OS === 'web') {
     const response = await fetch(uri);

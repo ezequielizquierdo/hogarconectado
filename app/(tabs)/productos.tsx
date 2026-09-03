@@ -32,6 +32,7 @@ import { DataStatePanel } from "@/components/ui/DataStatePanel";
 import { LoadingBar, ProductCatalogSkeleton } from "@/components/ui/LoadingStates";
 import FadeInView from "@/components/ui/FadeInView";
 import ProductCard from "@/components/product/ProductCard";
+import { ProductImageImportModal } from "@/components/product/ProductImageImportModal";
 import { QuoteDraftBar } from "@/components/quote/QuoteDraftBar";
 import { SidebarFilters } from "@/components/filters";
 import { Pagination } from "@/components/Pagination";
@@ -41,7 +42,7 @@ import { useMarcas } from "@/hooks/useMarcas";
 import { useDebounce } from "@/hooks/useDebounce";
 import { categoriasService, productosService } from "@/services";
 import { uploadService, UploadedImage } from "@/services/uploadService";
-import { Producto, ProductoConPrecios } from "@/services/types";
+import { ProductImageDraft, Producto, ProductoConPrecios } from "@/services/types";
 import { COLORS, SPACING, RADIUS, SHADOWS } from "@/constants/theme";
 import { useAuth } from "@/contexts/AuthContext";
 import { useDesktopHeader } from "@/contexts/DesktopHeaderContext";
@@ -149,6 +150,7 @@ export default function ProductosScreen() {
   } = useMarcas();
 
   const [modalVisible, setModalVisible] = useState(false);
+  const [imageImportVisible, setImageImportVisible] = useState(false);
   const [statsModalVisible, setStatsModalVisible] = useState(false);
   const [detailModalVisible, setDetailModalVisible] = useState(false);
   const [instagramModalVisible, setInstagramModalVisible] = useState(false);
@@ -378,6 +380,31 @@ export default function ProductosScreen() {
     setForm(initialForm);
     setModeloError("");
     setFormErrors({});
+  };
+
+  const useAnalyzedDraft = (draft: ProductImageDraft, imageUri: string) => {
+    const matchedCategory = categorias.find(category =>
+      category.nombre.localeCompare(draft.categoriaSugerida, "es", { sensitivity: "base" }) === 0
+    );
+    const assistedForm: ProductoForm = {
+      marca: draft.marca,
+      modelo: formatModeloToUpperCase(draft.modelo),
+      descripcion: draft.descripcion,
+      categoria: matchedCategory?._id || "",
+      precioBase: draft.precioBase ? formatPrice(draft.precioBase) : "",
+      porcentajeGanancia: initialForm.porcentajeGanancia,
+      stockCantidad: String(draft.stockCantidad || 0),
+      stockDisponible: String(draft.stockDisponible),
+      imagen: imageUri,
+      imagenPublicId: "",
+    };
+    setImageImportVisible(false);
+    setEditingProduct(null);
+    setForm(assistedForm);
+    initialFormSnapshot.current = JSON.stringify(assistedForm);
+    setFormErrors(matchedCategory ? {} : { categoria: `Revisá la categoría sugerida: ${draft.categoriaSugerida || "sin identificar"}.` });
+    setModeloError("");
+    setModalVisible(true);
   };
 
   const requestCloseModal = () => {
@@ -1412,6 +1439,15 @@ export default function ProductosScreen() {
               >
                 {/* Lista de productos */}
                 <ThemedView style={styles.webProductsContainer}>
+                  {canEdit ? (
+                    <View style={styles.assistedImportRow}>
+                      <TouchableOpacity style={styles.assistedImportButton} onPress={() => setImageImportVisible(true)}>
+                        <MaterialIcons name="auto-awesome" size={18} color={COLORS.ink} />
+                        <ThemedText style={styles.assistedImportButtonText}>Crear productos desde imágenes</ThemedText>
+                      </TouchableOpacity>
+                      <ThemedText style={styles.assistedImportHint}>Seleccioná varias imágenes y revisá un borrador por producto.</ThemedText>
+                    </View>
+                  ) : null}
                   {productosLoading && productosFiltrados.length > 0 ? <LoadingBar label="Actualizando catálogo…" /> : null}
                   {productosFiltrados.length === 0 ? (
                     productosLoading ? <ProductCatalogSkeleton /> : <DataStatePanel {...catalogState} />
@@ -1498,6 +1534,17 @@ export default function ProductosScreen() {
                   )}
                 </TouchableOpacity>
               </View>
+
+              {canEdit ? (
+                <TouchableOpacity style={styles.assistedImportButtonMobile} onPress={() => setImageImportVisible(true)}>
+                  <MaterialIcons name="auto-awesome" size={18} color={COLORS.ink} />
+                  <View style={styles.assistedImportMobileCopy}>
+                    <ThemedText style={styles.assistedImportButtonText}>Crear desde imágenes</ThemedText>
+                    <ThemedText style={styles.assistedImportHintMobile}>Elegí varias fotos o archivos</ThemedText>
+                  </View>
+                  <MaterialIcons name="chevron-right" size={20} color={COLORS.textSecondary} />
+                </TouchableOpacity>
+              ) : null}
 
               {/* Input de búsqueda */}
               <View style={styles.searchContainer}>
@@ -1658,6 +1705,12 @@ export default function ProductosScreen() {
           </ScrollView>
         </View>
       )}
+
+      <ProductImageImportModal
+        visible={imageImportVisible}
+        onClose={() => setImageImportVisible(false)}
+        onUseDraft={useAnalyzedDraft}
+      />
 
       <Modal
         visible={modalVisible}
@@ -3564,6 +3617,18 @@ const styles = StyleSheet.create({
     gap: SPACING.sm,
     marginBottom: SPACING.md,
   },
+  assistedImportButtonMobile: {
+    minHeight: 54,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: SPACING.sm,
+    backgroundColor: COLORS.secondary,
+    borderRadius: RADIUS.md,
+    paddingHorizontal: SPACING.md,
+    marginBottom: SPACING.md,
+  },
+  assistedImportMobileCopy: { flex: 1 },
+  assistedImportHintMobile: { color: COLORS.textSecondary, fontSize: 12, marginTop: 1 },
   filtersButtonMobile: {
     flex: 1,
     flexDirection: "row",
@@ -4562,6 +4627,29 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.cardBackground,
   },
+  assistedImportRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: SPACING.md,
+    marginBottom: SPACING.lg,
+    padding: SPACING.md,
+    backgroundColor: COLORS.surface,
+    borderRadius: RADIUS.lg,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  assistedImportButton: {
+    minHeight: 42,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: SPACING.sm,
+    paddingHorizontal: SPACING.md,
+    backgroundColor: COLORS.secondary,
+    borderRadius: RADIUS.md,
+  },
+  assistedImportButtonText: { color: COLORS.ink, fontWeight: "700" },
+  assistedImportHint: { flex: 1, color: COLORS.textSecondary, fontSize: 13 },
 
   // Estilos para header estilo ParallaxScrollView en web
   webParallaxHeader: {

@@ -7,6 +7,7 @@ import type { QuoteDraftItem } from "@/utils/quoteDraft";
 
 export const QUOTE_MODE_LABEL: Record<CotizacionModalidad, string> = {
   contado: "Contado",
+  facturado: "Facturado en 1 cuota con ganancia",
   "3-cuotas": "3 cuotas",
   "6-cuotas": "6 cuotas",
 };
@@ -17,6 +18,7 @@ export function getQuoteItemUnitPrice(
 ) {
   const prices = item.detalles?.precios;
   if (!prices) return 0;
+  if (modalidad === "facturado") return prices.factura?.unPago ?? prices.contado;
   if (modalidad === "3-cuotas") return prices.tresCuotas.total;
   if (modalidad === "6-cuotas") return prices.seisCuotas.total;
   return prices.contado;

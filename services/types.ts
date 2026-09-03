@@ -38,8 +38,9 @@ export interface Producto {
     precioConGanancia?: number;
     precios?: {
         contado: number;
-        tresCuotas: { total: number; cuota: number };
-        seisCuotas: { total: number; cuota: number };
+        factura?: { costoBase: number; unPago: number };
+        tresCuotas: { costoBase?: number; total: number; cuota: number };
+        seisCuotas: { costoBase?: number; total: number; cuota: number };
     };
     especificaciones?: Record<string, any>;
     stock: {
@@ -52,6 +53,18 @@ export interface Producto {
     activo?: boolean;
     createdAt?: string;
     updatedAt?: string;
+}
+
+export interface ProductImageDraft {
+    marca: string;
+    modelo: string;
+    categoriaSugerida: string;
+    descripcion: string;
+    precioBase: number | null;
+    stockCantidad: number;
+    stockDisponible: boolean;
+    confianza: number;
+    advertencias: string[];
 }
 
 export type ConsultaEstado = 'nueva' | 'en-gestion' | 'contactada' | 'cerrada';
@@ -88,11 +101,17 @@ export interface ConsultaResumen {
 export interface ProductoConPrecios extends Producto {
     precios: {
         contado: number;
+        factura?: {
+            costoBase: number;
+            unPago: number;
+        };
         tresCuotas: {
+            costoBase?: number;
             total: number;
             cuota: number;
         };
         seisCuotas: {
+            costoBase?: number;
             total: number;
             cuota: number;
         };
@@ -141,14 +160,15 @@ export interface ProductoCotizacion {
         porcentajeAplicado?: number;
         precios: {
             contado: number;
-            tresCuotas: { total: number; cuota: number };
-            seisCuotas: { total: number; cuota: number };
+            factura?: { costoBase: number; unPago: number };
+            tresCuotas: { costoBase?: number; total: number; cuota: number };
+            seisCuotas: { costoBase?: number; total: number; cuota: number };
         };
     };
 }
 
 export type CotizacionEstado = 'pendiente' | 'enviada' | 'confirmada' | 'cancelada';
-export type CotizacionModalidad = 'contado' | '3-cuotas' | '6-cuotas';
+export type CotizacionModalidad = 'contado' | 'facturado' | '3-cuotas' | '6-cuotas';
 
 export interface Cotizacion {
     _id: string;
@@ -160,6 +180,13 @@ export interface Cotizacion {
         total: number;
     };
     estado: CotizacionEstado;
+    confirmadaPor?: Pick<Usuario, '_id' | 'nombre' | 'email'> | string;
+    confirmadaAt?: string;
+    resumenConfirmacion?: {
+        totalVendido: number;
+        dineroARendir: number;
+        gananciaVendedor: number;
+    };
     observaciones?: string;
     createdAt: string;
     updatedAt: string;
