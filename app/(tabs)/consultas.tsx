@@ -60,12 +60,12 @@ export default function ConsultasScreen() {
   const isDesktop = Platform.OS === 'web' && width >= 1024;
 
   useEffect(() => {
-    if (user?.rol !== 'admin') return;
+    if (!['admin', 'vendedor'].includes(user?.rol || '')) return;
     void webPushService.getState().then(setPushState).catch(() => undefined);
   }, [user?.rol]);
 
   const load = useCallback(async (silent = false) => {
-    if (user?.rol !== 'admin') return;
+    if (!['admin', 'vendedor'].includes(user?.rol || '')) return;
     if (!silent) {
       setLoading(true);
       setError('');
@@ -83,7 +83,7 @@ export default function ConsultasScreen() {
   useFocusEffect(useCallback(() => { void load(); }, [load]));
 
   useEffect(() => {
-    if (Platform.OS !== 'web' || user?.rol !== 'admin') return;
+    if (Platform.OS !== 'web' || !['admin', 'vendedor'].includes(user?.rol || '')) return;
 
     const refreshVisible = () => {
       if (document.visibilityState === 'visible') void load(true);
@@ -200,9 +200,9 @@ export default function ConsultasScreen() {
     }
   };
 
-  if (user?.rol !== 'admin') return (
+  if (!['admin', 'vendedor'].includes(user?.rol || '')) return (
     <View style={styles.center}>
-      <DataStatePanel status="error" title="Acceso restringido" message="Solo los administradores pueden gestionar consultas." />
+      <DataStatePanel status="error" title="Acceso restringido" message="Esta sección está disponible para administradores y vendedores." />
     </View>
   );
 

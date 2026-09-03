@@ -668,6 +668,153 @@ Menos memoria, más visibilidad operativa.
 
 ---
 
+## 25. Mi primera integración con Google AI Studio
+
+**Tema:** Gemini, lectura de imágenes y alta asistida de productos
+**Estado:** Borrador
+
+### LinkedIn
+
+Empecé a usar Google AI Studio en un proyecto personal porque necesitaba cargar productos sin transcribir manualmente toda la información de una imagen.
+
+Google AI Studio es el entorno de Google para experimentar con los modelos Gemini, probar instrucciones con texto o imágenes y obtener las credenciales necesarias para integrarlos mediante una API. Puede ayudar a validar rápidamente una idea basada en inteligencia artificial antes de convertirla en una funcionalidad completa.
+
+En Hogar Conectado me sirvió para leer fotos y flyers que pueden contener marca, modelo, categoría, descripción, precio y datos de stock. Integramos Gemini desde el backend para convertir esa información en un borrador editable. La IA propone; la persona revisa y confirma. También agregamos advertencias para campos ausentes y una comprobación de posibles duplicados antes de crear la card.
+
+¿Lo recomiendo? Sí, especialmente para prototipar funciones multimodales y comprobar rápidamente si una idea aporta valor. No lo usaría como una fuente infalible: hay límites de cuota, modelos que cambian y respuestas que siempre necesitan validación cuando terminan afectando datos reales.
+
+Google presenta AI Studio como la forma más rápida de comenzar a construir con la API de Gemini, obtener una clave y experimentar con prompts: [Google AI Studio — documentación oficial](https://ai.google.dev/aistudio).
+
+Mi aprendizaje: aplicar IA no fue agregar un chat. Fue quitar una tarea repetitiva, conservar una revisión humana y diseñar qué hacer cuando el modelo duda.
+
+### X
+
+Empecé a usar Google AI Studio para convertir imágenes de productos en borradores editables: marca, modelo, categoría, precio y stock.
+
+¿Lo recomiendo? Sí para prototipar e integrar visión rápidamente; no para guardar resultados sin revisión humana.
+
+**Referencia:** [Google AI Studio](https://ai.google.dev/aistudio).
+
+---
+
+## 26. Qué me resolvió Render en un proyecto full stack
+
+**Tema:** despliegue de frontend y backend
+**Estado:** Borrador
+
+### LinkedIn
+
+Empecé a usar Render cuando Hogar Conectado necesitó dejar de ser una aplicación que solo funcionaba en mi computadora.
+
+Render es una plataforma en la nube para publicar aplicaciones web, APIs y sitios estáticos. Se conecta con el código alojado en Git, instala sus dependencias, lo compila y publica una nueva versión. Puede ayudar a transformar un desarrollo local en un servicio accesible desde internet sin tener que administrar desde el comienzo toda la infraestructura de un servidor.
+
+En nuestro proyecto me sirvió para publicar por separado el frontend y la API de Node.js, configurar variables de entorno y desplegar automáticamente cada cambio confirmado en GitHub. Esa conexión redujo mucho la distancia entre “funciona localmente” y “puedo probarlo desde un teléfono real”.
+
+¿Lo recomiendo? Sí para proyectos personales, prototipos y aplicaciones pequeñas que necesitan una puesta en producción comprensible. Hay que conocer los límites del plan elegido: por ejemplo, los servicios gratuitos pueden entrar en reposo y tardar al recibir la primera solicitud. También conviene sumar health checks y pruebas posteriores al despliegue; que un build termine no demuestra que todo el recorrido funcione.
+
+La documentación oficial explica los servicios web, las variables y el despliegue desde un repositorio Git: [Web Services — Render Docs](https://render.com/docs/web-services).
+
+Mi aprendizaje: desplegar fácil no elimina la operación. La vuelve visible y permite empezar a mejorarla.
+
+### X
+
+Render me permitió pasar de “funciona local” a probar una app real desde escritorio y celular: frontend, API, variables y despliegue automático desde GitHub.
+
+Lo recomiendo para proyectos personales, entendiendo límites como el arranque en frío del plan gratuito.
+
+**Referencia:** [Render Docs](https://render.com/docs/web-services).
+
+---
+
+## 27. Google Cloud detrás del botón “Ingresar con Google”
+
+**Tema:** identidad, OAuth y configuración por ambiente
+**Estado:** Borrador
+
+### LinkedIn
+
+Empecé a usar Google Cloud en este proyecto por una función que parece pequeña en pantalla: “Ingresar con Google”.
+
+Google Cloud reúne servicios e infraestructura en la nube de Google. Entre muchas otras posibilidades, permite administrar proyectos, APIs y credenciales OAuth: la configuración con la que una aplicación se identifica frente a Google y declara desde qué orígenes puede utilizar sus servicios. Puede ayudar a incorporar autenticación y otras APIs sin construir toda esa infraestructura desde cero.
+
+En Hogar Conectado me sirvió para configurar el acceso con una cuenta de Google. Detrás de ese botón tuve que crear un proyecto, configurar credenciales OAuth, declarar orígenes autorizados y separar la identidad que entrega Google de los permisos reales de la aplicación. Google confirma quién es la persona; Hogar Conectado decide si puede consultar, editar o administrar.
+
+¿Lo recomiendo? Sí cuando necesitás una identidad conocida sin construir desde cero un sistema de contraseñas. La consola tiene una curva de aprendizaje y exige ser cuidadoso con orígenes, clientes y secretos. También es importante no confundir autenticación con autorización: un login válido no debería convertir automáticamente a alguien en administrador.
+
+La guía oficial explica cómo se administran clientes OAuth y cómo una aplicación utiliza esas credenciales: [Administrar clientes OAuth — Google Cloud](https://support.google.com/cloud/answer/15549257?hl=es).
+
+Mi aprendizaje: el botón fue la parte fácil. El verdadero diseño estuvo en definir confianza, roles y límites.
+
+### X
+
+Usé Google Cloud para incorporar “Ingresar con Google”.
+
+Lo útil no fue solo evitar contraseñas: fue separar identidad y permisos. Google valida la cuenta; mi backend decide qué puede hacer.
+
+Lo recomiendo, con atención a OAuth, orígenes y secretos.
+
+**Referencia:** [clientes OAuth en Google Cloud](https://support.google.com/cloud/answer/15549257?hl=es).
+
+---
+
+## 28. Por qué las imágenes del catálogo terminaron en Cloudinary
+
+**Tema:** almacenamiento persistente y entrega de imágenes
+**Estado:** Borrador
+
+### LinkedIn
+
+Empecé a usar Cloudinary en un proyecto personal porque las imágenes dejaron de ser archivos de prueba y pasaron a formar parte real del catálogo.
+
+Cloudinary es un servicio para almacenar, gestionar, transformar y entregar imágenes y videos desde la nube. Recibe los archivos mediante una API, los conserva fuera del servidor de la aplicación y devuelve referencias que pueden utilizarse en una web o una app. Puede ayudar a resolver tanto la persistencia como la optimización y administración de contenido multimedia.
+
+En Hogar Conectado me sirvió para evitar que las fotos de los productos dependieran del filesystem temporal del servidor, algo que podía funcionar localmente pero no era una solución persistente para producción. Ahora el backend sube el archivo a Cloudinary y MongoDB conserva solamente la URL y los metadatos necesarios. Esto también nos ayuda a reemplazar o eliminar imágenes sin mezclarlas con el código desplegado.
+
+¿Lo recomiendo? Sí para catálogos y proyectos donde las imágenes son contenido, especialmente si querés resolver almacenamiento, entrega y transformaciones desde un mismo servicio. Conviene revisar límites del plan, controlar tamaños y formatos, y mantener las credenciales exclusivamente en el backend.
+
+La integración oficial para Node.js cubre carga, transformación, optimización y entrega de imágenes y videos: [Cloudinary Node.js SDK](https://cloudinary.com/documentation/node_integration).
+
+Mi aprendizaje: subir una imagen es una operación; administrarla durante toda su vida útil es otra.
+
+### X
+
+Empecé a usar Cloudinary para que las imágenes del catálogo no dependieran del disco temporal del servidor.
+
+El backend carga el archivo; MongoDB conserva la referencia. Lo recomiendo para catálogos, cuidando límites, validación y credenciales.
+
+**Referencia:** [Cloudinary para Node.js](https://cloudinary.com/documentation/node_integration).
+
+---
+
+## 29. MongoDB como memoria operativa del proyecto
+
+**Tema:** MongoDB Atlas, documentos y evolución del modelo
+**Estado:** Borrador
+
+### LinkedIn
+
+Empecé a usar MongoDB para que Hogar Conectado tuviera memoria más allá de una sesión del navegador.
+
+MongoDB es una base de datos orientada a documentos y MongoDB Atlas es su servicio administrado en la nube. En lugar de organizar toda la información únicamente en filas y tablas, permite trabajar con documentos cuya estructura se parece a los objetos usados por la aplicación. Puede ayudar a persistir, consultar y relacionar información mientras el modelo de un producto todavía está evolucionando.
+
+En nuestro proyecto me sirvió para almacenar productos, categorías, usuarios, consultas, suscripciones de notificaciones y cotizaciones. Estas estructuras están relacionadas, pero evolucionan a ritmos distintos. El modelo documental me permitió representarlas con Node.js y conservar snapshots: por ejemplo, una cotización histórica mantiene los precios utilizados aunque el producto cambie después.
+
+¿Lo recomiendo? Sí para aplicaciones JavaScript donde el dominio encaja naturalmente en documentos y todavía está evolucionando. Esa flexibilidad no reemplaza el diseño: siguen siendo necesarios esquemas, validación, índices, permisos, respaldos y migraciones cuidadosas.
+
+El tutorial oficial de MongoDB muestra cómo conectar Node.js con MongoDB y Atlas usando su driver: [MongoDB y npm — tutorial oficial](https://www.mongodb.com/resources/languages/mongodb-and-npm-tutorial).
+
+Mi aprendizaje: una base flexible ayuda a iterar, pero la consistencia sigue siendo una decisión del producto y del código.
+
+### X
+
+MongoDB se convirtió en la memoria operativa de Hogar Conectado: productos, usuarios, consultas, cotizaciones y snapshots históricos.
+
+Lo recomiendo cuando el dominio encaja en documentos, sin olvidar esquemas, índices, permisos y backups.
+
+**Referencia:** [MongoDB con Node.js](https://www.mongodb.com/resources/languages/mongodb-and-npm-tutorial).
+
+---
+
 ## Rutina editorial sugerida
 
 Al final de una jornada con cambios relevantes, responder:
@@ -678,3 +825,11 @@ Al final de una jornada con cambios relevantes, responder:
 4. ¿Tenemos evidencia suficiente para contarlo sin exagerar?
 
 Si las cuatro respuestas son claras, agregar un borrador nuevo. La publicación efectiva siempre requiere revisión humana.
+
+Además, cada vez que el proyecto incorpore una herramienta, plataforma, API, librería o servicio relevante, registrar un borrador que responda:
+
+1. ¿Qué problema concreto ayudó a resolver?
+2. ¿Cómo se utilizó realmente en Hogar Conectado?
+3. ¿La recomendaría y para qué escenario?
+4. ¿Qué límites, costos o riesgos conviene mencionar?
+5. ¿Cuál es su documentación oficial vigente?

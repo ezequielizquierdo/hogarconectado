@@ -11,6 +11,7 @@ import { useConsultasResumen } from "@/contexts/ConsultasContext";
 
 type DesktopTabBarProps = BottomTabBarProps & {
   isAdmin: boolean;
+  isSeller: boolean;
   isAuthenticated: boolean;
 };
 
@@ -83,6 +84,7 @@ export function DesktopTabBar({
   descriptors,
   navigation,
   isAdmin,
+  isSeller,
   isAuthenticated,
 }: DesktopTabBarProps) {
   const router = useRouter();
@@ -93,7 +95,7 @@ export function DesktopTabBar({
 
   const visibleRoutes = (routeNames: string[]) => {
     if (!isAdmin) {
-      if (routeNames === PRIMARY_ROUTES) return ["productos"];
+      if (routeNames === PRIMARY_ROUTES) return isSeller ? ["index", "productos", "consultas"] : ["productos"];
       return isAuthenticated ? ["perfil"] : [];
     }
     return routeNames;

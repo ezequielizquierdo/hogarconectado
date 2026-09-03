@@ -60,14 +60,27 @@ class CotizacionesService {
     }
 
     // Actualizar estado de cotización
-    async actualizarEstadoCotizacion(id: string, estado: CotizacionEstado): Promise<Cotizacion> {
+    async actualizarEstadoCotizacion(id: string, estado: CotizacionEstado, confirmacion?: {
+        compradorNombre: string;
+        entregaAcordada: string;
+        agregarEnvio: boolean;
+        costoEnvio?: number;
+    }): Promise<Cotizacion> {
         try {
-            const response = await apiClient.put<ApiResponse<Cotizacion>>(`/cotizaciones/${id}/estado`, { estado });
+            const response = await apiClient.put<ApiResponse<Cotizacion>>(`/cotizaciones/${id}/estado`, { estado, ...confirmacion });
             return response.data.data;
         } catch (error) {
             console.error('Error actualizando estado de cotización:', error);
             throw error;
         }
+    }
+
+    async actualizarSeguimientoVenta(id: string, cambios: {
+        estadoPago?: 'pendiente' | 'parcial' | 'confirmado';
+        estadoEntrega?: 'pendiente' | 'coordinada' | 'entregada' | 'cancelada';
+    }): Promise<Cotizacion> {
+        const response = await apiClient.patch<ApiResponse<Cotizacion>>(`/cotizaciones/${id}/venta`, cambios);
+        return response.data.data;
     }
 
     // Eliminar cotización

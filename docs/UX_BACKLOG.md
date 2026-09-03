@@ -629,7 +629,7 @@ Una tarea de interfaz se considera terminada cuando:
 
 ### AUTO-003 — Smoke test posterior al despliegue
 
-**Prioridad:** Alta  
+**Prioridad:** Alta
 **Estado:** Propuesta
 
 - Comprobar disponibilidad del frontend y `/health` del backend.
@@ -662,6 +662,19 @@ Una tarea de interfaz se considera terminada cuando:
 - Capturar superficies principales en escritorio y móvil.
 - Comparar contra referencias aprobadas.
 - Requerir decisión humana para aceptar diferencias.
+
+### AUTO-007 — Bitácora editorial de nuevas herramientas
+
+**Prioridad:** Alta
+**Estado:** En curso — práctica permanente
+
+- Cada herramienta, plataforma, API, librería o servicio relevante incorporado al proyecto genera una propuesta en `POSTS_SUGERIDOS.md`.
+- Cada propuesta integra naturalmente en la redacción qué es la herramienta, de qué se trata, para qué puede ayudar y para qué se utilizó dentro de Hogar Conectado; no presenta estas respuestas como un cuestionario o una ficha aislada.
+- El borrador explica el problema real, el uso concreto dentro de Hogar Conectado, si se recomienda y bajo qué condiciones.
+- Incluye límites, costos o riesgos conocidos para evitar recomendaciones publicitarias o poco honestas.
+- Utiliza al menos un enlace oficial vigente y nunca expone credenciales, configuración sensible ni datos privados.
+- Prepara versiones para LinkedIn y X; la publicación efectiva continúa requiriendo revisión humana.
+- La tarea forma parte del cierre de cada integración nueva y no depende de que la herramienta sea el tema central del cambio.
 
 ### UX-018 — PWA y notificaciones de consultas
 
@@ -731,6 +744,22 @@ Una tarea de interfaz se considera terminada cuando:
 - La operación está restringida a administradores, registra un resultado comprensible y ofrece recuperación ante errores.
 
 **Validación:** renombrado sin colisión, unificación con un nombre existente, nombre inválido, error de red, usuario sin permisos y verificación posterior en catálogo, filtros y formulario de producto.
+
+### UX-023 — Perfil vendedor y seguimiento de ventas
+
+**Prioridad:** Alta
+
+**Estado:** Implementación preparada; pendiente de validación funcional
+
+- El administrador puede asignar el rol Vendedor.
+- El vendedor comparte productos e historias, arma sus cotizaciones y gestiona consultas, sin crear o modificar catálogo ni acceder a precios base y costos internos.
+- Sus cotizaciones son privadas frente a otros vendedores; el administrador conserva la vista completa.
+- La confirmación exige nombre del comprador y acuerdo de entrega.
+- El envío es opcional, requiere importe y se reintegra íntegro sin generar comisión.
+- La liquidación divide el margen comercial en partes iguales y muestra al vendedor su ganancia y dinero a rendir.
+- El administrador ve la venta confirmada y actualiza por separado el estado de pago y de entrega.
+
+**Validación pendiente:** asignación del rol, ausencia de costos en API e interfaz, cotización y confirmación desde una cuenta vendedora, toma de consulta, notificación, liquidación con y sin envío y seguimiento administrativo.
 
 ### UX-021 — Historias de Instagram en lote
 

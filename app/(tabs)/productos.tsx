@@ -123,7 +123,8 @@ export default function ProductosScreen() {
   const { contains, addProduct, removeProduct } = useQuoteDraft();
   const router = useRouter();
   const canEdit = can("editor", "admin");
-  const canQuote = can("admin");
+  const canQuote = can("admin", "vendedor");
+  const canShare = can("admin", "editor", "vendedor");
   const canDelete = can("admin");
   const {
     categorias,
@@ -1363,7 +1364,7 @@ export default function ProductosScreen() {
             setSelectedProduct(item);
             setDetailModalVisible(true);
           }}
-          showAdminButtons={canEdit}
+          showAdminButtons={canEdit || canShare}
           isQuoted={contains(item._id)}
           onQuote={canQuote ? () => {
             if (contains(item._id)) {
@@ -1375,10 +1376,10 @@ export default function ProductosScreen() {
           onStockQuery={canEdit ? () => copiarConsultaStock(item) : undefined}
           onEdit={canEdit ? () => openModal(item) : undefined}
           onDelete={canDelete ? () => handleDelete(item) : undefined}
-          onInstagramStory={canEdit ? () => openInstagramModal(item) : undefined}
-          showConsultButton={!canEdit}
+          onInstagramStory={canShare ? () => openInstagramModal(item) : undefined}
+          showConsultButton={!canEdit && !canQuote}
           isConsultSelected={consultProducts.some(product => product._id === item._id)}
-          onConsult={!canEdit ? () => setConsultProducts(current => (
+          onConsult={!canEdit && !canQuote ? () => setConsultProducts(current => (
             current.some(product => product._id === item._id)
               ? current.filter(product => product._id !== item._id)
               : [...current, item]
@@ -3615,7 +3616,7 @@ export default function ProductosScreen() {
       </Modal>
 
       {canQuote && <QuoteDraftBar />}
-      {!canEdit && consultProducts.length > 0 && !consultModalVisible ? (
+      {!canEdit && !canQuote && consultProducts.length > 0 && !consultModalVisible ? (
         <View style={styles.consultDraftBar}>
           <View style={styles.consultDraftCopy}>
             <ThemedText style={styles.consultDraftTitle}>

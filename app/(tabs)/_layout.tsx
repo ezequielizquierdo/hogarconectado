@@ -31,6 +31,7 @@ export default function TabLayout() {
   const { width } = useWindowDimensions();
   const isDesktop = Platform.OS === "web" && width >= 1024;
   const isAdmin = user?.rol === "admin";
+  const isSeller = user?.rol === "vendedor";
   const isAuthenticated = state === "authenticated";
   const showUsersInNavigation = isAdmin && isDesktop;
 
@@ -43,6 +44,7 @@ export default function TabLayout() {
           <DesktopTabBar
             {...props}
             isAdmin={isAdmin}
+            isSeller={isSeller}
             isAuthenticated={isAuthenticated}
           />
         ) : (
@@ -94,7 +96,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          href: isAdmin ? undefined : null,
+          href: isAdmin || isSeller ? undefined : null,
           title: "Cotizaciones",
           tabBarLabel: isDesktop ? "Cotizaciones" : "Cotizar",
           tabBarIcon: ({ color }) => (
@@ -147,7 +149,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="consultas"
         options={{
-          href: isAdmin ? undefined : null,
+          href: isAdmin || isSeller ? undefined : null,
           title: "Consultas",
           tabBarLabel: "Consultas",
           tabBarIcon: ({ color }) => <ConsultasTabIcon color={color} />,
@@ -166,7 +168,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="perfil"
         options={{
-          href: isAdmin ? undefined : null,
+          href: isAuthenticated ? undefined : null,
           title: "Perfil",
           tabBarLabel: "Perfil",
           tabBarIcon: ({ color }) => (

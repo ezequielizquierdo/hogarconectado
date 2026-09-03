@@ -7,9 +7,10 @@ import { DataStatePanel } from '@/components/ui/DataStatePanel';
 import { CardListSkeleton, LoadingBar } from '@/components/ui/LoadingStates';
 import { COLORS, RADIUS, SHADOWS, SPACING } from '@/constants/theme';
 
-const roles: UserRole[] = ['consulta', 'editor', 'admin'];
+const roles: UserRole[] = ['consulta', 'vendedor', 'editor', 'admin'];
 const roleInfo: Record<UserRole, { label: string; description: string }> = {
   consulta: { label: 'Consulta', description: 'Puede consultar información y gestionar únicamente sus propias cotizaciones.' },
+  vendedor: { label: 'Vendedor', description: 'Puede compartir productos, cotizar, gestionar consultas y ver su liquidación; no administra catálogo ni costos.' },
   editor: { label: 'Editor', description: 'Puede cargar y modificar productos, imágenes y cotizaciones.' },
   admin: { label: 'Administrador', description: 'Puede administrar usuarios, permisos y toda la operación.' },
 };

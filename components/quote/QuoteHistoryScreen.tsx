@@ -48,7 +48,7 @@ const STATES: { value: CotizacionEstado | "todas"; label: string }[] = [
 const STATE_LABEL: Record<CotizacionEstado, string> = {
   pendiente: "Pendiente",
   enviada: "Enviada",
-  confirmada: "Confirmada",
+  confirmada: "Venta confirmada",
   cancelada: "Cancelada",
 };
 
@@ -138,6 +138,14 @@ function ConfirmationSummary({ quote, detailed = false }: { quote: Cotizacion; d
       ) : (
         <Text style={styles.legacyConfirmation}>Confirmación anterior sin resumen financiero registrado.</Text>
       )}
+      {quote.venta ? (
+        <View style={styles.saleDetails}>
+          <Text style={styles.saleDetailText}>Comprador: {quote.venta.compradorNombre}</Text>
+          <Text style={styles.saleDetailText}>Entrega: {quote.venta.entregaAcordada}</Text>
+          {quote.venta.agregarEnvio ? <Text style={styles.saleDetailText}>Envío: {formatMoney(quote.venta.costoEnvio)}</Text> : null}
+          <Text style={styles.saleDetailText}>Pago: {quote.venta.estadoPago} · Entrega: {quote.venta.estadoEntrega}</Text>
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -161,6 +169,11 @@ export function QuoteHistoryScreen() {
   const [detailError, setDetailError] = useState("");
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [feedback, setFeedback] = useState("");
+  const [confirming, setConfirming] = useState<Cotizacion | null>(null);
+  const [buyerName, setBuyerName] = useState("");
+  const [deliveryAgreement, setDeliveryAgreement] = useState("");
+  const [addShipping, setAddShipping] = useState(false);
+  const [shippingCost, setShippingCost] = useState("");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -208,19 +221,70 @@ export function QuoteHistoryScreen() {
       processingId ||
       (quote.estado === state && (state !== "confirmada" || confirmationIsComplete))
     ) return;
+    if (state === "confirmada") {
+      setConfirming(quote);
+      setSelected(null);
+      setFeedback("");
+      setBuyerName(quote.datosContacto.nombre || "");
+      setDeliveryAgreement("");
+      setAddShipping(false);
+      setShippingCost("");
+      return;
+    }
     setProcessingId(quote._id);
     setFeedback("");
     try {
       const updated = await cotizacionesService.actualizarEstadoCotizacion(quote._id, state);
       setQuotes((current) => current.map((item) => item._id === quote._id ? updated : item));
       setSelected((current) => current?._id === quote._id ? updated : current);
-      setFeedback(
-        state === "confirmada"
-          ? "Confirmación registrada con su resumen financiero."
-          : `Cotización marcada como ${STATE_LABEL[state].toLowerCase()}.`
-      );
+      setFeedback(`Cotización marcada como ${STATE_LABEL[state].toLowerCase()}.`);
     } catch {
       setFeedback("No pudimos actualizar el estado.");
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
+  const confirmSale = async () => {
+    if (!confirming || processingId) return;
+    if (buyerName.trim().length < 2 || deliveryAgreement.trim().length < 3) {
+      setFeedback("Completá el comprador y cómo se acordó la entrega.");
+      return;
+    }
+    const parsedShipping = Number(shippingCost.replace(/\D/g, "")) || 0;
+    if (addShipping && parsedShipping <= 0) {
+      setFeedback("Ingresá el costo del envío.");
+      return;
+    }
+    setProcessingId(confirming._id);
+    try {
+      const updated = await cotizacionesService.actualizarEstadoCotizacion(confirming._id, "confirmada", {
+        compradorNombre: buyerName.trim(),
+        entregaAcordada: deliveryAgreement.trim(),
+        agregarEnvio: addShipping,
+        costoEnvio: parsedShipping,
+      });
+      setQuotes(current => current.map(item => item._id === updated._id ? updated : item));
+      setSelected(current => current?._id === updated._id ? updated : current);
+      setConfirming(null);
+      setFeedback("Venta confirmada y liquidación calculada.");
+    } catch {
+      setFeedback("No pudimos confirmar la venta.");
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
+  const updateSaleTracking = async (changes: Parameters<typeof cotizacionesService.actualizarSeguimientoVenta>[1]) => {
+    if (!selected || processingId) return;
+    setProcessingId(selected._id);
+    try {
+      const updated = await cotizacionesService.actualizarSeguimientoVenta(selected._id, changes);
+      setSelected(updated);
+      setQuotes(current => current.map(item => item._id === updated._id ? updated : item));
+      setFeedback("Seguimiento de la venta actualizado.");
+    } catch {
+      setFeedback("No pudimos actualizar el seguimiento de la venta.");
     } finally {
       setProcessingId(null);
     }
@@ -513,6 +577,18 @@ export function QuoteHistoryScreen() {
                   <Text style={styles.detailTotalValue}>{formatMoney(selected.totales.total)}</Text>
                 </View>
                 <ConfirmationSummary quote={selected} detailed />
+                {isAdmin && selected.estado === "confirmada" && selected.venta ? (
+                  <View style={styles.saleTracking}>
+                    <Text style={styles.sectionLabel}>Confirmación de pago</Text>
+                    <View style={styles.stateActions}>{(['pendiente', 'parcial', 'confirmado'] as const).map(value => (
+                      <Pressable key={value} onPress={() => void updateSaleTracking({ estadoPago: value })} style={[styles.stateButton, selected.venta?.estadoPago === value && styles.stateButtonActive]}><Text style={styles.stateButtonText}>{value}</Text></Pressable>
+                    ))}</View>
+                    <Text style={styles.sectionLabel}>Entrega del producto</Text>
+                    <View style={styles.stateActions}>{(['pendiente', 'coordinada', 'entregada', 'cancelada'] as const).map(value => (
+                      <Pressable key={value} onPress={() => void updateSaleTracking({ estadoEntrega: value })} style={[styles.stateButton, selected.venta?.estadoEntrega === value && styles.stateButtonActive]}><Text style={styles.stateButtonText}>{value}</Text></Pressable>
+                    ))}</View>
+                  </View>
+                ) : null}
                 {selected.observaciones ? (
                   <View style={styles.notes}>
                     <Text style={styles.notesTitle}>Observaciones</Text>
@@ -557,6 +633,28 @@ export function QuoteHistoryScreen() {
               </View>
             </View>
           )}
+        </View>
+      </Modal>
+      <Modal visible={Boolean(confirming)} transparent animationType="fade" onRequestClose={() => setConfirming(null)}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.saleModal}>
+            <Text style={styles.modalEyebrow}>VENTA CONFIRMADA</Text>
+            <Text style={styles.modalTitle}>Completá los datos de la venta</Text>
+            <Text style={styles.label}>Nombre del comprador *</Text>
+            <TextInput value={buyerName} onChangeText={setBuyerName} style={styles.saleInput} placeholder="Nombre y apellido" />
+            <Text style={styles.label}>Entrega acordada *</Text>
+            <TextInput value={deliveryAgreement} onChangeText={setDeliveryAgreement} style={[styles.saleInput, styles.saleTextArea]} multiline placeholder="Retiro, domicilio, fecha u otra aclaración" />
+            <Pressable onPress={() => setAddShipping(current => !current)} style={styles.shippingToggle}>
+              <MaterialIcons name={addShipping ? "check-box" : "check-box-outline-blank"} size={23} color={COLORS.primaryDark} />
+              <Text style={styles.shippingToggleText}>Agregar envío</Text>
+            </Pressable>
+            {addShipping ? <><Text style={styles.label}>Costo del envío *</Text><TextInput value={shippingCost} onChangeText={setShippingCost} keyboardType="numeric" style={styles.saleInput} placeholder="$ 0" /></> : null}
+            {feedback ? <Text style={styles.modalFeedback}>{feedback}</Text> : null}
+            <View style={styles.saleActions}>
+              <Pressable onPress={() => setConfirming(null)} style={styles.modalSecondaryAction}><Text style={styles.secondaryActionText}>Cancelar</Text></Pressable>
+              <Pressable onPress={() => void confirmSale()} style={styles.modalPrimaryAction}><Text style={styles.whatsappText}>Confirmar venta</Text></Pressable>
+            </View>
+          </View>
         </View>
       </Modal>
     </View>
@@ -629,6 +727,9 @@ const styles = StyleSheet.create({
   settlementValue: { marginTop: 2, color: COLORS.text, fontSize: 15, fontWeight: "900" },
   profitValue: { marginTop: 2, color: COLORS.primaryDark, fontSize: 15, fontWeight: "900" },
   legacyConfirmation: { color: COLORS.textSecondary, fontSize: 11, lineHeight: 16 },
+  saleDetails: { gap: 3, paddingTop: SPACING.xs },
+  saleDetailText: { color: COLORS.textSecondary, fontSize: 12, lineHeight: 17 },
+  saleTracking: { marginTop: SPACING.md },
   actions: { flexDirection: "row", gap: SPACING.sm, marginTop: SPACING.lg },
   secondaryAction: { minHeight: 43, flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: SPACING.xs, borderRadius: RADIUS.md, backgroundColor: COLORS.cardBackground },
   secondaryActionText: { color: COLORS.text, fontSize: 13, fontWeight: "800" },
@@ -668,4 +769,11 @@ const styles = StyleSheet.create({
   modalSecondaryAction: { minHeight: 44, flexGrow: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: SPACING.xs, paddingHorizontal: SPACING.md, borderRadius: RADIUS.md, backgroundColor: COLORS.cardBackground },
   modalPrimaryAction: { minHeight: 44, flexGrow: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: SPACING.xs, paddingHorizontal: SPACING.md, borderRadius: RADIUS.md, backgroundColor: COLORS.secondaryDark },
   deleteAction: { width: 44, height: 44, alignItems: "center", justifyContent: "center", borderRadius: RADIUS.md, backgroundColor: COLORS.error + "28" },
+  saleModal: { width: "100%", maxWidth: 560, gap: SPACING.sm, padding: SPACING.lg, borderRadius: RADIUS.xl, backgroundColor: COLORS.surface, ...SHADOWS.lg },
+  label: { marginTop: SPACING.xs, color: COLORS.text, fontSize: 13, fontWeight: "800" },
+  saleInput: { minHeight: 46, paddingHorizontal: SPACING.md, borderWidth: 1, borderColor: COLORS.border, borderRadius: RADIUS.md, color: COLORS.text, backgroundColor: COLORS.cardBackground },
+  saleTextArea: { minHeight: 82, paddingTop: SPACING.md, textAlignVertical: "top" },
+  shippingToggle: { minHeight: 44, flexDirection: "row", alignItems: "center", gap: SPACING.sm },
+  shippingToggleText: { color: COLORS.text, fontSize: 14, fontWeight: "700" },
+  saleActions: { flexDirection: "row", gap: SPACING.sm, marginTop: SPACING.md },
 });

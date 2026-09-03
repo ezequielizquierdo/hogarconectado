@@ -1,6 +1,6 @@
 // Tipos para las entidades del backend
 
-export type UserRole = 'admin' | 'editor' | 'consulta';
+export type UserRole = 'admin' | 'editor' | 'vendedor' | 'consulta';
 export type UserStatus = 'pendiente' | 'activo' | 'bloqueado';
 
 export interface Usuario {
@@ -197,6 +197,15 @@ export interface Cotizacion {
         totalVendido: number;
         dineroARendir: number;
         gananciaVendedor: number;
+        participacionHogarConectado?: number;
+    };
+    venta?: {
+        compradorNombre: string;
+        entregaAcordada: string;
+        agregarEnvio: boolean;
+        costoEnvio: number;
+        estadoPago: 'pendiente' | 'parcial' | 'confirmado';
+        estadoEntrega: 'pendiente' | 'coordinada' | 'entregada' | 'cancelada';
     };
     observaciones?: string;
     createdAt: string;

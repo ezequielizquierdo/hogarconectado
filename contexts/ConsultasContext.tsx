@@ -17,7 +17,7 @@ export function ConsultasProvider({ children }: React.PropsWithChildren) {
   const [totalAbiertas, setTotalAbiertas] = useState(0);
 
   const refresh = useCallback(async () => {
-    if (state !== 'authenticated' || user?.rol !== 'admin') {
+    if (state !== 'authenticated' || !['admin', 'vendedor'].includes(user?.rol || '')) {
       setNuevas(0);
       setTotalAbiertas(0);
       return;
@@ -33,7 +33,7 @@ export function ConsultasProvider({ children }: React.PropsWithChildren) {
 
   useEffect(() => {
     void refresh();
-    if (state !== 'authenticated' || user?.rol !== 'admin') return;
+    if (state !== 'authenticated' || !['admin', 'vendedor'].includes(user?.rol || '')) return;
     const timer = setInterval(() => void refresh(), 60_000);
     return () => clearInterval(timer);
   }, [refresh, state, user?.rol]);

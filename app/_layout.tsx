@@ -27,7 +27,10 @@ function AuthenticatedNavigator() {
     }
     if ((state === 'pending' || state === 'blocked') && route !== 'acceso-pendiente') router.replace('/acceso-pendiente');
     const isNonAdminAccountRoute = route === '(tabs)' && tab === 'perfil';
-    if (state === 'authenticated' && user?.rol !== 'admin' && route === '(tabs)' && tab !== 'productos' && !isNonAdminAccountRoute) {
+    const sellerRoutes = ['index', 'productos', 'consultas', 'perfil'];
+    if (state === 'authenticated' && user?.rol === 'vendedor' && route === '(tabs)' && !sellerRoutes.includes(tab || '')) {
+      router.replace('/(tabs)/productos');
+    } else if (state === 'authenticated' && !['admin', 'vendedor'].includes(user?.rol || '') && route === '(tabs)' && tab !== 'productos' && !isNonAdminAccountRoute) {
       router.replace('/(tabs)/productos');
     }
     if (state === 'authenticated' && (route === 'login' || route === 'acceso-pendiente')) {

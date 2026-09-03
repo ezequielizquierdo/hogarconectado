@@ -13,6 +13,7 @@ La web responsive es la prioridad actual, manteniendo compatibilidad con iOS y A
 El usuario principal es el propietario del negocio y, eventualmente, personas de su equipo expresamente autorizadas. Trabajan desde escritorio o celular para vender y administrar productos, con Instagram y WhatsApp como canales comerciales frecuentes.
 
 - Administrador: aprueba accesos, asigna permisos y administra productos e imágenes.
+- Vendedor: comparte el catálogo, prepara sus cotizaciones, atiende consultas y registra ventas; ve su comisión y liquidación sin acceder a costos ni administrar productos.
 - Operador autorizado: consulta información y realiza las acciones habilitadas por su rol.
 - Usuario pendiente o bloqueado: no accede a las funciones de negocio.
 
@@ -42,6 +43,7 @@ Hogar Conectado conecta en un mismo flujo operativo los datos internos del produ
 - Calcular valores de contado, factura y cuotas.
 - Preparar cotizaciones coherentes con los precios vigentes.
 - Administrar usuarios, estados de aprobación y roles.
+- Registrar ventas, acuerdos de entrega, envíos y seguimiento separado de pago y entrega.
 - Almacenar imágenes persistentemente en Cloudinary.
 - El precio base representa el valor inicial antes de ganancia y financiación.
 - El precio contado es el precio comercial principal mostrado para el producto.
