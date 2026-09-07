@@ -11,6 +11,7 @@ export interface Usuario {
     foto?: string;
     rol: UserRole;
     estado: UserStatus;
+    codigoVendedor?: string;
     ultimoAcceso?: string;
     createdAt: string;
     updatedAt: string;
@@ -97,6 +98,7 @@ export interface ConsultaComercial {
     };
     estado: ConsultaEstado;
     asignadaA?: Pick<Usuario, '_id' | 'nombre' | 'email'> | null;
+    vendedorOrigen?: Pick<Usuario, '_id' | 'nombre' | 'email' | 'codigoVendedor'> | null;
     atendidaAt?: string | null;
     cerradaAt?: string | null;
     origen: 'catalogo-web';

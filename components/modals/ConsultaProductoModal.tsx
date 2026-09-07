@@ -24,6 +24,7 @@ interface ConsultaProductoModalProps {
   visible: boolean;
   productos: Producto[];
   initialName?: string;
+  sellerCode?: string;
   onRemoveProduct: (id: string) => void;
   onSuccessClose: () => void;
   onClose: () => void;
@@ -39,7 +40,7 @@ const PHONE_PREFIXES = [
   { label: 'Perú (+51)', value: '+51' },
 ];
 
-export function ConsultaProductoModal({ visible, productos, initialName = '', onRemoveProduct, onSuccessClose, onClose }: ConsultaProductoModalProps) {
+export function ConsultaProductoModal({ visible, productos, initialName = '', sellerCode, onRemoveProduct, onSuccessClose, onClose }: ConsultaProductoModalProps) {
   const [step, setStep] = useState<Step>('form');
   const [nombre, setNombre] = useState('');
   const [telefono, setTelefono] = useState('');
@@ -89,6 +90,7 @@ export function ConsultaProductoModal({ visible, productos, initialName = '', on
         productoIds: productos.map(producto => producto._id),
         nombre: nombre.trim().replace(/\s+/g, ' '),
         telefono: `${prefix}${telefono.replace(/\D/g, '')}`,
+        codigoVendedor: sellerCode,
       }, idempotencyKey.current);
       idempotencyKey.current = result.idempotencyKey;
       setStep('success');

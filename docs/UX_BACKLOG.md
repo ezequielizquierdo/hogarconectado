@@ -797,6 +797,10 @@ Una tarea de interfaz se considera terminada cuando:
 - Cada propuesta conserva su imagen principal y permite elegir otra imagen del mismo grupo.
 - Ningún producto se guarda automáticamente: el usuario revisa, corrige, descarta o confirma cada card.
 - Se detectan posibles duplicados por marca, modelo y códigos reconocidos antes de guardar.
+- Cuando exista un posible duplicado, la revisión presenta en paralelo el producto existente y el borrador nuevo, destacando diferencias de precio, stock, descripción, categoría e imagen.
+- Cada dato comparable ofrece una decisión independiente: conservar el valor original, usar el valor nuevo detectado o escribir manualmente un tercer valor antes de confirmar.
+- La pantalla construye una vista previa final con las elecciones campo por campo; el administrador puede actualizar el producto existente con esa combinación o crear igualmente un producto nuevo.
+- La comparación explica que una coincidencia puede ser una actualización comercial legítima y nunca reemplaza precio, stock ni imágenes automáticamente.
 - El procesamiento muestra progreso por imagen y permite reintentar solamente las fallidas.
 - Se investiga primero una solución gratuita o con nivel gratuito suficiente, evaluando precisión en español, privacidad, límites y costo operativo futuro.
 - Las credenciales y el procesamiento externo quedan exclusivamente en el backend.

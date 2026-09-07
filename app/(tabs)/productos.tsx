@@ -49,8 +49,9 @@ import { useDesktopHeader } from "@/contexts/DesktopHeaderContext";
 import { useQuoteDraft } from "@/contexts/QuoteDraftContext";
 import { captureWebStory } from "@/utils/captureWebStory";
 import { InstagramStoryRenderData } from "@/utils/instagramStoryRenderer";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { ConsultaProductoModal } from "@/components/modals/ConsultaProductoModal";
+import sellerReferralService, { SellerReferral } from "@/services/sellerReferralService";
 
 // Funciones de utilidad
 const formatPrice = (price: number | string): string => {
@@ -122,6 +123,7 @@ export default function ProductosScreen() {
   const { can, state, user } = useAuth();
   const { contains, addProduct, removeProduct } = useQuoteDraft();
   const router = useRouter();
+  const { ref: sellerRefParam } = useLocalSearchParams<{ ref?: string | string[] }>();
   const canEdit = can("editor", "admin");
   const canQuote = can("admin", "vendedor");
   const canShare = can("admin", "editor", "vendedor");
@@ -159,6 +161,7 @@ export default function ProductosScreen() {
   const [selectedProduct, setSelectedProduct] = useState<Producto | null>(null);
   const [consultProducts, setConsultProducts] = useState<Producto[]>([]);
   const [consultModalVisible, setConsultModalVisible] = useState(false);
+  const [sellerReferral, setSellerReferral] = useState<SellerReferral | null>(null);
   const [selectedProductForInstagram, setSelectedProductForInstagram] =
     useState<ProductoConPrecios | null>(null);
   const [instagramStoryOptions, setInstagramStoryOptions] = useState({
@@ -224,6 +227,14 @@ export default function ProductosScreen() {
   ); // "disponible", "agotado", ""
   // Debounce search text para evitar búsquedas excesivas
   const debouncedSearchText = useDebounce(searchText, 500);
+
+  useEffect(() => {
+    let active = true;
+    const code = Array.isArray(sellerRefParam) ? sellerRefParam[0] : sellerRefParam;
+    void (code ? sellerReferralService.remember(code) : sellerReferralService.current())
+      .then(referral => { if (active) setSellerReferral(referral); });
+    return () => { active = false; };
+  }, [sellerRefParam]);
 
   // Efecto para sincronizar búsqueda con backend
   useEffect(() => {
@@ -1462,6 +1473,12 @@ export default function ProductosScreen() {
               >
                 {/* Lista de productos */}
                 <ThemedView style={styles.webProductsContainer}>
+                  {sellerReferral && !canEdit && !canQuote ? (
+                    <View style={styles.sellerReferralBanner}>
+                      <MaterialIcons name="support-agent" size={18} color={COLORS.primaryDark} />
+                      <ThemedText style={styles.sellerReferralText}>Te atiende {sellerReferral.nombre}</ThemedText>
+                    </View>
+                  ) : null}
                   {canEdit ? (
                     <View style={styles.assistedImportRow}>
                       <TouchableOpacity style={styles.assistedImportButton} onPress={() => setImageImportVisible(true)}>
@@ -1520,6 +1537,12 @@ export default function ProductosScreen() {
             }
           >
             <View style={styles.mobileContentWithBackground}>
+              {sellerReferral && !canEdit && !canQuote ? (
+                <View style={styles.sellerReferralBanner}>
+                  <MaterialIcons name="support-agent" size={18} color={COLORS.primaryDark} />
+                  <ThemedText style={styles.sellerReferralText}>Te atiende {sellerReferral.nombre}</ThemedText>
+                </View>
+              ) : null}
               {/* Barra de acciones: Agregar + Filtrar en la misma línea */}
               <View style={styles.mobileActionsBar}>
                 {canEdit && <TouchableOpacity
@@ -2256,6 +2279,7 @@ export default function ProductosScreen() {
         visible={consultModalVisible && consultProducts.length > 0}
         productos={consultProducts}
         initialName={state === 'authenticated' ? user?.nombre : ''}
+        sellerCode={sellerReferral?.codigo}
         onRemoveProduct={(id) => setConsultProducts(current => current.filter(product => product._id !== id))}
         onSuccessClose={() => {
           setConsultModalVisible(false);
@@ -3637,6 +3661,8 @@ export default function ProductosScreen() {
 }
 
 const styles = StyleSheet.create({
+  sellerReferralBanner: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm, paddingHorizontal: SPACING.md, paddingVertical: SPACING.sm, borderWidth: 1, borderColor: COLORS.primary, borderRadius: RADIUS.md, backgroundColor: COLORS.cardBackground },
+  sellerReferralText: { color: COLORS.text, fontSize: 13, fontWeight: '700' },
   consultDraftBar: {
     position: 'absolute', left: SPACING.md, right: SPACING.md, bottom: Platform.OS === 'web' ? SPACING.md : 78,
     maxWidth: 680, alignSelf: 'center', flexDirection: 'row', alignItems: 'center', gap: SPACING.md,

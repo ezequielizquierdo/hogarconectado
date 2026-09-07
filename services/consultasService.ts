@@ -5,6 +5,7 @@ export interface NuevaConsultaPayload {
   productoIds: string[];
   nombre: string;
   telefono: string;
+  codigoVendedor?: string;
 }
 
 function createIdempotencyKey(productoIds: string[]) {

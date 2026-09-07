@@ -1,11 +1,20 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { COLORS, RADIUS, SHADOWS, SPACING } from '@/constants/theme';
 import { router } from 'expo-router';
+import * as Clipboard from 'expo-clipboard';
 import React from 'react';
-import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 export default function PerfilScreen() {
   const { user, logout } = useAuth();
+  const sellerLink = user?.codigoVendedor
+    ? `https://hogarconectado.onrender.com/productos?ref=${user.codigoVendedor}`
+    : '';
+
+  const copySellerLink = async () => {
+    await Clipboard.setStringAsync(sellerLink);
+    Alert.alert('Enlace copiado', 'Compartilo con tus clientes para que sus consultas queden asociadas a vos.');
+  };
 
   return (
     <ScrollView contentContainerStyle={styles.page}>
@@ -27,6 +36,20 @@ export default function PerfilScreen() {
         </View>
         <View style={styles.divider} />
         <Text style={styles.sectionLabel}>ACCESOS DE TU CUENTA</Text>
+        {user?.rol === 'vendedor' && sellerLink ? (
+          <View style={styles.sellerLinkBox}>
+            <Text style={styles.sellerLinkTitle}>Tu enlace de ventas</Text>
+            <Text style={styles.sellerLink} numberOfLines={2}>{sellerLink}</Text>
+            <Pressable
+              style={({ pressed }) => [styles.secondaryButton, pressed && styles.buttonPressed]}
+              onPress={copySellerLink}
+              accessibilityRole="button"
+              accessibilityLabel="Copiar enlace de ventas"
+            >
+              <Text style={styles.secondaryButtonText}>Copiar enlace</Text>
+            </Pressable>
+          </View>
+        ) : null}
         <View style={styles.actions}>
           {user?.rol === 'admin' ? (
             <Pressable
@@ -80,6 +103,9 @@ const styles = StyleSheet.create({
   sectionLabel: { color: COLORS.textSecondary, fontSize: 11, fontWeight: '800', letterSpacing: 1 },
   divider: { height: 1, backgroundColor: COLORS.border },
   actions: { width: '100%', gap: SPACING.sm },
+  sellerLinkBox: { gap: SPACING.sm, padding: SPACING.md, borderRadius: RADIUS.md, backgroundColor: COLORS.cardBackground },
+  sellerLinkTitle: { color: COLORS.text, fontSize: 15, fontWeight: '800' },
+  sellerLink: { color: COLORS.textSecondary, fontSize: 13, lineHeight: 18 },
   secondaryButton: { minHeight: 44, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: COLORS.border, borderRadius: RADIUS.md, backgroundColor: COLORS.cardBackground, paddingHorizontal: SPACING.lg, paddingVertical: SPACING.sm },
   secondaryButtonText: { color: COLORS.text, fontWeight: '700' },
   button: { minHeight: 44, alignItems: 'center', justifyContent: 'center', borderRadius: RADIUS.md, backgroundColor: COLORS.error, paddingHorizontal: SPACING.lg, paddingVertical: SPACING.sm },

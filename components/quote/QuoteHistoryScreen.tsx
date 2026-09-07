@@ -157,6 +157,7 @@ export function QuoteHistoryScreen() {
   const { width } = useWindowDimensions();
   const isDesktop = Platform.OS === "web" && width >= 1024;
   const isAdmin = user?.rol === "admin";
+  const isSeller = user?.rol === "vendedor";
   const [quotes, setQuotes] = useState<Cotizacion[]>([]);
   const [filter, setFilter] = useState<CotizacionEstado | "todas">("todas");
   const [search, setSearch] = useState("");
@@ -174,25 +175,32 @@ export function QuoteHistoryScreen() {
   const [deliveryAgreement, setDeliveryAgreement] = useState("");
   const [addShipping, setAddShipping] = useState(false);
   const [shippingCost, setShippingCost] = useState("");
+  const [sellerStats, setSellerStats] = useState<{
+    liquidacion: { totalVendido: number; dineroARendir: number; gananciaVendedor: number };
+  } | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
     setError("");
     try {
-      const result = await cotizacionesService.obtenerCotizaciones({
-        estado: filter,
-        buscar: debouncedSearch || undefined,
-        limite: 100,
-        pagina: 1,
-      });
+      const [result, stats] = await Promise.all([
+        cotizacionesService.obtenerCotizaciones({
+          estado: filter,
+          buscar: debouncedSearch || undefined,
+          limite: 100,
+          pagina: 1,
+        }),
+        isSeller ? cotizacionesService.obtenerEstadisticas() : Promise.resolve(null),
+      ]);
       setQuotes(result.cotizaciones);
       setTotal(result.pagination?.total ?? result.cotizaciones.length);
+      setSellerStats(stats);
     } catch {
       setError("No pudimos cargar las cotizaciones guardadas.");
     } finally {
       setLoading(false);
     }
-  }, [debouncedSearch, filter]);
+  }, [debouncedSearch, filter, isSeller]);
 
   useFocusEffect(useCallback(() => { void load(); }, [load]));
 
@@ -411,6 +419,23 @@ export function QuoteHistoryScreen() {
             <Text style={styles.primaryButtonText}>Nueva desde Productos</Text>
           </Pressable>
         </View>
+
+        {isSeller && sellerStats ? (
+          <View style={styles.summaryRow}>
+            <View style={styles.summaryCard}>
+              <Text style={styles.summaryValue}>{formatMoney(sellerStats.liquidacion.gananciaVendedor)}</Text>
+              <Text style={styles.summaryLabel}>Tu ganancia confirmada</Text>
+            </View>
+            <View style={styles.summaryCard}>
+              <Text style={styles.summaryValue}>{formatMoney(sellerStats.liquidacion.dineroARendir)}</Text>
+              <Text style={styles.summaryLabel}>Dinero a rendir</Text>
+            </View>
+            <View style={styles.summaryCard}>
+              <Text style={styles.summaryValue}>{formatMoney(sellerStats.liquidacion.totalVendido)}</Text>
+              <Text style={styles.summaryLabel}>Ventas confirmadas</Text>
+            </View>
+          </View>
+        ) : null}
 
         <View style={styles.summaryRow}>
           <View style={styles.summaryCard}>
