@@ -52,7 +52,7 @@ function AuthenticatedNavigator() {
       <Stack>
         <Stack.Screen name="login" options={{ headerShown: false }} />
         <Stack.Screen name="acceso-pendiente" options={{ headerShown: false }} />
-        <Stack.Screen name="cotizacion/[token]" options={{ headerShown: false }} />
+        <Stack.Screen name="cotizacion" options={{ headerShown: false }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="+not-found" />
       </Stack>
