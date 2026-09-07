@@ -54,6 +54,7 @@ No incorporar secretos al frontend ni versionar archivos `.env` locales.
 - Las funciones administrativas deben respetar el rol del usuario; no confiar solamente en ocultar controles en la interfaz.
 - El rol `vendedor` puede compartir productos, crear y gestionar sus cotizaciones, atender consultas y ver su liquidación; nunca recibe precio base, costos financieros, porcentajes internos ni permisos para mutar el catálogo.
 - Al confirmar una venta, el vendedor registra comprador y entrega. Su ganancia es la mitad del margen comercial; el envío se suma íntegramente al dinero a rendir y no genera comisión.
+- El enlace compartido de una cotización es público y privado por token: permite revisar y aceptar sin iniciar sesión, reserva stock por 24 horas y comunica expresamente que el pago continúa pendiente.
 - Todo cambio visual debe revisarse tanto en escritorio como en viewport móvil.
 - Reutilizar tokens y componentes existentes antes de introducir estilos aislados.
 

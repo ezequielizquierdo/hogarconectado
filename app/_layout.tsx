@@ -19,10 +19,11 @@ function AuthenticatedNavigator() {
   const route = segments[0];
   const tab = segments[1];
   const isPublicCatalog = route === '(tabs)' && tab === 'productos';
+  const isPublicQuote = route === 'cotizacion';
 
   useEffect(() => {
     if (state === 'loading') return;
-    if (state === 'unauthenticated' && route !== 'login' && !isPublicCatalog) {
+    if (state === 'unauthenticated' && route !== 'login' && !isPublicCatalog && !isPublicQuote) {
       router.replace('/(tabs)/productos');
     }
     if ((state === 'pending' || state === 'blocked') && route !== 'acceso-pendiente') router.replace('/acceso-pendiente');
@@ -38,11 +39,11 @@ function AuthenticatedNavigator() {
     if (state === 'authenticated' && (route === 'login' || route === 'acceso-pendiente')) {
       router.replace(user?.rol === 'admin' ? '/(tabs)' : '/(tabs)/productos');
     }
-  }, [isPublicCatalog, route, router, state, tab, user]);
+  }, [isPublicCatalog, isPublicQuote, route, router, state, tab, user]);
 
   // El catálogo es público: no debe quedar bloqueado por la validación remota
   // de una sesión guardada cuando el backend está iniciándose.
-  if (state === 'loading' && !isPublicCatalog) {
+  if (state === 'loading' && !isPublicCatalog && !isPublicQuote) {
     return <AppLaunchScreen />;
   }
 
@@ -51,6 +52,7 @@ function AuthenticatedNavigator() {
       <Stack>
         <Stack.Screen name="login" options={{ headerShown: false }} />
         <Stack.Screen name="acceso-pendiente" options={{ headerShown: false }} />
+        <Stack.Screen name="cotizacion/[token]" options={{ headerShown: false }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="+not-found" />
       </Stack>

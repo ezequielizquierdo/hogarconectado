@@ -24,6 +24,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useQuoteDraft } from "@/contexts/QuoteDraftContext";
 import { useDebounce } from "@/hooks/useDebounce";
 import cotizacionesService from "@/services/cotizacionesService";
+import pedidosService, { PedidoResumen } from "@/services/pedidosService";
 import type {
   Cotizacion,
   CotizacionEstado,
@@ -148,6 +149,34 @@ function ConfirmationSummary({ quote, detailed = false }: { quote: Cotizacion; d
       ) : null}
     </View>
   );
+}
+
+function CustomerAcceptance({ quote, isAdmin, processing, onUpdate }: {
+  quote: Cotizacion;
+  isAdmin: boolean;
+  processing: boolean;
+  onUpdate: (order: PedidoResumen, state: 'pago-confirmado' | 'cancelado') => void;
+}) {
+  const order = typeof quote.aceptacionCliente?.pedido === 'object' ? quote.aceptacionCliente.pedido : null;
+  if (!order) return null;
+  const labels = {
+    'reserva-pendiente': 'Reserva activa · pago pendiente',
+    'pago-confirmado': 'Pago confirmado',
+    cancelado: 'Reserva cancelada',
+    vencido: 'Reserva vencida',
+  };
+  return <View style={styles.customerAcceptedBox}>
+    <MaterialIcons name={order.estado === 'pago-confirmado' ? 'verified' : 'shopping-bag'} size={18} color={order.estado === 'reserva-pendiente' || order.estado === 'pago-confirmado' ? '#25835b' : COLORS.textSecondary} />
+    <View style={styles.customerAcceptedCopy}>
+      <Text style={styles.customerAcceptedTitle}>Aceptada por el cliente</Text>
+      <Text style={styles.customerAcceptedText}>{labels[order.estado]}</Text>
+      {order.estado === 'reserva-pendiente' ? <Text style={styles.customerAcceptedText}>Vence {formatDate(order.reservaVenceAt)}</Text> : null}
+      {isAdmin && order.estado === 'reserva-pendiente' ? <View style={styles.orderActions}>
+        <Pressable disabled={processing} onPress={() => onUpdate(order, 'pago-confirmado')} style={styles.orderConfirmButton}><Text style={styles.orderConfirmText}>Confirmar pago</Text></Pressable>
+        <Pressable disabled={processing} onPress={() => onUpdate(order, 'cancelado')} style={styles.orderCancelButton}><Text style={styles.orderCancelText}>Cancelar reserva</Text></Pressable>
+      </View> : null}
+    </View>
+  </View>;
 }
 
 export function QuoteHistoryScreen() {
@@ -293,6 +322,22 @@ export function QuoteHistoryScreen() {
       setFeedback("Seguimiento de la venta actualizado.");
     } catch {
       setFeedback("No pudimos actualizar el seguimiento de la venta.");
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
+  const updateOrder = async (quoteId: string, order: PedidoResumen, nextState: 'pago-confirmado' | 'cancelado') => {
+    if (processingId) return;
+    setProcessingId(quoteId);
+    setFeedback('');
+    try {
+      await pedidosService.cambiarEstado(order._id, nextState);
+      setSelected(null);
+      await load();
+      setFeedback(nextState === 'pago-confirmado' ? 'Pago confirmado.' : 'Reserva cancelada y stock restituido.');
+    } catch (requestError: any) {
+      setFeedback(requestError.response?.data?.message || 'No pudimos actualizar el pedido.');
     } finally {
       setProcessingId(null);
     }
@@ -512,6 +557,8 @@ export function QuoteHistoryScreen() {
                   </View>
                 </View>
 
+                <CustomerAcceptance quote={quote} isAdmin={isAdmin} processing={processingId === quote._id} onUpdate={(order, state) => void updateOrder(quote._id, order, state)} />
+
                 <View style={styles.productList}>
                   {quote.productos.slice(0, 2).map((item, index) => (
                     <ProductLine key={`${quote._id}-${index}`} item={item} quote={quote} />
@@ -729,6 +776,15 @@ const styles = StyleSheet.create({
   status_confirmada: { backgroundColor: COLORS.success },
   status_cancelada: { backgroundColor: COLORS.error },
   statusText: { color: COLORS.text, fontSize: 11, fontWeight: "800" },
+  customerAcceptedBox: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm, marginTop: SPACING.md, padding: SPACING.sm, borderRadius: RADIUS.md, backgroundColor: COLORS.secondary },
+  customerAcceptedCopy: { flex: 1 },
+  customerAcceptedTitle: { color: COLORS.text, fontSize: 13, fontWeight: '800' },
+  customerAcceptedText: { color: COLORS.textSecondary, fontSize: 11, lineHeight: 16 },
+  orderActions: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.sm, marginTop: SPACING.sm },
+  orderConfirmButton: { minHeight: 36, justifyContent: 'center', paddingHorizontal: SPACING.md, borderRadius: RADIUS.sm, backgroundColor: COLORS.primary },
+  orderConfirmText: { color: COLORS.ink, fontSize: 12, fontWeight: '800' },
+  orderCancelButton: { minHeight: 36, justifyContent: 'center', paddingHorizontal: SPACING.md, borderRadius: RADIUS.sm, backgroundColor: COLORS.error },
+  orderCancelText: { color: COLORS.errorStrong, fontSize: 12, fontWeight: '800' },
   productList: { gap: SPACING.sm, marginTop: SPACING.lg },
   productLine: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: SPACING.md, paddingBottom: SPACING.sm, borderBottomWidth: 1, borderBottomColor: COLORS.border },
   productLineCopy: { minWidth: 0, flex: 1 },

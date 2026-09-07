@@ -761,6 +761,23 @@ Una tarea de interfaz se considera terminada cuando:
 
 **Validación pendiente:** asignación del rol, ausencia de costos en API e interfaz, cotización y confirmación desde una cuenta vendedora, toma de consulta, notificación, liquidación con y sin envío y seguimiento administrativo.
 
+### UX-024 — Aceptación pública y reserva de cotizaciones
+
+**Prioridad:** Alta
+
+**Estado:** Implementación preparada; pendiente de validación funcional
+
+- WhatsApp incorpora un enlace privado y no predecible para revisar la cotización sin iniciar sesión.
+- La vista pública muestra vendedor, cliente, productos, cantidades, precios, modalidad, cuotas y total, sin costos internos.
+- El enlace vence a los 30 días y puede regenerarse mientras la cotización siga disponible.
+- “Aceptar y reservar 24 h” es idempotente, crea un pedido y descuenta todas las unidades dentro de una única transacción.
+- Si falta stock de cualquier artículo, no se reserva ningún producto y se informa el conflicto.
+- La aceptación no confirma ni cobra el pago; el pedido nace con pago pendiente.
+- Las reservas vencidas liberan automáticamente el stock. Una cancelación administrativa también devuelve las unidades.
+- Vendedor y administrador ven que el cliente aceptó y que existe una reserva pendiente de pago.
+
+**Validación pendiente:** enlace nuevo y vencido, doble toque, falta de stock parcial, aceptación mobile, devolución al vencer, cancelación, confirmación de pago y visibilidad por propietario.
+
 ### UX-021 — Historias de Instagram en lote
 
 **Prioridad:** Media
