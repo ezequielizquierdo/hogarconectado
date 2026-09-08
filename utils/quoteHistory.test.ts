@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  QUOTE_MODE_LABEL,
   getQuoteItemSubtotal,
   getQuoteItemUnitPrice,
   getQuoteProductName,
@@ -25,6 +26,11 @@ const item = {
 };
 
 describe("quoteHistory", () => {
+  it("usa etiquetas comerciales sin exponer la ganancia al cliente", () => {
+    expect(QUOTE_MODE_LABEL.facturado).toBe("Facturado en 1 cuota");
+    expect(QUOTE_MODE_LABEL.facturado).not.toMatch(/ganancia/i);
+  });
+
   it("usa el snapshot comercial para mostrar el producto", () => {
     expect(getQuoteProductName(item)).toBe("Crown DJS-1002BT");
   });

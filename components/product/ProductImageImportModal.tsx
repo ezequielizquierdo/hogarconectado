@@ -7,6 +7,7 @@ import { ThemedText } from '@/components/ThemedText';
 import { ProductImageDraft } from '@/services/types';
 import { productAssistantService } from '@/services/productAssistantService';
 import { COLORS, RADIUS, SHADOWS, SPACING } from '@/constants/theme';
+import { DuplicateFieldKey as ComparisonFieldKey, DuplicateSource as ComparisonSource, getDuplicateChoiceValue, getDuplicateOriginalValues } from '@/utils/productDuplicate';
 
 type DraftItem = {
   id: string;
@@ -16,17 +17,44 @@ type DraftItem = {
   draft?: ProductImageDraft;
   error?: string;
   duplicateConfirmed?: boolean;
+  selectedDuplicateId?: string;
+  detectedDraft?: ProductImageDraft;
+  duplicateImageSource?: 'original' | 'new';
+  fieldSelections?: Partial<Record<ComparisonFieldKey, ComparisonSource>>;
+  savedAs?: 'created' | 'updated';
 };
 
 type Props = {
   visible: boolean;
   onClose: () => void;
-  onCreateDraft: (draft: ProductImageDraft, imageUri: string) => Promise<void>;
+  onCreateDraft: (draft: ProductImageDraft, imageUri: string, allowDuplicate?: boolean) => Promise<void>;
+  onUpdateDuplicate: (
+    existing: NonNullable<ProductImageDraft['possibleDuplicates']>[number],
+    draft: ProductImageDraft,
+    imageUri: string,
+    useNewImage: boolean,
+  ) => Promise<void>;
 };
 
 const getErrorMessage = (error: any) => error?.response?.data?.message || error?.message || 'No pudimos analizar esta imagen.';
+const comparisonFields = [
+  { key: 'marca', label: 'Marca' },
+  { key: 'modelo', label: 'Modelo' },
+  { key: 'categoriaSugerida', label: 'Categoría' },
+  { key: 'precioBase', label: 'Precio base' },
+  { key: 'porcentajeGanancia', label: 'Porcentaje' },
+  { key: 'stockCantidad', label: 'Cantidad' },
+  { key: 'stockDisponible', label: 'Disponibilidad' },
+  { key: 'descripcion', label: 'Descripción' },
+] as const;
 
-export function ProductImageImportModal({ visible, onClose, onCreateDraft }: Props) {
+const displayComparisonValue = (value: unknown) => {
+  if (typeof value === 'boolean') return value ? 'Disponible' : 'No disponible';
+  if (value === null || value === undefined || value === '') return 'Sin dato';
+  return String(value);
+};
+
+export function ProductImageImportModal({ visible, onClose, onCreateDraft, onUpdateDuplicate }: Props) {
   const [items, setItems] = useState<DraftItem[]>([]);
   const [selecting, setSelecting] = useState(false);
 
@@ -43,7 +71,16 @@ export function ProductImageImportModal({ visible, onClose, onCreateDraft }: Pro
       setItems(current => current.map(candidate => candidate.id === item.id ? { ...candidate, status: 'analyzing' } : candidate));
       try {
         const draft = await productAssistantService.analizarImagen(item.uri);
-        setItems(current => current.map(candidate => candidate.id === item.id ? { ...candidate, status: 'ready', draft } : candidate));
+        const firstDuplicate = draft.possibleDuplicates?.[0];
+        setItems(current => current.map(candidate => candidate.id === item.id ? {
+          ...candidate,
+          status: 'ready',
+          draft: firstDuplicate ? { ...draft, ...getDuplicateOriginalValues(firstDuplicate) } : draft,
+          detectedDraft: draft,
+          selectedDuplicateId: draft.possibleDuplicates?.[0]?._id,
+          duplicateImageSource: 'original',
+          fieldSelections: Object.fromEntries(comparisonFields.map(field => [field.key, 'original'])) as Record<ComparisonFieldKey, ComparisonSource>,
+        } : candidate));
       } catch (error) {
         setItems(current => current.map(candidate => candidate.id === item.id ? { ...candidate, status: 'error', error: getErrorMessage(error) } : candidate));
       }
@@ -82,24 +119,27 @@ export function ProductImageImportModal({ visible, onClose, onCreateDraft }: Pro
     }
   };
 
-  const updateDraft = (id: string, field: keyof ProductImageDraft, value: string | number | boolean) => {
+  const updateDraft = (id: string, field: keyof ProductImageDraft, value: string | number | boolean, keepDuplicates = false) => {
     setItems(current => current.map(item => item.id === id && item.draft
-      ? {
+      ? (() => {
+          const preserveComparison = keepDuplicates || (item.draft.possibleDuplicates?.length || 0) > 0;
+          return {
           ...item,
-          duplicateConfirmed: field === 'marca' || field === 'modelo' ? false : item.duplicateConfirmed,
+          duplicateConfirmed: !preserveComparison && (field === 'marca' || field === 'modelo') ? false : item.duplicateConfirmed,
           draft: {
             ...item.draft,
             [field]: value,
-            ...(field === 'marca' || field === 'modelo' ? { possibleDuplicates: [] } : {}),
+            ...(!preserveComparison && (field === 'marca' || field === 'modelo') ? { possibleDuplicates: [] } : {}),
           },
-        }
+        };
+        })()
       : item));
   };
 
   const remove = (id: string) => setItems(current => current.filter(item => item.id !== id));
-  const createProduct = async (item: DraftItem) => {
+  const createProduct = async (item: DraftItem, allowDuplicate = item.duplicateConfirmed || false) => {
     if (!item.draft || item.status !== 'ready') return;
-    if (!item.duplicateConfirmed) {
+    if (!allowDuplicate) {
       try {
         const possibleDuplicates = await productAssistantService.buscarDuplicados(item.draft.marca, item.draft.modelo);
         if (possibleDuplicates.length > 0) {
@@ -117,8 +157,66 @@ export function ProductImageImportModal({ visible, onClose, onCreateDraft }: Pro
     }
     setItems(current => current.map(candidate => candidate.id === item.id ? { ...candidate, status: 'saving', error: undefined } : candidate));
     try {
-      await onCreateDraft(item.draft, item.uri);
-      setItems(current => current.map(candidate => candidate.id === item.id ? { ...candidate, status: 'created' } : candidate));
+      await onCreateDraft(item.draft, item.uri, allowDuplicate);
+      setItems(current => current.map(candidate => candidate.id === item.id ? { ...candidate, status: 'created', savedAs: 'created' } : candidate));
+    } catch (error) {
+      setItems(current => current.map(candidate => candidate.id === item.id ? { ...candidate, status: 'ready', error: getErrorMessage(error) } : candidate));
+    }
+  };
+
+  const chooseDuplicateField = (
+    item: DraftItem,
+    field: ComparisonFieldKey,
+    source: ComparisonSource,
+  ) => {
+    const duplicate = item.draft?.possibleDuplicates?.find(candidate => candidate._id === item.selectedDuplicateId);
+    const detected = item.detectedDraft;
+    if (!duplicate || !detected) return;
+    updateDraft(item.id, field, getDuplicateChoiceValue(duplicate, detected, field, source), true);
+    setItems(current => current.map(candidate => candidate.id === item.id
+      ? { ...candidate, fieldSelections: { ...candidate.fieldSelections, [field]: source } }
+      : candidate));
+  };
+
+  const updateDetectedField = (item: DraftItem, field: ComparisonFieldKey, value: string | number | boolean) => {
+    setItems(current => current.map(candidate => {
+      if (candidate.id !== item.id || !candidate.detectedDraft || !candidate.draft) return candidate;
+      const selected = candidate.fieldSelections?.[field] === 'new';
+      return {
+        ...candidate,
+        detectedDraft: { ...candidate.detectedDraft, [field]: value },
+        draft: selected ? { ...candidate.draft, [field]: value } : candidate.draft,
+      };
+    }));
+  };
+
+  const chooseAllDuplicateFields = (item: DraftItem, source: ComparisonSource) => {
+    comparisonFields.forEach(field => chooseDuplicateField(item, field.key, source));
+    setItems(current => current.map(candidate => candidate.id === item.id
+      ? { ...candidate, duplicateImageSource: source === 'original' ? 'original' : 'new' }
+      : candidate));
+  };
+
+  const selectDuplicate = (itemId: string, duplicate: NonNullable<ProductImageDraft['possibleDuplicates']>[number]) => {
+    setItems(current => current.map(candidate => candidate.id === itemId && candidate.draft
+      ? {
+          ...candidate,
+          selectedDuplicateId: duplicate._id,
+          duplicateImageSource: 'original',
+          fieldSelections: Object.fromEntries(comparisonFields.map(field => [field.key, 'original'])) as Record<ComparisonFieldKey, ComparisonSource>,
+          draft: { ...candidate.draft, ...getDuplicateOriginalValues(duplicate) },
+        }
+      : candidate));
+  };
+
+  const updateExisting = async (item: DraftItem) => {
+    if (!item.draft || item.status !== 'ready') return;
+    const duplicate = item.draft.possibleDuplicates?.find(candidate => candidate._id === item.selectedDuplicateId);
+    if (!duplicate) return;
+    setItems(current => current.map(candidate => candidate.id === item.id ? { ...candidate, status: 'saving', error: undefined } : candidate));
+    try {
+      await onUpdateDuplicate(duplicate, item.draft, item.uri, item.duplicateImageSource !== 'original');
+      setItems(current => current.map(candidate => candidate.id === item.id ? { ...candidate, status: 'created', savedAs: 'updated' } : candidate));
     } catch (error) {
       setItems(current => current.map(candidate => candidate.id === item.id ? { ...candidate, status: 'ready', error: getErrorMessage(error) } : candidate));
     }
@@ -169,7 +267,7 @@ export function ProductImageImportModal({ visible, onClose, onCreateDraft }: Pro
                     ) : item.status === 'error' ? (
                       <ThemedText style={styles.errorText}>{item.error}</ThemedText>
                     ) : item.status === 'created' ? (
-                      <ThemedText style={styles.readyText}>Producto creado correctamente</ThemedText>
+                      <ThemedText style={styles.readyText}>{item.savedAs === 'updated' ? 'Producto actualizado correctamente' : 'Producto creado correctamente'}</ThemedText>
                     ) : (
                       <ThemedText style={styles.readyText}>Borrador listo · {Math.round((item.draft?.confianza || 0) * 100)}% de confianza</ThemedText>
                     )}
@@ -181,11 +279,12 @@ export function ProductImageImportModal({ visible, onClose, onCreateDraft }: Pro
 
                 {(item.status === 'ready' || item.status === 'saving' || item.status === 'created') && item.draft ? (
                   <View style={styles.fields}>
+                    {(item.draft.possibleDuplicates?.length || 0) === 0 ? <>
                     <View style={styles.field}><ThemedText style={styles.label}>Marca *</ThemedText><TextInput editable={item.status === 'ready'} style={styles.input} value={item.draft.marca} placeholder="Marca" onChangeText={value => updateDraft(item.id, 'marca', value)} /></View>
                     <View style={styles.field}><ThemedText style={styles.label}>Modelo *</ThemedText><TextInput editable={item.status === 'ready'} style={styles.input} value={item.draft.modelo} placeholder="Modelo" onChangeText={value => updateDraft(item.id, 'modelo', value)} /></View>
                     <View style={styles.field}><ThemedText style={styles.label}>Categoría *</ThemedText><TextInput editable={item.status === 'ready'} style={styles.input} value={item.draft.categoriaSugerida} placeholder="Categoría sugerida" onChangeText={value => updateDraft(item.id, 'categoriaSugerida', value)} /></View>
                     <View style={styles.field}><ThemedText style={styles.label}>Precio base *</ThemedText><TextInput editable={item.status === 'ready'} style={styles.input} value={item.draft.precioBase?.toString() || ''} placeholder="Precio base" keyboardType="numeric" onChangeText={value => updateDraft(item.id, 'precioBase', Number(value.replace(/\D/g, '')) || 0)} /></View>
-                    <View style={styles.field}><ThemedText style={styles.label}>Porcentaje para precio contado *</ThemedText><TextInput editable={item.status === 'ready'} style={styles.input} value={String(item.draft.porcentajeGanancia ?? 30)} placeholder="Ej.: 30" keyboardType="decimal-pad" onChangeText={value => updateDraft(item.id, 'porcentajeGanancia', Number(value.replace(',', '.')) || 0)} /></View>
+                    <View style={styles.field}><ThemedText style={styles.label}>Porcentaje para precio contado *</ThemedText><TextInput editable={item.status === 'ready'} style={styles.input} value={String(item.draft.porcentajeGanancia ?? 10)} placeholder="Ej.: 10" keyboardType="decimal-pad" onChangeText={value => updateDraft(item.id, 'porcentajeGanancia', Number(value.replace(',', '.')) || 0)} /></View>
                     <View style={styles.field}><ThemedText style={styles.label}>Stock cantidad</ThemedText><TextInput editable={item.status === 'ready'} style={styles.input} value={String(item.draft.stockCantidad)} placeholder="Stock" keyboardType="numeric" onChangeText={value => updateDraft(item.id, 'stockCantidad', Number(value.replace(/\D/g, '')) || 0)} /></View>
                     <View style={styles.field}>
                       <ThemedText style={styles.label}>Stock disponible</ThemedText>
@@ -195,6 +294,7 @@ export function ProductImageImportModal({ visible, onClose, onCreateDraft }: Pro
                       </TouchableOpacity>
                     </View>
                     <View style={styles.field}><ThemedText style={styles.label}>Descripción</ThemedText><TextInput editable={item.status === 'ready'} style={[styles.input, styles.description]} value={item.draft.descripcion} placeholder="Descripción" multiline onChangeText={value => updateDraft(item.id, 'descripcion', value)} /></View>
+                    </> : null}
                     {item.draft.advertencias.length > 0 ? (
                       <View style={styles.warning}><MaterialIcons name="info-outline" size={18} color="#8a5b00" /><ThemedText style={styles.warningText}>{item.draft.advertencias.join(' ')}</ThemedText></View>
                     ) : null}
@@ -204,27 +304,103 @@ export function ProductImageImportModal({ visible, onClose, onCreateDraft }: Pro
                           <MaterialIcons name="warning-amber" size={20} color={COLORS.errorStrong} />
                           <ThemedText style={styles.duplicateTitle}>Este producto podría estar cargado</ThemedText>
                         </View>
-                        {item.draft.possibleDuplicates?.map(product => (
-                          <ThemedText key={product._id} style={styles.duplicateProduct}>
-                            {product.marca} {product.modelo}
-                          </ThemedText>
-                        ))}
-                        <ThemedText style={styles.duplicateHelp}>Revisá la coincidencia para evitar cards repetidas.</ThemedText>
+                        <ThemedText style={styles.duplicateHelp}>Elegí el valor final de cada fila. La opción coloreada es la que se guardará; los valores nuevos también se pueden corregir.</ThemedText>
+                        <View style={styles.duplicateCandidates}>
+                          {item.draft.possibleDuplicates?.map(product => (
+                            <TouchableOpacity
+                              key={product._id}
+                              onPress={() => selectDuplicate(item.id, product)}
+                              style={[styles.duplicateCandidate, item.selectedDuplicateId === product._id && styles.duplicateCandidateSelected]}
+                            >
+                              <ThemedText style={styles.duplicateProduct}>{product.marca} {product.modelo}</ThemedText>
+                            </TouchableOpacity>
+                          ))}
+                        </View>
+                        {(() => {
+                          const original = item.draft?.possibleDuplicates?.find(product => product._id === item.selectedDuplicateId);
+                          if (!original) return null;
+                          const originalValues = getDuplicateOriginalValues(original);
+                          return (
+                            <View style={styles.comparison}>
+                              <View style={styles.comparisonHeader}>
+                                <View style={styles.comparisonImageBox}>{original.imagen ? <Image source={{ uri: original.imagen }} style={styles.comparisonImage} resizeMode="contain" /> : <MaterialIcons name="image-not-supported" size={24} color={COLORS.textSecondary} />}</View>
+                                <ThemedText style={styles.comparisonColumnTitle}>Producto existente</ThemedText>
+                                <View style={styles.comparisonImageBox}><Image source={{ uri: item.uri }} style={styles.comparisonImage} resizeMode="contain" /></View>
+                                <ThemedText style={styles.comparisonColumnTitle}>Imagen nueva</ThemedText>
+                              </View>
+                              {comparisonFields.map(field => {
+                                const newValue = item.detectedDraft?.[field.key];
+                                const numericField = field.key === 'precioBase' || field.key === 'porcentajeGanancia' || field.key === 'stockCantidad';
+                                return (
+                                  <View key={field.key} style={styles.comparisonRow}>
+                                    <ThemedText style={styles.comparisonLabel}>{field.label}</ThemedText>
+                                    <TouchableOpacity
+                                      style={[styles.valueChoice, item.fieldSelections?.[field.key] === 'original' && styles.valueChoiceSelected]}
+                                      onPress={() => chooseDuplicateField(item, field.key, 'original')}
+                                    >
+                                      <ThemedText numberOfLines={3} style={styles.valueChoiceText}>{displayComparisonValue(originalValues[field.key])}</ThemedText>
+                                      <View style={styles.choiceFooter}>{item.fieldSelections?.[field.key] === 'original' ? <MaterialIcons name="check-circle" size={15} color={COLORS.primaryDark} /> : null}<ThemedText style={styles.useValue}>Usar actual</ThemedText></View>
+                                    </TouchableOpacity>
+                                    <View style={[styles.valueChoice, item.fieldSelections?.[field.key] === 'new' && styles.valueChoiceSelected]}>
+                                      {field.key === 'stockDisponible' ? (
+                                        <TouchableOpacity style={styles.inlineToggle} onPress={() => updateDetectedField(item, field.key, !newValue)}>
+                                          <ThemedText style={styles.valueChoiceText}>{displayComparisonValue(newValue)}</ThemedText>
+                                          <MaterialIcons name={newValue ? 'toggle-on' : 'toggle-off'} size={26} color={newValue ? '#21734b' : COLORS.textSecondary} />
+                                        </TouchableOpacity>
+                                      ) : (
+                                        <TextInput
+                                          multiline={field.key === 'descripcion'}
+                                          keyboardType={numericField ? 'decimal-pad' : 'default'}
+                                          onChangeText={value => updateDetectedField(
+                                            item,
+                                            field.key,
+                                            numericField
+                                              ? field.key === 'porcentajeGanancia'
+                                                ? Number(value.replace(',', '.').replace(/[^0-9.]/g, '')) || 0
+                                                : Number(value.replace(/\D/g, '')) || 0
+                                              : value,
+                                          )}
+                                          placeholder="Sin dato"
+                                          placeholderTextColor={COLORS.textLight}
+                                          style={[styles.comparisonInput, field.key === 'descripcion' && styles.comparisonInputMultiline]}
+                                          value={newValue === null || newValue === undefined ? '' : String(newValue)}
+                                        />
+                                      )}
+                                      <TouchableOpacity style={styles.choiceFooter} onPress={() => chooseDuplicateField(item, field.key, 'new')}>
+                                        {item.fieldSelections?.[field.key] === 'new' ? <MaterialIcons name="check-circle" size={15} color={COLORS.primaryDark} /> : null}
+                                        <ThemedText style={styles.useValue}>Usar nuevo</ThemedText>
+                                      </TouchableOpacity>
+                                    </View>
+                                  </View>
+                                );
+                              })}
+                              <View style={styles.imageChoiceRow}>
+                                <ThemedText style={styles.comparisonLabel}>Imagen final</ThemedText>
+                                <TouchableOpacity onPress={() => setItems(current => current.map(candidate => candidate.id === item.id ? { ...candidate, duplicateImageSource: 'original' } : candidate))} style={[styles.imageChoice, item.duplicateImageSource === 'original' && styles.imageChoiceSelected]}><ThemedText style={styles.useValue}>Conservar actual</ThemedText></TouchableOpacity>
+                                <TouchableOpacity onPress={() => setItems(current => current.map(candidate => candidate.id === item.id ? { ...candidate, duplicateImageSource: 'new' } : candidate))} style={[styles.imageChoice, item.duplicateImageSource !== 'original' && styles.imageChoiceSelected]}><ThemedText style={styles.useValue}>Agregar nueva</ThemedText></TouchableOpacity>
+                              </View>
+                            </View>
+                          );
+                        })()}
+                        <View style={styles.bulkChoices}>
+                          <TouchableOpacity style={styles.bulkChoice} onPress={() => chooseAllDuplicateFields(item, 'original')}><ThemedText style={styles.bulkChoiceText}>Elegir todo actual</ThemedText></TouchableOpacity>
+                          <TouchableOpacity style={styles.bulkChoice} onPress={() => chooseAllDuplicateFields(item, 'new')}><ThemedText style={styles.bulkChoiceText}>Elegir todo nuevo</ThemedText></TouchableOpacity>
+                        </View>
                         <View style={styles.duplicateActions}>
-                          <TouchableOpacity style={styles.duplicateCancel} onPress={() => remove(item.id)}>
-                            <ThemedText style={styles.duplicateCancelText}>No crear</ThemedText>
+                          <TouchableOpacity style={styles.duplicateUpdate} onPress={() => updateExisting(item)}>
+                            <ThemedText style={styles.duplicateConfirmText}>Guardar selección</ThemedText>
                           </TouchableOpacity>
-                          <TouchableOpacity style={styles.duplicateConfirm} onPress={() => setItems(current => current.map(candidate => candidate.id === item.id ? { ...candidate, duplicateConfirmed: true } : candidate))}>
-                            <ThemedText style={styles.duplicateConfirmText}>Crear de todos modos</ThemedText>
+                          <TouchableOpacity style={styles.duplicateConfirm} onPress={() => createProduct(item, true)}>
+                            <ThemedText style={styles.duplicateConfirmText}>Crear como producto nuevo</ThemedText>
                           </TouchableOpacity>
                         </View>
                       </View>
                     ) : null}
                     {item.error ? <ThemedText style={styles.errorText}>{item.error}</ThemedText> : null}
-                    <TouchableOpacity disabled={item.status !== 'ready' || ((item.draft.possibleDuplicates?.length || 0) > 0 && !item.duplicateConfirmed)} style={[styles.reviewButton, (item.status !== 'ready' || ((item.draft.possibleDuplicates?.length || 0) > 0 && !item.duplicateConfirmed)) && styles.reviewButtonDisabled]} onPress={() => createProduct(item)}>
+                    {(item.draft.possibleDuplicates?.length || 0) === 0 ? <TouchableOpacity disabled={item.status !== 'ready'} style={[styles.reviewButton, item.status !== 'ready' && styles.reviewButtonDisabled]} onPress={() => createProduct(item)}>
                       {item.status === 'saving' ? <ActivityIndicator color={COLORS.ink} /> : <MaterialIcons name={item.status === 'created' ? 'check-circle' : 'add-circle'} size={18} color={COLORS.ink} />}
                       <ThemedText style={styles.reviewButtonText}>{item.status === 'saving' ? 'Creando producto…' : item.status === 'created' ? 'Producto creado' : 'Crear producto'}</ThemedText>
-                    </TouchableOpacity>
+                    </TouchableOpacity> : null}
                   </View>
                 ) : null}
               </View>
@@ -261,9 +437,34 @@ const styles = StyleSheet.create({
   duplicateTitle: { flex: 1, color: COLORS.errorStrong, fontSize: 14, fontWeight: '800' },
   duplicateProduct: { color: COLORS.text, fontSize: 14, fontWeight: '700' },
   duplicateHelp: { color: COLORS.textSecondary, fontSize: 12, lineHeight: 17 },
-  duplicateActions: { flexDirection: 'row', gap: SPACING.sm },
+  duplicateCandidates: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.xs },
+  duplicateCandidate: { borderWidth: 1, borderColor: COLORS.border, borderRadius: RADIUS.sm, backgroundColor: COLORS.surface, paddingHorizontal: SPACING.sm, paddingVertical: SPACING.xs },
+  duplicateCandidateSelected: { borderColor: COLORS.primaryDark, backgroundColor: '#eef0ff' },
+  comparison: { gap: SPACING.sm, marginTop: SPACING.xs },
+  comparisonHeader: { flexDirection: 'row', alignItems: 'center', gap: SPACING.xs },
+  comparisonImageBox: { width: 48, height: 48, borderRadius: RADIUS.sm, backgroundColor: COLORS.surface, borderWidth: 1, borderColor: COLORS.border, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
+  comparisonImage: { width: '100%', height: '100%' },
+  comparisonColumnTitle: { flex: 1, color: COLORS.text, fontSize: 11, lineHeight: 14, fontWeight: '700' },
+  comparisonRow: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.xs },
+  comparisonLabel: { width: '100%', color: COLORS.textSecondary, fontSize: 11, fontWeight: '800', textTransform: 'uppercase' },
+  valueChoice: { flex: 1, minWidth: 110, minHeight: 58, borderWidth: 1, borderColor: COLORS.border, borderRadius: RADIUS.sm, backgroundColor: COLORS.surface, padding: SPACING.sm, justifyContent: 'space-between' },
+  valueChoiceSelected: { borderColor: COLORS.primaryDark, borderWidth: 2, backgroundColor: '#eef0ff' },
+  valueChoiceText: { color: COLORS.text, fontSize: 12, lineHeight: 16 },
+  comparisonInput: { minHeight: 28, color: COLORS.text, fontSize: 12, lineHeight: 16, padding: 0, borderBottomWidth: 1, borderBottomColor: COLORS.borderFocus },
+  comparisonInputMultiline: { minHeight: 54, textAlignVertical: 'top' },
+  inlineToggle: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  choiceFooter: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start' },
+  useValue: { color: COLORS.primaryDark, fontSize: 11, fontWeight: '800', marginTop: 3 },
+  imageChoiceRow: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.xs },
+  imageChoice: { flex: 1, minWidth: 110, borderWidth: 1, borderColor: COLORS.border, borderRadius: RADIUS.sm, backgroundColor: COLORS.surface, padding: SPACING.sm, alignItems: 'center' },
+  imageChoiceSelected: { borderColor: COLORS.primaryDark, backgroundColor: '#eef0ff' },
+  bulkChoices: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.xs },
+  bulkChoice: { flex: 1, minWidth: 130, minHeight: 38, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: COLORS.primaryDark, borderRadius: RADIUS.md, backgroundColor: COLORS.surface, paddingHorizontal: SPACING.sm },
+  bulkChoiceText: { color: COLORS.primaryDark, fontSize: 12, fontWeight: '800' },
+  duplicateActions: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.sm },
   duplicateCancel: { flex: 1, minHeight: 42, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: COLORS.border, borderRadius: RADIUS.md, backgroundColor: COLORS.surface },
   duplicateCancelText: { color: COLORS.text, fontSize: 13, fontWeight: '700' },
+  duplicateUpdate: { flex: 1, minWidth: 145, minHeight: 42, alignItems: 'center', justifyContent: 'center', borderRadius: RADIUS.md, backgroundColor: COLORS.secondary },
   duplicateConfirm: { flex: 1, minHeight: 42, alignItems: 'center', justifyContent: 'center', borderRadius: RADIUS.md, backgroundColor: COLORS.warning },
   duplicateConfirmText: { color: COLORS.ink, fontSize: 13, fontWeight: '800', textAlign: 'center' },
   reviewButton: { minHeight: 46, backgroundColor: COLORS.secondary, borderRadius: RADIUS.md, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: SPACING.sm }, reviewButtonDisabled: { opacity: 0.7 }, reviewButtonText: { color: COLORS.ink, fontWeight: '800' },

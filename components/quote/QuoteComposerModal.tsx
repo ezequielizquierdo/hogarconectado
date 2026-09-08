@@ -228,7 +228,7 @@ export function QuoteComposerModal({ visible, onClose }: QuoteComposerModalProps
                   ) : (
                     <>
                       <ThemedText style={styles.paymentSummaryLabel}>
-                        {paymentMode === "facturado" ? "Valor facturado en 1 cuota con ganancia" : "Total contado"}
+                        {paymentMode === "facturado" ? "Total facturado en 1 cuota" : "Total contado"}
                       </ThemedText>
                       <ThemedText style={styles.paymentSummaryTotal}>{formatPrice(total)}</ThemedText>
                     </>
@@ -284,11 +284,11 @@ export function QuoteComposerModal({ visible, onClose }: QuoteComposerModalProps
               </View>
 
               <View style={styles.fieldGroup}>
-                <ThemedText style={styles.label}>Observaciones (opcional)</ThemedText>
+                <ThemedText style={styles.label}>Observaciones para el cliente (opcional)</ThemedText>
                 <TextInput
                   multiline
                   onChangeText={setNotes}
-                  placeholder="Entrega, vigencia u otra aclaración"
+                  placeholder="Entrega, vigencia u otra aclaración visible para el cliente"
                   placeholderTextColor={COLORS.textLight}
                   style={[styles.input, styles.notesInput]}
                   value={notes}
@@ -330,7 +330,7 @@ export function QuoteComposerModal({ visible, onClose }: QuoteComposerModalProps
                 {!!notes.trim() && <ThemedText style={styles.previewNotes}>{notes.trim()}</ThemedText>}
                 <View style={styles.previewTotalRow}>
                   <View>
-                    <ThemedText style={styles.previewTotalLabel}>{installmentCount ? "TOTAL FINANCIADO" : paymentMode === "facturado" ? "FACTURADO EN 1 CUOTA CON GANANCIA" : "TOTAL"}</ThemedText>
+                    <ThemedText style={styles.previewTotalLabel}>{installmentCount ? "TOTAL FINANCIADO" : paymentMode === "facturado" ? "TOTAL FACTURADO EN 1 CUOTA" : "TOTAL"}</ThemedText>
                     {installmentCount && installmentAmount !== null && (
                       <ThemedText style={styles.previewInstallment}>{installmentCount} cuotas de {formatPrice(installmentAmount)}</ThemedText>
                     )}

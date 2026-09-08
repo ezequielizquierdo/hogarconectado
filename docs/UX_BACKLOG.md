@@ -800,16 +800,16 @@ Una tarea de interfaz se considera terminada cuando:
 
 ### UX-022 — Alta de productos asistida por imágenes
 
-**Prioridad:** Alta — siguiente evolución prioritaria
+**Prioridad:** Alta
 
-**Estado:** En investigación
+**Estado:** Implementado — pendiente de validación manual en producción
 
 **Objetivo:** cargar una o varias imágenes de productos, extraer automáticamente su información y preparar cards editables antes de guardarlas.
 
 **Criterios de aceptación:**
 
-- El alta permite seleccionar varias imágenes desde archivos, galería o cámara.
-- El sistema distingue si las imágenes corresponden a productos diferentes o complementan un mismo producto y permite corregir el agrupamiento.
+- El alta permite seleccionar varias imágenes desde archivos de escritorio o la galería del teléfono.
+- Cada imagen representa un producto independiente, según el alcance acordado para esta etapa.
 - Se propone marca, modelo, categoría, descripción, precio base, stock visible y otros datos reconocibles, indicando campos dudosos o ausentes.
 - Cada propuesta conserva su imagen principal y permite elegir otra imagen del mismo grupo.
 - Ningún producto se guarda automáticamente: el usuario revisa, corrige, descarta o confirma cada card.
@@ -821,6 +821,8 @@ Una tarea de interfaz se considera terminada cuando:
 - El procesamiento muestra progreso por imagen y permite reintentar solamente las fallidas.
 - Se investiga primero una solución gratuita o con nivel gratuito suficiente, evaluando precisión en español, privacidad, límites y costo operativo futuro.
 - Las credenciales y el procesamiento externo quedan exclusivamente en el backend.
+
+**Implementación actual:** una imagen genera un producto independiente. Ante una coincidencia de marca y modelo, la revisión muestra el registro existente y el detectado, permite elegir campo por campo o editar el valor final, conservar la imagen actual o agregar la nueva, y finalizar actualizando el producto existente o creando otro de forma explícita. No se reemplaza información automáticamente.
 
 **Validación:** imágenes limpias, flyers con mucho texto, fotografías inclinadas, varias fotos del mismo producto, imágenes de productos diferentes y datos incompletos.
 

@@ -7,7 +7,7 @@ import type { QuoteDraftItem } from "@/utils/quoteDraft";
 
 export const QUOTE_MODE_LABEL: Record<CotizacionModalidad, string> = {
   contado: "Contado",
-  facturado: "Facturado en 1 cuota con ganancia",
+  facturado: "Facturado en 1 cuota",
   "3-cuotas": "3 cuotas",
   "6-cuotas": "6 cuotas",
 };

@@ -111,7 +111,7 @@ const initialForm: ProductoForm = {
   descripcion: "",
   categoria: "",
   precioBase: "",
-  porcentajeGanancia: "30",
+  porcentajeGanancia: "10",
   stockCantidad: "",
   stockDisponible: "true",
   imagen: "",
@@ -394,19 +394,19 @@ export default function ProductosScreen() {
     setFormErrors({});
   };
 
-  const createAnalyzedProduct = async (draft: ProductImageDraft, imageUri: string) => {
+  const createAnalyzedProduct = async (draft: ProductImageDraft, imageUri: string, allowDuplicate = false) => {
     if (!draft.marca.trim()) throw new Error("Ingresá la marca del producto.");
     if (!draft.modelo.trim()) throw new Error("Ingresá el modelo del producto.");
     if (!draft.categoriaSugerida.trim()) throw new Error("Ingresá una categoría.");
     if (!draft.precioBase || draft.precioBase <= 0) throw new Error("Ingresá un precio base mayor a 0.");
-    const porcentajeGanancia = Number(draft.porcentajeGanancia ?? 30);
+    const porcentajeGanancia = Number(draft.porcentajeGanancia ?? 10);
     if (!Number.isFinite(porcentajeGanancia) || porcentajeGanancia < 0 || porcentajeGanancia > 100) {
       throw new Error("Ingresá un porcentaje entre 0 y 100.");
     }
     const duplicate = productos.find(product =>
       formatModeloToUpperCase(product.modelo) === formatModeloToUpperCase(draft.modelo)
     );
-    if (duplicate) throw new Error(`El modelo "${formatModeloToUpperCase(draft.modelo)}" ya existe.`);
+    if (duplicate && !allowDuplicate) throw new Error(`El modelo "${formatModeloToUpperCase(draft.modelo)}" ya existe.`);
 
     const matchedCategory = categorias.find(category =>
       category.nombre.localeCompare(draft.categoriaSugerida, "es", { sensitivity: "base" }) === 0
@@ -427,6 +427,51 @@ export default function ProductosScreen() {
         tags: [],
         imagenes: [uploadedImage.url],
         imagenPublicIds: [uploadedImage.publicId],
+        activo: true,
+      });
+      await Promise.all([recargar(), recargarMarcas(), recargarCategorias()]);
+    } catch (error) {
+      if (uploadedImage?.publicId) await uploadService.eliminarImagen(uploadedImage.publicId).catch(() => undefined);
+      throw error;
+    }
+  };
+
+  const updateAnalyzedDuplicate = async (
+    existing: NonNullable<ProductImageDraft["possibleDuplicates"]>[number],
+    draft: ProductImageDraft,
+    imageUri: string,
+    useNewImage: boolean,
+  ) => {
+    if (!draft.marca.trim()) throw new Error("Ingresá la marca del producto.");
+    if (!draft.modelo.trim()) throw new Error("Ingresá el modelo del producto.");
+    if (!draft.categoriaSugerida.trim()) throw new Error("Ingresá una categoría.");
+    if (!draft.precioBase || draft.precioBase <= 0) throw new Error("Ingresá un precio base mayor a 0.");
+    const porcentajeGanancia = Number(draft.porcentajeGanancia ?? 10);
+    if (!Number.isFinite(porcentajeGanancia) || porcentajeGanancia < 0 || porcentajeGanancia > 100) {
+      throw new Error("Ingresá un porcentaje entre 0 y 100.");
+    }
+
+    const matchedCategory = categorias.find(category =>
+      category.nombre.localeCompare(draft.categoriaSugerida, "es", { sensitivity: "base" }) === 0
+    );
+    const categoryId = matchedCategory?._id || await createCategory(draft.categoriaSugerida);
+    let uploadedImage: UploadedImage | null = null;
+
+    try {
+      const existingImages = existing.imagenes || (existing.imagen ? [existing.imagen] : []);
+      const existingPublicIds = existing.imagenPublicIds || [];
+      if (useNewImage) uploadedImage = await uploadService.subirImagen(imageUri);
+
+      await productosService.actualizarProducto(existing._id, {
+        marca: draft.marca.trim(),
+        modelo: formatModeloToUpperCase(draft.modelo),
+        descripcion: draft.descripcion.trim(),
+        categoria: categoryId,
+        precioBase: draft.precioBase,
+        porcentajeGanancia,
+        stock: { cantidad: draft.stockCantidad || 0, disponible: draft.stockDisponible },
+        imagenes: uploadedImage ? [uploadedImage.url, ...existingImages.filter(url => url !== uploadedImage?.url)] : existingImages,
+        imagenPublicIds: uploadedImage ? [uploadedImage.publicId, ...existingPublicIds.filter(id => id !== uploadedImage?.publicId)] : existingPublicIds,
         activo: true,
       });
       await Promise.all([recargar(), recargarMarcas(), recargarCategorias()]);
@@ -1756,6 +1801,7 @@ export default function ProductosScreen() {
         visible={imageImportVisible}
         onClose={() => setImageImportVisible(false)}
         onCreateDraft={createAnalyzedProduct}
+        onUpdateDuplicate={updateAnalyzedDuplicate}
       />
 
       <Modal
@@ -1878,7 +1924,7 @@ export default function ProductosScreen() {
                         text.replace(/[^0-9.,]/g, "")
                       )
                     }
-                    placeholder="Ej.: 30"
+                    placeholder="Ej.: 10"
                     keyboardType="decimal-pad"
                     error={formErrors.porcentajeGanancia}
                   />
@@ -2131,7 +2177,7 @@ export default function ProductosScreen() {
                       text.replace(/[^0-9.,]/g, "")
                     )
                   }
-                  placeholder="Ej.: 30"
+                  placeholder="Ej.: 10"
                   keyboardType="decimal-pad"
                   error={formErrors.porcentajeGanancia}
                 />

@@ -71,6 +71,13 @@ export interface ProductImageDraft {
         _id: string;
         marca: string;
         modelo: string;
+        categoria?: Pick<Categoria, '_id' | 'nombre'> | string;
+        descripcion?: string;
+        precioBase?: number;
+        porcentajeGanancia?: number;
+        stock?: { cantidad: number; disponible: boolean };
+        imagenes?: string[];
+        imagenPublicIds?: string[];
         imagen?: string;
     }>;
 }
