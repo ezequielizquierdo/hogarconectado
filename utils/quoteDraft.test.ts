@@ -9,6 +9,7 @@ import {
   getDraftTotal,
   getDraftProductCount,
   getDraftUnitCount,
+  getQuoteDraftStorageKey,
   removeProductFromDraft,
   hasDraftPaymentMode,
   updateDraftQuantity,
@@ -32,6 +33,18 @@ const product = (id: string, contado: number): ProductoConPrecios => ({
 });
 
 describe("quoteDraft", () => {
+  it("separa los borradores persistidos por usuario", () => {
+    expect(getQuoteDraftStorageKey("usuario-admin")).toBe(
+      "hogar_conectado_quote_draft_v3:usuario-admin"
+    );
+    expect(getQuoteDraftStorageKey("usuario-vendedor")).toBe(
+      "hogar_conectado_quote_draft_v3:usuario-vendedor"
+    );
+    expect(getQuoteDraftStorageKey()).toBe(
+      "hogar_conectado_quote_draft_v3:guest"
+    );
+  });
+
   it("agrega un producto una sola vez", () => {
     const first = addProductToDraft([], product("1", 100));
     const repeated = addProductToDraft(first, product("1", 100));

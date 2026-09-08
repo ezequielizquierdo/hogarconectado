@@ -8,6 +8,13 @@ export interface QuoteDraftItem {
 
 export type QuotePaymentMode = "contado" | "facturado" | "3-cuotas" | "6-cuotas";
 
+// v3 separa la selección por cuenta para que un cambio de sesión no exponga
+// ni reutilice el borrador comercial de otra persona en el mismo dispositivo.
+const QUOTE_DRAFT_STORAGE_PREFIX = "hogar_conectado_quote_draft_v3";
+
+export const getQuoteDraftStorageKey = (userId?: string | null) =>
+  `${QUOTE_DRAFT_STORAGE_PREFIX}:${userId?.trim() || "guest"}`;
+
 export const getProductPercentage = (producto: ProductoConPrecios) =>
   producto.porcentajeGananciaAplicado ?? producto.porcentajeGanancia ?? 10;
 

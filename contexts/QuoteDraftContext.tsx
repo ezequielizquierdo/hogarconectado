@@ -8,19 +8,18 @@ import React, {
   useState,
 } from "react";
 
+import { useAuth } from "@/contexts/AuthContext";
 import type { ProductoConPrecios } from "@/services/types";
 import {
   addProductToDraft,
   getDraftCashTotal,
   getDraftProductCount,
   getDraftUnitCount,
+  getQuoteDraftStorageKey,
   type QuoteDraftItem,
   removeProductFromDraft,
   updateDraftQuantity,
 } from "@/utils/quoteDraft";
-
-// v2 invalida borradores que guardaban precios de cuotas incompletos.
-const STORAGE_KEY = "hogar_conectado_quote_draft_v2";
 
 interface QuoteDraftContextValue {
   items: QuoteDraftItem[];
@@ -39,22 +38,35 @@ interface QuoteDraftContextValue {
 const QuoteDraftContext = createContext<QuoteDraftContextValue | null>(null);
 
 export function QuoteDraftProvider({ children }: React.PropsWithChildren) {
+  const { state: authState, user } = useAuth();
   const [items, setItems] = useState<QuoteDraftItem[]>([]);
-  const [hydrated, setHydrated] = useState(false);
+  const [hydratedStorageKey, setHydratedStorageKey] = useState<string | null>(null);
+  const storageKey = useMemo(
+    () => getQuoteDraftStorageKey(user?._id),
+    [user?._id]
+  );
 
   useEffect(() => {
+    if (authState === "loading") return;
+
     let active = true;
+    setHydratedStorageKey(null);
+    setItems([]);
 
     const restore = async () => {
       try {
-        const stored = await AsyncStorage.getItem(STORAGE_KEY);
-        if (!active || !stored) return;
+        const stored = await AsyncStorage.getItem(storageKey);
+        if (!active) return;
+        if (!stored) {
+          setItems([]);
+          return;
+        }
         const parsed = JSON.parse(stored) as QuoteDraftItem[];
-        if (Array.isArray(parsed)) setItems(parsed);
+        setItems(Array.isArray(parsed) ? parsed : []);
       } catch {
         if (active) setItems([]);
       } finally {
-        if (active) setHydrated(true);
+        if (active) setHydratedStorageKey(storageKey);
       }
     };
 
@@ -62,12 +74,14 @@ export function QuoteDraftProvider({ children }: React.PropsWithChildren) {
     return () => {
       active = false;
     };
-  }, []);
+  }, [authState, storageKey]);
+
+  const hydrated = hydratedStorageKey === storageKey;
 
   useEffect(() => {
     if (!hydrated) return;
-    void AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(items));
-  }, [hydrated, items]);
+    void AsyncStorage.setItem(storageKey, JSON.stringify(items));
+  }, [hydrated, items, storageKey]);
 
   const addProduct = useCallback((producto: ProductoConPrecios) => {
     setItems((current) => addProductToDraft(current, producto));

@@ -12,6 +12,8 @@ export const QUOTE_MODE_LABEL: Record<CotizacionModalidad, string> = {
   "6-cuotas": "6 cuotas",
 };
 
+export const getRecordedValue = (value?: string | null) => value?.trim() || "No registrado";
+
 export function getQuoteItemUnitPrice(
   item: ProductoCotizacion,
   modalidad: CotizacionModalidad

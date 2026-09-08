@@ -33,6 +33,7 @@ import type {
 import {
   getQuoteItemSubtotal,
   getQuoteProductName,
+  getRecordedValue,
   quoteToDraftItems,
   QUOTE_MODE_LABEL,
 } from "@/utils/quoteHistory";
@@ -141,8 +142,8 @@ function ConfirmationSummary({ quote, detailed = false }: { quote: Cotizacion; d
       )}
       {quote.venta ? (
         <View style={styles.saleDetails}>
-          <Text style={styles.saleDetailText}>Comprador: {quote.venta.compradorNombre}</Text>
-          <Text style={styles.saleDetailText}>Entrega: {quote.venta.entregaAcordada}</Text>
+          <Text style={styles.saleDetailText}>Comprador: {getRecordedValue(quote.venta.compradorNombre)}</Text>
+          <Text style={styles.saleDetailText}>Entrega: {getRecordedValue(quote.venta.entregaAcordada)}</Text>
           {quote.venta.agregarEnvio ? <Text style={styles.saleDetailText}>Envío: {formatMoney(quote.venta.costoEnvio)}</Text> : null}
           <Text style={styles.saleDetailText}>Pago: {quote.venta.estadoPago} · Entrega: {quote.venta.estadoEntrega}</Text>
         </View>

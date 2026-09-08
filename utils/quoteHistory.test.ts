@@ -5,6 +5,7 @@ import {
   getQuoteItemSubtotal,
   getQuoteItemUnitPrice,
   getQuoteProductName,
+  getRecordedValue,
   quoteToDraftItems,
 } from "./quoteHistory";
 
@@ -29,6 +30,12 @@ describe("quoteHistory", () => {
   it("usa etiquetas comerciales sin exponer la ganancia al cliente", () => {
     expect(QUOTE_MODE_LABEL.facturado).toBe("Facturado en 1 cuota");
     expect(QUOTE_MODE_LABEL.facturado).not.toMatch(/ganancia/i);
+  });
+
+  it("hace explícitos los datos históricos que no fueron registrados", () => {
+    expect(getRecordedValue("")).toBe("No registrado");
+    expect(getRecordedValue("  ")).toBe("No registrado");
+    expect(getRecordedValue("Retiro por depósito")).toBe("Retiro por depósito");
   });
 
   it("usa el snapshot comercial para mostrar el producto", () => {
