@@ -390,8 +390,6 @@ export function QuoteHistoryScreen() {
             window.location.assign(result.urlWhatsApp);
           }
         } else {
-          const canOpen = await Linking.canOpenURL(result.urlWhatsApp);
-          if (!canOpen) throw new Error("WhatsApp no disponible");
           await Linking.openURL(result.urlWhatsApp);
         }
         setFeedback(successMessage);
@@ -400,9 +398,9 @@ export function QuoteHistoryScreen() {
         await Clipboard.setStringAsync(result.mensaje);
         setFeedback("Texto de la cotización copiado.");
       }
-    } catch {
+    } catch (requestError: any) {
       if (reservedWindow && !reservedWindow.closed) reservedWindow.close();
-      setFeedback("No pudimos abrir WhatsApp. Podés usar Copiar texto para enviar la cotización manualmente.");
+      setFeedback(requestError.response?.data?.message || "No pudimos abrir WhatsApp. Podés usar Copiar texto para enviar la cotización manualmente.");
     } finally {
       setProcessingId(null);
     }
