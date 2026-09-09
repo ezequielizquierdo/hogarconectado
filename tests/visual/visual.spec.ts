@@ -94,7 +94,7 @@ test('catálogo público', async ({ page }) => {
 
 for (const surface of [
   { name: 'calculadora', path: '/calculadora', ready: 'Calculadora' },
-  { name: 'cotizaciones', path: '/', ready: 'Cotizaciones' },
+  { name: 'cotizaciones', path: '/', ready: 'Operación comercial' },
   { name: 'usuarios', path: '/usuarios', ready: 'Usuarios' },
   { name: 'perfil', path: '/perfil', ready: 'Perfil' },
 ]) {
