@@ -11,14 +11,15 @@ export interface PublicQuote {
   cuotas?: { cantidad: number; monto: number } | null;
   observaciones?: string;
   aceptada: boolean;
-  pedido?: { estado: 'reserva-pendiente' | 'pago-confirmado' | 'cancelado' | 'vencido'; reservaVenceAt: string } | null;
+  pedido?: { estado: 'reserva-pendiente' | 'pago-informado' | 'pago-confirmado' | 'cancelado' | 'vencido'; reservaVenceAt: string; pagoInformadoAt?: string } | null;
   enlaceVenceAt: string;
 }
 
 export interface PublicOrderResult {
   id: string;
-  estado: 'reserva-pendiente';
+  estado: 'reserva-pendiente' | 'pago-informado' | 'pago-confirmado';
   reservaVenceAt: string;
+  pagoInformadoAt?: string;
 }
 
 function idempotencyKey(token: string) {
@@ -39,4 +40,11 @@ async function accept(token: string, key = idempotencyKey(token)) {
   return response.data;
 }
 
-export default { accept, get };
+async function reportPayment(token: string) {
+  const response = await apiClient.post<ApiResponse<PublicOrderResult>>(
+    `/cotizaciones-publicas/${token}/informar-pago`
+  );
+  return response.data;
+}
+
+export default { accept, get, reportPayment };

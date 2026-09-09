@@ -204,9 +204,10 @@ export interface Cotizacion {
         aceptadaAt?: string;
         pedido?: string | {
             _id: string;
-            estado: 'reserva-pendiente' | 'pago-confirmado' | 'cancelado' | 'vencido';
+            estado: 'reserva-pendiente' | 'pago-informado' | 'pago-confirmado' | 'cancelado' | 'vencido';
             reservadoAt: string;
             reservaVenceAt: string;
+            pagoInformadoAt?: string;
         };
     };
     confirmadaPor?: Pick<Usuario, '_id' | 'nombre' | 'email'> | string;

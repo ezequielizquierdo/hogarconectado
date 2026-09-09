@@ -38,6 +38,7 @@ import {
   QUOTE_MODE_LABEL,
 } from "@/utils/quoteHistory";
 import { getDraftInstallmentCount } from "@/utils/quoteDraft";
+import { getQuoteNextStep } from "@/utils/quoteWorkflow";
 
 const STATES: { value: CotizacionEstado | "todas"; label: string }[] = [
   { value: "todas", label: "Todas" },
@@ -162,22 +163,36 @@ function CustomerAcceptance({ quote, isAdmin, processing, onUpdate }: {
   if (!order) return null;
   const labels = {
     'reserva-pendiente': 'Reserva activa · pago pendiente',
+    'pago-informado': 'Pago informado · requiere verificación',
     'pago-confirmado': 'Pago confirmado',
     cancelado: 'Reserva cancelada',
     vencido: 'Reserva vencida',
   };
   return <View style={styles.customerAcceptedBox}>
-    <MaterialIcons name={order.estado === 'pago-confirmado' ? 'verified' : 'shopping-bag'} size={18} color={order.estado === 'reserva-pendiente' || order.estado === 'pago-confirmado' ? '#25835b' : COLORS.textSecondary} />
+    <MaterialIcons name={order.estado === 'pago-confirmado' ? 'verified' : order.estado === 'pago-informado' ? 'notification-important' : 'shopping-bag'} size={18} color={['reserva-pendiente', 'pago-informado', 'pago-confirmado'].includes(order.estado) ? '#25835b' : COLORS.textSecondary} />
     <View style={styles.customerAcceptedCopy}>
       <Text style={styles.customerAcceptedTitle}>Aceptada por el cliente</Text>
       <Text style={styles.customerAcceptedText}>{labels[order.estado]}</Text>
       {order.estado === 'reserva-pendiente' ? <Text style={styles.customerAcceptedText}>Vence {formatDate(order.reservaVenceAt)}</Text> : null}
-      {isAdmin && order.estado === 'reserva-pendiente' ? <View style={styles.orderActions}>
-        <Pressable disabled={processing} onPress={() => onUpdate(order, 'pago-confirmado')} style={styles.orderConfirmButton}><Text style={styles.orderConfirmText}>Confirmar pago</Text></Pressable>
+      {isAdmin && ['reserva-pendiente', 'pago-informado'].includes(order.estado) ? <View style={styles.orderActions}>
+        <Pressable disabled={processing} onPress={() => onUpdate(order, 'pago-confirmado')} style={styles.orderConfirmButton}><Text style={styles.orderConfirmText}>{order.estado === 'pago-informado' ? 'Verificar y confirmar pago' : 'Confirmar pago'}</Text></Pressable>
         <Pressable disabled={processing} onPress={() => onUpdate(order, 'cancelado')} style={styles.orderCancelButton}><Text style={styles.orderCancelText}>Cancelar reserva</Text></Pressable>
       </View> : null}
     </View>
   </View>;
+}
+
+function NextStep({ quote, isAdmin }: { quote: Cotizacion; isAdmin: boolean }) {
+  const step = getQuoteNextStep(quote, isAdmin);
+  return (
+    <View style={[styles.nextStep, styles[`nextStep_${step.tone}`]]}>
+      <MaterialIcons name={step.tone === "success" ? "check-circle" : step.tone === "warning" ? "priority-high" : step.tone === "neutral" ? "remove-circle-outline" : "arrow-forward"} size={18} color={COLORS.text} />
+      <View style={styles.nextStepCopy}>
+        <Text style={styles.nextStepTitle}>{step.title}</Text>
+        <Text style={styles.nextStepDetail}>{step.detail}</Text>
+      </View>
+    </View>
+  );
 }
 
 export function QuoteHistoryScreen() {
@@ -448,9 +463,9 @@ export function QuoteHistoryScreen() {
         <View style={[styles.header, !isDesktop && styles.headerMobile]}>
           <View style={styles.headerCopy}>
             <Text style={styles.eyebrow}>GESTIÓN COMERCIAL</Text>
-            <Text style={styles.title}>Cotizaciones</Text>
+            <Text style={styles.title}>{isSeller ? "Mi negocio" : isAdmin ? "Operación comercial" : "Cotizaciones"}</Text>
             <Text style={styles.subtitle}>
-              Encontrá, compartí y seguí las propuestas guardadas.
+              {isSeller ? "Tus ventas, ganancias y próximos pasos en un solo lugar." : isAdmin ? "Controlá pagos, entregas y cotizaciones desde una sola bandeja." : "Encontrá, compartí y seguí las propuestas guardadas."}
             </Text>
           </View>
           <Pressable
@@ -557,6 +572,7 @@ export function QuoteHistoryScreen() {
                 </View>
 
                 <CustomerAcceptance quote={quote} isAdmin={isAdmin} processing={processingId === quote._id} onUpdate={(order, state) => void updateOrder(quote._id, order, state)} />
+                <NextStep quote={quote} isAdmin={isAdmin} />
 
                 <View style={styles.productList}>
                   {quote.productos.slice(0, 2).map((item, index) => (
@@ -779,6 +795,14 @@ const styles = StyleSheet.create({
   customerAcceptedCopy: { flex: 1 },
   customerAcceptedTitle: { color: COLORS.text, fontSize: 13, fontWeight: '800' },
   customerAcceptedText: { color: COLORS.textSecondary, fontSize: 11, lineHeight: 16 },
+  nextStep: { flexDirection: "row", alignItems: "center", gap: SPACING.sm, marginTop: SPACING.md, padding: SPACING.sm, borderRadius: RADIUS.md, borderWidth: 1 },
+  nextStep_primary: { borderColor: COLORS.primary, backgroundColor: COLORS.primary + "18" },
+  nextStep_warning: { borderColor: COLORS.warning, backgroundColor: COLORS.warning + "28" },
+  nextStep_success: { borderColor: COLORS.secondaryDark, backgroundColor: COLORS.secondary + "55" },
+  nextStep_neutral: { borderColor: COLORS.border, backgroundColor: COLORS.cardBackground },
+  nextStepCopy: { minWidth: 0, flex: 1 },
+  nextStepTitle: { color: COLORS.text, fontSize: 13, fontWeight: "800" },
+  nextStepDetail: { marginTop: 1, color: COLORS.textSecondary, fontSize: 11, lineHeight: 16 },
   orderActions: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.sm, marginTop: SPACING.sm },
   orderConfirmButton: { minHeight: 36, justifyContent: 'center', paddingHorizontal: SPACING.md, borderRadius: RADIUS.sm, backgroundColor: COLORS.primary },
   orderConfirmText: { color: COLORS.ink, fontSize: 12, fontWeight: '800' },
