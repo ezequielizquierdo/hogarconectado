@@ -749,7 +749,7 @@ Una tarea de interfaz se considera terminada cuando:
 
 **Prioridad:** Alta
 
-**Estado:** Implementación preparada; pendiente de validación funcional
+**Estado:** Implementado — validación automática completa; pendiente de comprobación manual en producción
 
 - El administrador puede asignar el rol Vendedor.
 - El vendedor comparte productos e historias, arma sus cotizaciones y gestiona consultas, sin crear o modificar catálogo ni acceder a precios base y costos internos.
@@ -759,7 +759,9 @@ Una tarea de interfaz se considera terminada cuando:
 - La liquidación divide el margen comercial en partes iguales y muestra al vendedor su ganancia y dinero a rendir.
 - El administrador ve la venta confirmada y actualiza por separado el estado de pago y de entrega.
 
-**Validación pendiente:** asignación del rol, ausencia de costos en API e interfaz, cotización y confirmación desde una cuenta vendedora, toma de consulta, notificación, liquidación con y sin envío y seguimiento administrativo.
+**Validación automática:** el backend comprueba propiedad de cotizaciones y consultas, liquidación con y sin envío, el ejemplo comercial de $371.000 vendido a $430.000 y serialización sin precio base, costos, porcentajes ni participación interna. La regresión visual cubre catálogo sin controles administrativos, tablero `Mi negocio`, ganancia, dinero a rendir e identificación del vendedor con seguimiento administrativo de pago y entrega en escritorio y mobile.
+
+**Validación manual pendiente:** recorrer en producción con una cuenta Vendedor real la creación y el envío por WhatsApp, confirmar una venta con y sin envío, tomar una consulta y recibir una notificación; desde Administrador, verificar luego pago y entrega.
 
 ### UX-024 — Aceptación pública y reserva de cotizaciones
 

@@ -11,6 +11,16 @@ const admin = {
   updatedAt: '2026-01-01T00:00:00.000Z',
 };
 
+const seller = {
+  ...admin,
+  _id: 'visual-seller',
+  googleId: 'visual-seller-google',
+  email: 'vendedor@hogarconectado.test',
+  nombre: 'Vendedor de muestra',
+  rol: 'vendedor',
+  codigoVendedor: 'VENDEMO',
+};
+
 const category = {
   _id: 'visual-category',
   nombre: 'Heladeras',
@@ -47,6 +57,39 @@ const quote = {
   updatedAt: '2026-08-31T12:00:00.000Z',
 };
 
+const sellerQuote = {
+  ...quote,
+  _id: 'visual-seller-quote',
+  datosContacto: { nombre: 'Comprador de muestra', telefono: '+5491100000000' },
+  productos: [{
+    producto: product,
+    cantidad: 1,
+    detalles: {
+      categoria: category.nombre,
+      marca: product.marca,
+      modelo: product.modelo,
+      precios: { contado: 430000 },
+    },
+  }],
+  totales: { subtotal: 430000, total: 430000 },
+  estado: 'confirmada',
+  confirmadaPor: { _id: seller._id, nombre: seller.nombre, email: seller.email },
+  confirmadaAt: '2026-09-03T18:00:00.000Z',
+  resumenConfirmacion: {
+    totalVendido: 430000,
+    dineroARendir: 400500,
+    gananciaVendedor: 29500,
+  },
+  venta: {
+    compradorNombre: 'Comprador de muestra',
+    entregaAcordada: 'Retiro coordinado en el local',
+    agregarEnvio: false,
+    costoEnvio: 0,
+    estadoPago: 'pendiente',
+    estadoEntrega: 'coordinada',
+  },
+};
+
 const publicQuote = {
   id: 'visual-public-quote',
   cliente: 'Cliente de muestra',
@@ -60,7 +103,7 @@ const publicQuote = {
   enlaceVenceAt: '2026-12-31T23:59:59.000Z',
 };
 
-async function mockApi(page: Page, authenticated = false) {
+async function mockApi(page: Page, authenticated = false, currentUser = admin, currentQuote: any = quote) {
   if (authenticated) {
     await page.addInitScript(() => localStorage.setItem('auth_token', 'visual-token'));
   } else {
@@ -72,13 +115,15 @@ async function mockApi(page: Page, authenticated = false) {
     const path = url.pathname;
     let body: unknown = { success: true, data: [] };
 
-    if (path.endsWith('/auth/me')) body = { success: true, data: admin };
+    if (path.endsWith('/auth/me')) body = { success: true, data: currentUser };
     else if (path.endsWith('/cotizaciones-publicas/visual-token')) body = { success: true, data: publicQuote };
     else if (path.endsWith('/categorias')) body = { success: true, data: [category] };
     else if (path.includes('/productos')) body = { success: true, data: [product], pagination: { total: 1, pagina: 1, limite: 20, paginas: 1 } };
-    else if (path.endsWith('/cotizaciones/estadisticas/resumen')) body = { success: true, data: { total: 1, pendientes: 1, totalGeneral: 1917500 } };
-    else if (path.endsWith('/cotizaciones/visual-quote')) body = { success: true, data: quote };
-    else if (path.includes('/cotizaciones')) body = { success: true, data: [quote], pagination: { total: 1, pagina: 1, limite: 20, paginas: 1 } };
+    else if (path.endsWith('/cotizaciones/estadisticas/resumen')) body = { success: true, data: currentUser.rol === 'vendedor'
+      ? { total: 1, pendientes: 0, totalGeneral: 430000, liquidacion: { totalVendido: 430000, dineroARendir: 400500, gananciaVendedor: 29500 } }
+      : { total: 1, pendientes: 1, totalGeneral: 1917500 } };
+    else if (path.endsWith(`/cotizaciones/${currentQuote._id}`)) body = { success: true, data: currentQuote };
+    else if (path.includes('/cotizaciones')) body = { success: true, data: [currentQuote], pagination: { total: 1, pagina: 1, limite: 20, paginas: 1 } };
     else if (path.endsWith('/usuarios')) body = { success: true, data: [admin] };
     else if (path.endsWith('/consultas/resumen')) body = { success: true, data: { nuevas: 0, totalAbiertas: 0 } };
     else if (path.includes('/consultas')) body = { success: true, data: [] };
@@ -179,6 +224,37 @@ test('detalle y confirmación de una cotización', async ({ page }) => {
   await page.getByText('Venta confirmada', { exact: true }).click();
   await expect(page.getByText('Confirmar venta', { exact: true }).first()).toBeVisible();
   await expect(page).toHaveScreenshot('confirmar-venta.png', { fullPage: true });
+});
+
+test('catálogo del vendedor', async ({ page }) => {
+  await mockApi(page, true, seller);
+  await page.goto('/productos');
+  await settle(page);
+  await expect(page.getByText('+ Cotizar', { exact: true })).toBeVisible();
+  await expect(page.getByText('Agregar producto', { exact: true })).toHaveCount(0);
+  await expect(page).toHaveScreenshot('productos-vendedor.png', { fullPage: true });
+});
+
+test('negocio y liquidación del vendedor', async ({ page }) => {
+  await mockApi(page, true, seller, sellerQuote);
+  await page.goto('/');
+  await settle(page);
+  await expect(page.getByText('Mi negocio', { exact: true })).toBeVisible();
+  await expect(page.getByText('Tu ganancia confirmada', { exact: true })).toBeVisible();
+  await expect(page.getByText('$ 29.500', { exact: true }).first()).toBeVisible();
+  await expect(page.getByText('$ 400.500', { exact: true }).first()).toBeVisible();
+  await expect(page).toHaveScreenshot('negocio-vendedor.png', { fullPage: true });
+});
+
+test('supervisión administrativa de una venta', async ({ page }) => {
+  await mockApi(page, true, admin, sellerQuote);
+  await page.goto('/');
+  await settle(page);
+  await page.getByText('Ver detalle', { exact: true }).click();
+  await expect(page.getByText('Confirmó Vendedor de muestra', { exact: true }).last()).toBeVisible();
+  await expect(page.getByText('Confirmación de pago', { exact: true })).toBeVisible();
+  await expect(page.getByText('Entrega del producto', { exact: true })).toBeVisible();
+  await expect(page).toHaveScreenshot('supervision-venta-admin.png', { fullPage: true });
 });
 
 for (const surface of [
