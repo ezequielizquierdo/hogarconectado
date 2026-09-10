@@ -6,3 +6,4 @@ export { IconSymbol } from './IconSymbol';
 export { default as TabBarBackground } from './TabBarBackground';
 export { default as EcommerceHeader } from './EcommerceHeader';
 export { default as CategoryGrid } from './CategoryGrid';
+export { ScreenHeader } from './ScreenHeader';

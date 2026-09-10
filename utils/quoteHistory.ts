@@ -41,6 +41,16 @@ export function getQuoteProductName(item: ProductoCotizacion) {
   return "Producto";
 }
 
+export function getQuoteCategoryName(item: ProductoCotizacion) {
+  const category: unknown = item.detalles?.categoria;
+  if (!category) return "";
+  if (typeof category === "string") return category;
+  if (typeof category === "object" && "nombre" in category) {
+    return String((category as { nombre?: unknown }).nombre ?? "");
+  }
+  return "";
+}
+
 export function quoteToDraftItems(quote: Cotizacion): QuoteDraftItem[] {
   return quote.productos.flatMap((item) => {
     if (!item.detalles) return [];

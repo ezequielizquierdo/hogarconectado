@@ -19,6 +19,7 @@ import {
 
 import { DataStatePanel } from "@/components/ui/DataStatePanel";
 import { CardListSkeleton, LoadingBar } from "@/components/ui/LoadingStates";
+import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { COLORS, RADIUS, SHADOWS, SPACING } from "@/constants/theme";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQuoteDraft } from "@/contexts/QuoteDraftContext";
@@ -32,6 +33,7 @@ import type {
 } from "@/services/types";
 import {
   getQuoteItemSubtotal,
+  getQuoteCategoryName,
   getQuoteProductName,
   getRecordedValue,
   quoteToDraftItems,
@@ -54,6 +56,19 @@ const STATE_LABEL: Record<CotizacionEstado, string> = {
   confirmada: "Venta confirmada",
   cancelada: "Cancelada",
 };
+
+const PAYMENT_STATE_LABEL = {
+  pendiente: "Pendiente",
+  parcial: "Pago parcial",
+  confirmado: "Pago confirmado",
+} as const;
+
+const DELIVERY_STATE_LABEL = {
+  pendiente: "Pendiente",
+  coordinada: "Coordinada",
+  entregada: "Entregada",
+  cancelada: "Cancelada",
+} as const;
 
 const formatMoney = (value: number) =>
   new Intl.NumberFormat("es-AR", {
@@ -93,6 +108,7 @@ function askToReplaceDraft() {
 }
 
 function ProductLine({ item, quote }: { item: ProductoCotizacion; quote: Cotizacion }) {
+  const categoryName = getQuoteCategoryName(item);
   return (
     <View style={styles.productLine}>
       <View style={styles.productLineCopy}>
@@ -101,7 +117,7 @@ function ProductLine({ item, quote }: { item: ProductoCotizacion; quote: Cotizac
         </Text>
         <Text style={styles.productMeta}>
           {item.cantidad} {item.cantidad === 1 ? "unidad" : "unidades"}
-          {item.detalles?.categoria ? ` · ${item.detalles.categoria}` : ""}
+          {categoryName ? ` · ${categoryName}` : ""}
         </Text>
       </View>
       <Text style={styles.productSubtotal}>
@@ -257,6 +273,8 @@ export function QuoteHistoryScreen() {
   const filterButtons = STATES.map((state) => (
     <Pressable
       key={state.value}
+      accessibilityRole="button"
+      accessibilityState={{ selected: filter === state.value }}
       onPress={() => setFilter(state.value)}
       style={[styles.filterChip, filter === state.value && styles.filterChipActive]}
     >
@@ -460,24 +478,14 @@ export function QuoteHistoryScreen() {
         contentContainerStyle={[styles.content, !isDesktop && styles.contentMobile]}
         keyboardShouldPersistTaps="handled"
       >
-        <View style={[styles.header, !isDesktop && styles.headerMobile]}>
-          <View style={styles.headerCopy}>
-            <Text style={styles.eyebrow}>GESTIÓN COMERCIAL</Text>
-            <Text style={styles.title}>{isSeller ? "Mi negocio" : isAdmin ? "Operación comercial" : "Cotizaciones"}</Text>
-            <Text style={styles.subtitle}>
-              {isSeller ? "Tus ventas, ganancias y próximos pasos en un solo lugar." : isAdmin ? "Controlá pagos, entregas y cotizaciones desde una sola bandeja." : "Encontrá, compartí y seguí las propuestas guardadas."}
-            </Text>
-          </View>
-          <Pressable
-            onPress={() => router.push("/(tabs)/productos")}
-            accessibilityRole="button"
-            accessibilityLabel="Crear cotización desde Productos"
-            style={({ pressed }) => [styles.primaryButton, pressed && styles.pressed]}
-          >
-            <MaterialIcons name="add" size={20} color={COLORS.ink} />
-            <Text style={styles.primaryButtonText}>Nueva desde Productos</Text>
-          </Pressable>
-        </View>
+        <ScreenHeader
+          eyebrow="GESTIÓN COMERCIAL"
+          title={isSeller ? "Mi negocio" : isAdmin ? "Operación comercial" : "Cotizaciones"}
+          subtitle={isSeller ? "Tus ventas, ganancias y próximos pasos en un solo lugar." : isAdmin ? "Controlá pagos, entregas y cotizaciones desde una sola bandeja." : "Encontrá, compartí y seguí las propuestas guardadas."}
+          actionLabel="Nueva desde Productos"
+          actionIcon={<MaterialIcons name="add" size={20} color={COLORS.ink} />}
+          onAction={() => router.push("/(tabs)/productos")}
+        />
 
         {isSeller && sellerStats ? (
           <View style={styles.summaryRow}>
@@ -539,7 +547,7 @@ export function QuoteHistoryScreen() {
           )}
         </View>
 
-        {feedback ? <Text style={styles.feedback}>{feedback}</Text> : null}
+        {feedback ? <Text style={styles.feedback} accessibilityLiveRegion="polite">{feedback}</Text> : null}
 
         {loading && quotes.length > 0 ? <LoadingBar label="Actualizando cotizaciones…" /> : null}
         {loading && quotes.length === 0 ? (
@@ -668,11 +676,11 @@ export function QuoteHistoryScreen() {
                   <View style={styles.saleTracking}>
                     <Text style={styles.sectionLabel}>Confirmación de pago</Text>
                     <View style={styles.stateActions}>{(['pendiente', 'parcial', 'confirmado'] as const).map(value => (
-                      <Pressable key={value} onPress={() => void updateSaleTracking({ estadoPago: value })} style={[styles.stateButton, selected.venta?.estadoPago === value && styles.stateButtonActive]}><Text style={styles.stateButtonText}>{value}</Text></Pressable>
+                      <Pressable key={value} onPress={() => void updateSaleTracking({ estadoPago: value })} style={[styles.stateButton, selected.venta?.estadoPago === value && styles.stateButtonActive]}><Text style={[styles.stateButtonText, selected.venta?.estadoPago === value && styles.stateButtonTextActive]}>{PAYMENT_STATE_LABEL[value]}</Text></Pressable>
                     ))}</View>
                     <Text style={styles.sectionLabel}>Entrega del producto</Text>
                     <View style={styles.stateActions}>{(['pendiente', 'coordinada', 'entregada', 'cancelada'] as const).map(value => (
-                      <Pressable key={value} onPress={() => void updateSaleTracking({ estadoEntrega: value })} style={[styles.stateButton, selected.venta?.estadoEntrega === value && styles.stateButtonActive]}><Text style={styles.stateButtonText}>{value}</Text></Pressable>
+                      <Pressable key={value} onPress={() => void updateSaleTracking({ estadoEntrega: value })} style={[styles.stateButton, selected.venta?.estadoEntrega === value && styles.stateButtonActive]}><Text style={[styles.stateButtonText, selected.venta?.estadoEntrega === value && styles.stateButtonTextActive]}>{DELIVERY_STATE_LABEL[value]}</Text></Pressable>
                     ))}</View>
                   </View>
                 ) : null}
@@ -689,6 +697,8 @@ export function QuoteHistoryScreen() {
                     <Pressable
                       key={state.value}
                       disabled={processingId === selected._id}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: selected.estado === state.value, disabled: processingId === selected._id }}
                       onPress={() => void updateState(selected, state.value as CotizacionEstado)}
                       style={[styles.stateButton, selected.estado === state.value && styles.stateButtonActive]}
                     >
@@ -725,21 +735,46 @@ export function QuoteHistoryScreen() {
       <Modal visible={Boolean(confirming)} transparent animationType="fade" onRequestClose={() => setConfirming(null)}>
         <View style={styles.modalOverlay}>
           <View style={styles.saleModal}>
-            <Text style={styles.modalEyebrow}>VENTA CONFIRMADA</Text>
-            <Text style={styles.modalTitle}>Completá los datos de la venta</Text>
-            <Text style={styles.label}>Nombre del comprador *</Text>
-            <TextInput value={buyerName} onChangeText={setBuyerName} style={styles.saleInput} placeholder="Nombre y apellido" />
-            <Text style={styles.label}>Entrega acordada *</Text>
-            <TextInput value={deliveryAgreement} onChangeText={setDeliveryAgreement} style={[styles.saleInput, styles.saleTextArea]} multiline placeholder="Retiro, domicilio, fecha u otra aclaración" />
-            <Pressable onPress={() => setAddShipping(current => !current)} style={styles.shippingToggle}>
-              <MaterialIcons name={addShipping ? "check-box" : "check-box-outline-blank"} size={23} color={COLORS.primaryDark} />
-              <Text style={styles.shippingToggleText}>Agregar envío</Text>
-            </Pressable>
-            {addShipping ? <><Text style={styles.label}>Costo del envío *</Text><TextInput value={shippingCost} onChangeText={setShippingCost} keyboardType="numeric" style={styles.saleInput} placeholder="$ 0" /></> : null}
-            {feedback ? <Text style={styles.modalFeedback}>{feedback}</Text> : null}
+            <View style={styles.saleModalHeader}>
+              <View style={styles.modalHeaderCopy}>
+                <Text style={styles.modalEyebrow}>CIERRE DE LA OPERACIÓN</Text>
+                <Text style={styles.modalTitle}>Confirmar venta</Text>
+                <Text style={styles.saleModalSubtitle}>Registrá quién compra y cómo se entregará el pedido. La liquidación se calculará al confirmar.</Text>
+              </View>
+              <Pressable onPress={() => setConfirming(null)} style={styles.closeButton} accessibilityLabel="Cerrar confirmación de venta">
+                <MaterialIcons name="close" size={24} color={COLORS.text} />
+              </Pressable>
+            </View>
+            {confirming ? (
+              <View style={styles.saleQuoteSummary}>
+                <View style={styles.saleQuoteSummaryCopy}>
+                  <Text style={styles.saleQuoteSummaryLabel}>Cotización para</Text>
+                  <Text style={styles.saleQuoteSummaryName}>{confirming.datosContacto.nombre}</Text>
+                </View>
+                <Text style={styles.saleQuoteSummaryTotal}>{formatMoney(confirming.totales.total)}</Text>
+              </View>
+            ) : null}
+            <ScrollView style={styles.saleModalScroll} contentContainerStyle={styles.saleModalContent} keyboardShouldPersistTaps="handled">
+              <Text style={styles.label}>Nombre del comprador *</Text>
+              <TextInput value={buyerName} onChangeText={setBuyerName} style={styles.saleInput} placeholder="Nombre y apellido" />
+              <Text style={styles.label}>Entrega acordada *</Text>
+              <TextInput value={deliveryAgreement} onChangeText={setDeliveryAgreement} style={[styles.saleInput, styles.saleTextArea]} multiline placeholder="Retiro, domicilio, fecha u otra aclaración" />
+              <Pressable onPress={() => setAddShipping(current => !current)} style={styles.shippingToggle} accessibilityRole="checkbox" accessibilityState={{ checked: addShipping }}>
+                <MaterialIcons name={addShipping ? "check-box" : "check-box-outline-blank"} size={23} color={COLORS.primaryDark} />
+                <View style={styles.shippingToggleCopy}>
+                  <Text style={styles.shippingToggleText}>Agregar envío</Text>
+                  <Text style={styles.shippingToggleHelp}>El envío se suma al total y no genera comisión.</Text>
+                </View>
+              </Pressable>
+              {addShipping ? <><Text style={styles.label}>Costo del envío *</Text><TextInput value={shippingCost} onChangeText={setShippingCost} keyboardType="numeric" style={styles.saleInput} placeholder="$ 0" /></> : null}
+              {feedback ? <Text style={styles.modalFeedback}>{feedback}</Text> : null}
+            </ScrollView>
             <View style={styles.saleActions}>
               <Pressable onPress={() => setConfirming(null)} style={styles.modalSecondaryAction}><Text style={styles.secondaryActionText}>Cancelar</Text></Pressable>
-              <Pressable onPress={() => void confirmSale()} style={styles.modalPrimaryAction}><Text style={styles.whatsappText}>Confirmar venta</Text></Pressable>
+              <Pressable disabled={processingId === confirming?._id} accessibilityRole="button" accessibilityState={{ disabled: processingId === confirming?._id, busy: processingId === confirming?._id }} onPress={() => void confirmSale()} style={styles.modalPrimaryAction}>
+                {processingId === confirming?._id ? <ActivityIndicator size="small" color={COLORS.ink} /> : null}
+                <Text style={styles.whatsappText}>{processingId === confirming?._id ? "Confirmando…" : "Confirmar venta"}</Text>
+              </Pressable>
             </View>
           </View>
         </View>
@@ -873,11 +908,22 @@ const styles = StyleSheet.create({
   modalSecondaryAction: { minHeight: 44, flexGrow: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: SPACING.xs, paddingHorizontal: SPACING.md, borderRadius: RADIUS.md, backgroundColor: COLORS.cardBackground },
   modalPrimaryAction: { minHeight: 44, flexGrow: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: SPACING.xs, paddingHorizontal: SPACING.md, borderRadius: RADIUS.md, backgroundColor: COLORS.secondaryDark },
   deleteAction: { width: 44, height: 44, alignItems: "center", justifyContent: "center", borderRadius: RADIUS.md, backgroundColor: COLORS.error + "28" },
-  saleModal: { width: "100%", maxWidth: 560, gap: SPACING.sm, padding: SPACING.lg, borderRadius: RADIUS.xl, backgroundColor: COLORS.surface, ...SHADOWS.lg },
-  label: { marginTop: SPACING.xs, color: COLORS.text, fontSize: 13, fontWeight: "800" },
+  saleModal: { width: "100%", maxWidth: 560, maxHeight: "92%", overflow: "hidden", borderRadius: RADIUS.xl, backgroundColor: COLORS.surface, ...SHADOWS.lg },
+  saleModalHeader: { flexDirection: "row", alignItems: "flex-start", gap: SPACING.md, padding: SPACING.lg, paddingBottom: SPACING.md },
+  saleModalSubtitle: { marginTop: SPACING.xs, color: COLORS.textSecondary, fontSize: 13, lineHeight: 19 },
+  saleQuoteSummary: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: SPACING.md, marginHorizontal: SPACING.lg, padding: SPACING.md, borderRadius: RADIUS.lg, backgroundColor: COLORS.primary + "20" },
+  saleQuoteSummaryCopy: { minWidth: 0, flex: 1 },
+  saleQuoteSummaryLabel: { color: COLORS.textSecondary, fontSize: 11, fontWeight: "700" },
+  saleQuoteSummaryName: { marginTop: 2, color: COLORS.text, fontSize: 15, fontWeight: "800" },
+  saleQuoteSummaryTotal: { color: COLORS.primaryDark, fontSize: 18, fontWeight: "800" },
+  saleModalScroll: { flexShrink: 1 },
+  saleModalContent: { gap: SPACING.sm, padding: SPACING.lg },
+  label: { color: COLORS.text, fontSize: 13, fontWeight: "800" },
   saleInput: { minHeight: 46, paddingHorizontal: SPACING.md, borderWidth: 1, borderColor: COLORS.border, borderRadius: RADIUS.md, color: COLORS.text, backgroundColor: COLORS.cardBackground },
   saleTextArea: { minHeight: 82, paddingTop: SPACING.md, textAlignVertical: "top" },
-  shippingToggle: { minHeight: 44, flexDirection: "row", alignItems: "center", gap: SPACING.sm },
+  shippingToggle: { minHeight: 52, flexDirection: "row", alignItems: "center", gap: SPACING.sm, marginTop: SPACING.xs, padding: SPACING.sm, borderRadius: RADIUS.md, backgroundColor: COLORS.cardBackground },
+  shippingToggleCopy: { minWidth: 0, flex: 1 },
   shippingToggleText: { color: COLORS.text, fontSize: 14, fontWeight: "700" },
-  saleActions: { flexDirection: "row", gap: SPACING.sm, marginTop: SPACING.md },
+  shippingToggleHelp: { marginTop: 2, color: COLORS.textSecondary, fontSize: 11, lineHeight: 15 },
+  saleActions: { flexDirection: "row", gap: SPACING.sm, padding: SPACING.md, borderTopWidth: 1, borderTopColor: COLORS.border },
 });

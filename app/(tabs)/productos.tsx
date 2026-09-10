@@ -29,6 +29,7 @@ import EditableDropdown from "@/components/forms/EditableDropdown";
 import AnimatedInput from "@/components/forms/AnimatedInput";
 import AnimatedButton from "@/components/ui/AnimatedButton";
 import { DataStatePanel } from "@/components/ui/DataStatePanel";
+import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { LoadingBar, ProductCatalogSkeleton } from "@/components/ui/LoadingStates";
 import FadeInView from "@/components/ui/FadeInView";
 import ProductCard from "@/components/product/ProductCard";
@@ -1518,6 +1519,11 @@ export default function ProductosScreen() {
               >
                 {/* Lista de productos */}
                 <ThemedView style={styles.webProductsContainer}>
+                  <ScreenHeader
+                    eyebrow="CATÁLOGO"
+                    title="Productos"
+                    subtitle={canEdit ? "Gestioná el catálogo, el stock y los recursos comerciales desde un solo lugar." : "Explorá el catálogo y elegí los productos que te interesan."}
+                  />
                   {sellerReferral && !canEdit && !canQuote ? (
                     <View style={styles.sellerReferralBanner}>
                       <MaterialIcons name="support-agent" size={18} color={COLORS.primaryDark} />
@@ -1930,7 +1936,7 @@ export default function ProductosScreen() {
                   />
 
                   <AnimatedInput
-                    label="Stock Cantidad"
+                    label="Cantidad disponible"
                     value={form.stockCantidad}
                     onChangeText={(text) =>
                       updateFormField("stockCantidad", text.replace(/\D/g, ""))
@@ -1941,7 +1947,7 @@ export default function ProductosScreen() {
                   />
 
                   <LabeledDropdown
-                    label="Stock Disponible"
+                    label="Disponibilidad"
                     options={[
                       { label: "Disponible", value: "true" },
                       { label: "No disponible", value: "false" },
@@ -1974,8 +1980,7 @@ export default function ProductosScreen() {
                       Imagen del producto
                     </ThemedText>
                     <ThemedText style={styles.imageSectionNote}>
-                      📸 Puedes agregar imágenes desde URL, galería, cámara o
-                      archivos.
+                      Podés agregar una imagen desde la galería, cámara, archivos o una URL.
                     </ThemedText>
 
                     {form.imagen &&
@@ -2183,7 +2188,7 @@ export default function ProductosScreen() {
                 />
 
                 <AnimatedInput
-                  label="Stock Cantidad"
+                  label="Cantidad disponible"
                   value={form.stockCantidad}
                   onChangeText={(text) =>
                     updateFormField("stockCantidad", text.replace(/\D/g, ""))
@@ -2194,7 +2199,7 @@ export default function ProductosScreen() {
                 />
 
                 <LabeledDropdown
-                  label="Stock Disponible"
+                  label="Disponibilidad"
                   options={[
                     { label: "Disponible", value: "true" },
                     { label: "No disponible", value: "false" },
@@ -2227,8 +2232,7 @@ export default function ProductosScreen() {
                     Imagen del producto
                   </ThemedText>
                   <ThemedText style={styles.imageSectionNote}>
-                    📸 Puedes agregar imágenes desde URL, galería, cámara o
-                    archivos.
+                    Podés agregar una imagen desde la galería, cámara, archivos o una URL.
                   </ThemedText>
 
                   {form.imagen &&
@@ -3592,18 +3596,22 @@ export default function ProductosScreen() {
       >
         <SafeAreaView style={styles.filtersModalContainer}>
           <View style={styles.filtersModalHeader}>
-            <ThemedText style={styles.filtersModalTitle}>Filtros</ThemedText>
+            <View style={styles.filtersModalHeaderCopy}>
+              <ThemedText style={styles.filtersModalEyebrow}>EXPLORAR CATÁLOGO</ThemedText>
+              <ThemedText style={styles.filtersModalTitle}>Filtrar productos</ThemedText>
+              <ThemedText style={styles.filtersModalSubtitle}>Combiná categoría, marca y disponibilidad.</ThemedText>
+            </View>
             <TouchableOpacity
               onPress={() => setFiltersModalVisible(false)}
               style={styles.filtersModalClose}
               accessibilityRole="button"
               accessibilityLabel="Cerrar filtros"
             >
-              <ThemedText style={styles.filtersModalCloseText}>×</ThemedText>
+              <MaterialIcons name="close" size={22} color={COLORS.text} />
             </TouchableOpacity>
           </View>
 
-          <ScrollView style={styles.filtersModalContent}>
+          <ScrollView style={styles.filtersModalContent} contentContainerStyle={styles.filtersModalContentContainer} keyboardShouldPersistTaps="handled">
             <View style={styles.filtersSection}>
               <LabeledDropdown
                 label="Categoría"
@@ -4020,19 +4028,19 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    padding: SPACING.lg,
+    padding: SPACING.md,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.border,
     backgroundColor: COLORS.surface,
   },
   cancelButton: {
-    color: COLORS.primary,
-    fontSize: 16,
-    fontWeight: "600",
+    color: COLORS.primaryDark,
+    fontSize: 14,
+    fontWeight: "700",
   },
   form: {
-    padding: SPACING.lg,
-    gap: SPACING.lg,
+    padding: SPACING.md,
+    gap: SPACING.md,
     paddingBottom: SPACING.xl,
   },
   formSectionHeader: {
@@ -4044,7 +4052,7 @@ const styles = StyleSheet.create({
   },
   formSectionTitle: {
     color: COLORS.text,
-    fontSize: 17,
+    fontSize: 15,
     fontWeight: "700",
   },
   formSectionHint: {
@@ -4053,14 +4061,13 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   modalActions: {
-    padding: SPACING.xl,
-    paddingTop: SPACING.lg,
-    paddingBottom: SPACING.xxl,
+    padding: SPACING.md,
+    paddingBottom: SPACING.lg,
     backgroundColor: COLORS.surface,
     borderTopWidth: 1,
     borderTopColor: COLORS.border,
     ...SHADOWS.lg,
-    minHeight: 80,
+    minHeight: 68,
   },
   saveButton: {
     width: "100%",
@@ -4388,9 +4395,9 @@ const styles = StyleSheet.create({
   },
   imageSectionNote: {
     fontSize: 12,
-    color: COLORS.warning,
+    lineHeight: 17,
+    color: COLORS.textSecondary,
     marginBottom: SPACING.sm,
-    fontStyle: "italic",
   },
   imageLabel: {
     fontSize: 16,
@@ -4550,15 +4557,15 @@ const styles = StyleSheet.create({
   },
   closeButton: {
     padding: SPACING.sm,
-    backgroundColor: COLORS.error,
-    borderRadius: RADIUS.sm,
+    backgroundColor: COLORS.cardBackground,
+    borderRadius: RADIUS.full,
     minWidth: 44,
     minHeight: 44,
     alignItems: "center",
     justifyContent: "center",
   },
   closeButtonText: {
-    color: COLORS.surface,
+    color: COLORS.text,
     fontSize: 16,
     fontWeight: "600",
   },
@@ -4752,6 +4759,7 @@ const styles = StyleSheet.create({
   webProductsContainer: {
     padding: SPACING.xl,
     flex: 1,
+    gap: SPACING.lg,
     backgroundColor: COLORS.cardBackground,
   },
   assistedImportRow: {
@@ -4879,7 +4887,7 @@ const styles = StyleSheet.create({
   },
   webModalContainer: {
     backgroundColor: COLORS.background,
-    borderRadius: RADIUS.lg,
+    borderRadius: RADIUS.xl,
     maxWidth: 600,
     maxHeight: "90%" as any,
     width: "100%" as const,
@@ -4890,14 +4898,14 @@ const styles = StyleSheet.create({
     flexDirection: "row" as const,
     justifyContent: "space-between" as const,
     alignItems: "center" as const,
-    padding: SPACING.lg,
+    padding: SPACING.md,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.border,
     backgroundColor: COLORS.surface,
   },
   webModalTitle: {
-    fontSize: 20,
-    fontWeight: "600" as const,
+    fontSize: 21,
+    fontWeight: "800" as const,
     color: COLORS.text,
   },
   webModalCloseButton: {
@@ -4919,10 +4927,10 @@ const styles = StyleSheet.create({
   },
   webModalContentContainer: {
     flexGrow: 1,
-    paddingBottom: SPACING.lg,
+    paddingBottom: SPACING.sm,
   },
   webModalActions: {
-    padding: SPACING.lg,
+    padding: SPACING.md,
     borderTopWidth: 1,
     borderTopColor: COLORS.border,
     backgroundColor: COLORS.surface,
@@ -5258,36 +5266,35 @@ const styles = StyleSheet.create({
   filtersModalHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "center",
+    alignItems: "flex-start",
     padding: SPACING.lg,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.border,
     backgroundColor: COLORS.surface,
   },
+  filtersModalHeaderCopy: { minWidth: 0, flex: 1 },
+  filtersModalEyebrow: { color: COLORS.primaryDark, fontSize: 11, fontWeight: "800", letterSpacing: 1 },
   filtersModalTitle: {
-    fontSize: 20,
-    fontWeight: "700",
+    marginTop: 2,
+    fontSize: 24,
+    fontWeight: "800",
     color: COLORS.text,
   },
+  filtersModalSubtitle: { marginTop: 3, color: COLORS.textSecondary, fontSize: 13, lineHeight: 18 },
   filtersModalClose: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: COLORS.border,
+    width: 42,
+    height: 42,
+    borderRadius: RADIUS.full,
+    backgroundColor: COLORS.cardBackground,
     justifyContent: "center",
     alignItems: "center",
   },
-  filtersModalCloseText: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: COLORS.textSecondary,
-  },
   filtersModalContent: {
     flex: 1,
-    padding: SPACING.lg,
   },
+  filtersModalContentContainer: { padding: SPACING.lg },
   filtersSection: {
-    marginBottom: SPACING.lg,
+    marginBottom: SPACING.md,
   },
   filtersModalActions: {
     flexDirection: "row",

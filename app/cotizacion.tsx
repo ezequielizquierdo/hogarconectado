@@ -1,10 +1,11 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { Image } from 'expo-image';
 import { useLocalSearchParams } from 'expo-router';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { COLORS, RADIUS, SHADOWS, SPACING } from '@/constants/theme';
+import { DataStatePanel } from '@/components/ui/DataStatePanel';
 import publicQuotesService, { PublicOrderResult, PublicQuote } from '@/services/publicQuotesService';
 
 const money = (value: number) => `$ ${value.toLocaleString('es-AR', { maximumFractionDigits: 0 })}`;
@@ -21,13 +22,20 @@ export default function PublicQuoteScreen() {
   const [error, setError] = useState('');
   const acceptanceKey = useRef<string | undefined>(undefined);
 
-  useEffect(() => {
+  const loadQuote = useCallback(async () => {
     if (!token) { setError('El enlace de cotización no es válido.'); setLoading(false); return; }
-    void publicQuotesService.get(token)
-      .then(setQuote)
-      .catch((requestError: any) => setError(requestError.response?.data?.message || 'No pudimos cargar la cotización.'))
-      .finally(() => setLoading(false));
+    setLoading(true);
+    setError('');
+    try {
+      setQuote(await publicQuotesService.get(token));
+    } catch (requestError: any) {
+      setError(requestError.response?.data?.message || 'No pudimos cargar la cotización.');
+    } finally {
+      setLoading(false);
+    }
   }, [token]);
+
+  useEffect(() => { void loadQuote(); }, [loadQuote]);
 
   const accept = async () => {
     if (!token || accepting) return;
@@ -74,9 +82,9 @@ export default function PublicQuoteScreen() {
 
   return (
     <ScrollView contentContainerStyle={styles.page}>
-      <View style={styles.brand}><View style={styles.logo}><MaterialIcons name="home" size={26} color={COLORS.primaryDark} /></View><View><Text style={styles.brandName}>Hogar Conectado</Text><Text style={styles.brandTagline}>Tu propuesta comercial</Text></View></View>
-      {loading ? <View style={styles.state}><ActivityIndicator color={COLORS.primaryDark} /><Text style={styles.muted}>Preparando tu cotización…</Text></View> : null}
-      {!loading && error && !quote ? <View style={styles.state}><MaterialIcons name="error-outline" size={42} color={COLORS.errorStrong} /><Text style={styles.title}>No pudimos abrirla</Text><Text style={styles.muted}>{error}</Text></View> : null}
+      <View style={styles.brand}><Image source={require('@/assets/images/logo-transparent-circle.png')} style={styles.logo} contentFit="contain" accessibilityLabel="Logo de Hogar Conectado" /><View><Text style={styles.brandName}>Hogar Conectado</Text><Text style={styles.brandTagline}>Tu propuesta comercial</Text></View></View>
+      {loading ? <DataStatePanel status="loading" title="Preparando tu cotización…" message="Estamos recuperando los productos y valores de la propuesta." /> : null}
+      {!loading && error && !quote ? <DataStatePanel status="error" title="No pudimos abrir la cotización" message={error} actionLabel={token ? "Reintentar" : undefined} onAction={token ? () => void loadQuote() : undefined} /> : null}
       {quote ? <View style={styles.card}>
         <Text style={styles.eyebrow}>COTIZACIÓN</Text>
         <Text style={styles.title}>Hola, {quote.cliente}</Text>
@@ -109,7 +117,7 @@ export default function PublicQuoteScreen() {
 const styles = StyleSheet.create({
   page: { flexGrow: 1, alignItems: 'center', padding: SPACING.lg, backgroundColor: COLORS.background },
   brand: { width: '100%', maxWidth: 680, flexDirection: 'row', alignItems: 'center', gap: SPACING.sm, marginBottom: SPACING.lg },
-  logo: { width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.secondary },
+  logo: { width: 48, height: 48 },
   brandName: { color: COLORS.text, fontSize: 19, fontWeight: '800' }, brandTagline: { color: COLORS.textSecondary, fontSize: 12 },
   card: { width: '100%', maxWidth: 680, padding: SPACING.lg, gap: SPACING.md, borderWidth: 1, borderTopWidth: 4, borderColor: COLORS.border, borderTopColor: COLORS.primary, borderRadius: RADIUS.xl, backgroundColor: COLORS.surface, ...SHADOWS.md },
   state: { flex: 1, minHeight: 360, alignItems: 'center', justifyContent: 'center', gap: SPACING.md },

@@ -202,7 +202,7 @@ export function ConsultaProductoModal({ visible, productos, initialName = '', se
                 <View style={styles.confirmBox}>
                   <MaterialIcons name="help-outline" size={28} color={COLORS.primaryDark} />
                   <Text style={styles.confirmTitle}>¿Querés consultar por {productos.length === 1 ? 'este producto' : `estos ${productos.length} productos`}?</Text>
-                  <Text style={styles.confirmText}>Te contactaremos al {prefix} {telefono.trim()}.</Text>
+                  <Text style={styles.confirmText}>Te contactaremos al {prefix} {`${telefono.trim()}.`}</Text>
                 </View>
                 {error ? <Text style={styles.error}>{error}</Text> : null}
                 <View style={styles.buttonRow}>

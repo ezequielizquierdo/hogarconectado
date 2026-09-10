@@ -3,6 +3,7 @@ import { COLORS, RADIUS, SHADOWS, SPACING } from '@/constants/theme';
 import { router } from 'expo-router';
 import * as Clipboard from 'expo-clipboard';
 import React from 'react';
+import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 export default function PerfilScreen() {
@@ -18,11 +19,7 @@ export default function PerfilScreen() {
 
   return (
     <ScrollView contentContainerStyle={styles.page}>
-      <View style={styles.screenHeader}>
-        <Text style={styles.eyebrow}>CUENTA Y ACCESOS</Text>
-        <Text style={styles.screenTitle}>Perfil</Text>
-        <Text style={styles.screenSubtitle}>Revisá tu identidad, permisos y accesos disponibles.</Text>
-      </View>
+      <ScreenHeader eyebrow="CUENTA Y ACCESOS" title="Perfil" subtitle="Revisá tu identidad, permisos y accesos disponibles." />
       <View style={styles.card}>
         <View style={styles.identity}>
           {user?.foto ? <Image source={{ uri: user.foto }} style={styles.avatar} /> : (

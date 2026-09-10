@@ -5,6 +5,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { Alert, Platform, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { DataStatePanel } from '@/components/ui/DataStatePanel';
 import { CardListSkeleton, LoadingBar } from '@/components/ui/LoadingStates';
+import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { COLORS, RADIUS, SHADOWS, SPACING } from '@/constants/theme';
 
 const roles: UserRole[] = ['consulta', 'vendedor', 'editor', 'admin'];
@@ -97,16 +98,7 @@ export default function UsuariosScreen() {
   return (
     <ScrollView contentContainerStyle={[styles.page, isDesktop && styles.pageDesktop]}>
       <View style={styles.shell}>
-      <View style={styles.header}>
-        <View style={styles.headerCopy}>
-          <Text style={styles.eyebrow}>ACCESOS Y PERMISOS</Text>
-          <Text style={styles.title}>Usuarios</Text>
-          <Text style={styles.subtitle}>Aprobá accesos, asigná roles y revisá el estado de cada cuenta.</Text>
-        </View>
-        <Pressable style={({ pressed }) => [styles.secondaryButton, pressed && styles.buttonPressed]} onPress={logout}>
-          <Text style={styles.secondaryButtonText}>Cerrar sesión</Text>
-        </Pressable>
-      </View>
+      <ScreenHeader eyebrow="ACCESOS Y PERMISOS" title="Usuarios" subtitle="Aprobá accesos, asigná roles y revisá el estado de cada cuenta." actionLabel="Cerrar sesión" actionVariant="secondary" onAction={logout} />
       <View style={styles.roleGuide}>
         <View style={styles.guideHeading}>
           <Text style={styles.guideEyebrow}>GUÍA RÁPIDA</Text>

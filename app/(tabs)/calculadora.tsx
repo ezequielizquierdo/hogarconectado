@@ -1,5 +1,6 @@
 import { COLORS, RADIUS, SHADOWS, SPACING } from "@/constants/theme";
 import { useCalculoPrecios } from "@/hooks/useCalculoPrecios";
+import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import * as Clipboard from "expo-clipboard";
 import React, { useState } from "react";
 import {
@@ -148,13 +149,7 @@ export default function CalculadoraScreen() {
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.shell}>
-          <View style={styles.screenHeader}>
-            <Text style={styles.screenEyebrow}>OPERACIÓN COMERCIAL</Text>
-            <Text style={styles.screenTitle}>Calculadora</Text>
-            <Text style={styles.screenSubtitle}>
-              Calculá precios y copiá cada modalidad en pocos pasos.
-            </Text>
-          </View>
+          <ScreenHeader eyebrow="OPERACIÓN COMERCIAL" title="Calculadora" subtitle="Calculá precios y copiá cada modalidad en pocos pasos." />
 
           <View style={[styles.content, isDesktop && styles.contentDesktop]}>
           <View style={[styles.inputPanel, isDesktop && styles.inputPanelDesktop]}>

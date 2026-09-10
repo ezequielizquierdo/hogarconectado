@@ -7,6 +7,7 @@ import { Alert, Linking, Platform, Pressable, ScrollView, StyleSheet, Text, useW
 
 import { DataStatePanel } from '@/components/ui/DataStatePanel';
 import { CardListSkeleton, LoadingBar } from '@/components/ui/LoadingStates';
+import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { COLORS, RADIUS, SHADOWS, SPACING } from '@/constants/theme';
 import { useAuth } from '@/contexts/AuthContext';
 import { useConsultasResumen } from '@/contexts/ConsultasContext';
@@ -113,6 +114,8 @@ export default function ConsultasScreen() {
   const filterButtons = ESTADOS.map(option => (
     <Pressable
       key={option.value}
+      accessibilityRole="button"
+      accessibilityState={{ selected: filtro === option.value }}
       onPress={() => setFiltro(option.value)}
       style={[styles.filterChip, filtro === option.value && styles.filterChipActive]}
     >
@@ -208,16 +211,10 @@ export default function ConsultasScreen() {
 
   return (
     <ScrollView contentContainerStyle={styles.page}>
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.eyebrow}>ATENCIÓN COMERCIAL</Text>
-          <Text style={styles.title}>Consultas</Text>
-          <Text style={styles.subtitle}>Respondé y seguí cada interés recibido desde el catálogo.</Text>
-        </View>
-        <View style={styles.summaryRow}>
-          <View style={styles.summaryCard}><Text style={styles.summaryValue}>{totals.nuevas}</Text><Text style={styles.summaryLabel}>Nuevas visibles</Text></View>
-          <View style={styles.summaryCard}><Text style={styles.summaryValue}>{totals.abiertas}</Text><Text style={styles.summaryLabel}>Abiertas visibles</Text></View>
-        </View>
+      <ScreenHeader eyebrow="ATENCIÓN COMERCIAL" title="Consultas" subtitle="Respondé y seguí cada interés recibido desde el catálogo." />
+      <View style={styles.summaryRow}>
+        <View style={styles.summaryCard}><Text style={styles.summaryValue}>{totals.nuevas}</Text><Text style={styles.summaryLabel}>Nuevas visibles</Text></View>
+        <View style={styles.summaryCard}><Text style={styles.summaryValue}>{totals.abiertas}</Text><Text style={styles.summaryLabel}>Abiertas visibles</Text></View>
       </View>
 
       {Platform.OS === 'web' && pushState && (

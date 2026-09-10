@@ -1,6 +1,7 @@
 import GoogleSignInButton from '@/components/auth/GoogleSignInButton';
 import { useAuth } from '@/contexts/AuthContext';
 import React from 'react';
+import { Image } from 'expo-image';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { COLORS, RADIUS, SHADOWS, SPACING } from '@/constants/theme';
 
@@ -10,6 +11,7 @@ export default function PendingAccessScreen() {
   return (
     <View style={styles.page}>
       <View style={styles.card}>
+        <Image source={require('@/assets/images/logo-transparent-circle.png')} style={styles.logo} contentFit="contain" accessibilityLabel="Logo de Hogar Conectado" />
         <Text style={styles.icon}>{blocked ? '⛔' : '⏳'}</Text>
         <Text style={styles.title}>{blocked ? 'Acceso bloqueado' : 'Acceso pendiente'}</Text>
         <Text style={styles.text}>{user?.email}</Text>
@@ -33,6 +35,7 @@ export default function PendingAccessScreen() {
 const styles = StyleSheet.create({
   page: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: SPACING.lg, backgroundColor: COLORS.background },
   card: { maxWidth: 480, width: '100%', backgroundColor: COLORS.surface, borderRadius: RADIUS.lg, padding: SPACING.xl, alignItems: 'center', gap: SPACING.md, borderWidth: 1, borderColor: COLORS.border, ...SHADOWS.md },
+  logo: { width: 64, height: 64 },
   icon: { fontSize: 48 },
   title: { fontSize: 26, fontWeight: '700', color: COLORS.text },
   text: { color: COLORS.textSecondary, textAlign: 'center', lineHeight: 21 },
