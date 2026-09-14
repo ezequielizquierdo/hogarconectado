@@ -61,6 +61,7 @@ const sellerQuote = {
   ...quote,
   _id: 'visual-seller-quote',
   datosContacto: { nombre: 'Comprador de muestra', telefono: '+5491100000000' },
+  creadaPor: { _id: seller._id, nombre: seller.nombre, email: seller.email },
   productos: [{
     producto: product,
     cantidad: 1,
@@ -103,7 +104,34 @@ const publicQuote = {
   enlaceVenceAt: '2026-12-31T23:59:59.000Z',
 };
 
-async function mockApi(page: Page, authenticated = false, currentUser = admin, currentQuote: any = quote) {
+const reservedPublicQuote = {
+  ...publicQuote,
+  aceptada: true,
+  pedido: {
+    estado: 'reserva-pendiente',
+    reservaVenceAt: '2026-12-31T20:00:00.000Z',
+  },
+};
+
+const paymentReportedPublicQuote = {
+  ...reservedPublicQuote,
+  pedido: {
+    ...reservedPublicQuote.pedido,
+    estado: 'pago-informado',
+    pagoInformadoAt: '2026-09-10T18:00:00.000Z',
+  },
+};
+
+const expiredReservationPublicQuote = {
+  ...reservedPublicQuote,
+  pedido: {
+    ...reservedPublicQuote.pedido,
+    estado: 'vencido',
+    reservaVenceAt: '2026-09-09T18:00:00.000Z',
+  },
+};
+
+async function mockApi(page: Page, authenticated = false, currentUser = admin, currentQuote: any = quote, currentPublicQuote: any = publicQuote) {
   if (authenticated) {
     await page.addInitScript(() => localStorage.setItem('auth_token', 'visual-token'));
   } else {
@@ -116,7 +144,7 @@ async function mockApi(page: Page, authenticated = false, currentUser = admin, c
     let body: unknown = { success: true, data: [] };
 
     if (path.endsWith('/auth/me')) body = { success: true, data: currentUser };
-    else if (path.endsWith('/cotizaciones-publicas/visual-token')) body = { success: true, data: publicQuote };
+    else if (path.endsWith('/cotizaciones-publicas/visual-token')) body = { success: true, data: currentPublicQuote };
     else if (path.endsWith('/categorias')) body = { success: true, data: [category] };
     else if (path.includes('/productos')) body = { success: true, data: [product], pagination: { total: 1, pagina: 1, limite: 20, paginas: 1 } };
     else if (path.endsWith('/cotizaciones/estadisticas/resumen')) body = { success: true, data: currentUser.rol === 'vendedor'
@@ -171,6 +199,33 @@ test('cotización pública', async ({ page }) => {
   await settle(page);
   await expect(page.getByText('Hola, Cliente de muestra')).toBeVisible();
   await expect(page).toHaveScreenshot('cotizacion-publica.png', { fullPage: true });
+});
+
+test('cotización pública con reserva activa', async ({ page }) => {
+  await mockApi(page, false, admin, quote, reservedPublicQuote);
+  await page.goto('/cotizacion?token=visual-token');
+  await settle(page);
+  await expect(page.getByText('Productos reservados', { exact: true })).toBeVisible();
+  await expect(page.getByText('Ya realicé el pago', { exact: true })).toBeVisible();
+  await expect(page).toHaveScreenshot('cotizacion-reservada.png', { fullPage: true });
+});
+
+test('cotización pública con pago informado', async ({ page }) => {
+  await mockApi(page, false, admin, quote, paymentReportedPublicQuote);
+  await page.goto('/cotizacion?token=visual-token');
+  await settle(page);
+  await expect(page.getByText('Pago informado', { exact: true })).toBeVisible();
+  await expect(page.getByText('Ya realicé el pago', { exact: true })).toHaveCount(0);
+  await expect(page).toHaveScreenshot('cotizacion-pago-informado.png', { fullPage: true });
+});
+
+test('cotización pública con reserva vencida', async ({ page }) => {
+  await mockApi(page, false, admin, quote, expiredReservationPublicQuote);
+  await page.goto('/cotizacion?token=visual-token');
+  await settle(page);
+  await expect(page.getByText('La reserva ya no está activa', { exact: true })).toBeVisible();
+  await expect(page.getByText('Ya realicé el pago', { exact: true })).toHaveCount(0);
+  await expect(page).toHaveScreenshot('cotizacion-reserva-vencida.png', { fullPage: true });
 });
 
 test('alta manual de producto', async ({ page }) => {

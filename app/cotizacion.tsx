@@ -10,6 +10,9 @@ import publicQuotesService, { PublicOrderResult, PublicQuote } from '@/services/
 
 const money = (value: number) => `$ ${value.toLocaleString('es-AR', { maximumFractionDigits: 0 })}`;
 const paymentLabel = { contado: 'Contado', facturado: 'Facturado', '3-cuotas': '3 cuotas', '6-cuotas': '6 cuotas' };
+const dateTime = (value: string) => new Intl.DateTimeFormat('es-AR', {
+  day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit',
+}).format(new Date(value));
 
 export default function PublicQuoteScreen() {
   const { token: rawToken } = useLocalSearchParams<{ token?: string | string[] }>();
@@ -53,7 +56,8 @@ export default function PublicQuoteScreen() {
   };
 
   const currentOrder = order || quote?.pedido;
-  const reservationActive = currentOrder?.estado === 'reserva-pendiente';
+  const reservationExpired = currentOrder?.estado === 'reserva-pendiente' && new Date(currentOrder.reservaVenceAt).getTime() <= Date.now();
+  const reservationActive = currentOrder?.estado === 'reserva-pendiente' && !reservationExpired;
   const paymentReported = currentOrder?.estado === 'pago-informado';
   const paymentConfirmed = currentOrder?.estado === 'pago-confirmado';
 
@@ -105,9 +109,16 @@ export default function PublicQuoteScreen() {
             <Pressable onPress={() => void reportPayment()} disabled={reportingPayment} style={({ pressed }) => [styles.button, styles.paymentButton, pressed && styles.pressed, reportingPayment && styles.disabled]}>{reportingPayment ? <ActivityIndicator color={COLORS.ink} /> : <Text style={styles.buttonText}>Ya realicé el pago</Text>}</Pressable>
           </> : null}
         </> : <>
-          <Text style={styles.disclaimer}>Al aceptar, reservaremos estas unidades durante 24 horas. Esto no confirma ni cobra el pago.</Text>
-          {error ? <Text style={styles.error}>{error}</Text> : null}
-          <Pressable onPress={accept} disabled={accepting} style={({ pressed }) => [styles.button, pressed && styles.pressed, accepting && styles.disabled]}>{accepting ? <ActivityIndicator color={COLORS.ink} /> : <Text style={styles.buttonText}>Aceptar y reservar 24 h</Text>}</Pressable>
+          <View style={styles.acceptanceInfo}>
+            <MaterialIcons name="schedule" size={21} color={COLORS.primaryDark} />
+            <View style={styles.acceptanceInfoCopy}>
+              <Text style={styles.acceptanceInfoTitle}>Reserva por 24 horas</Text>
+              <Text style={styles.disclaimer}>Al aceptar, reservaremos estas unidades. Esto no confirma ni cobra el pago.</Text>
+              <Text style={styles.linkExpiry}>Enlace disponible hasta el {dateTime(quote.enlaceVenceAt)}.</Text>
+            </View>
+          </View>
+          {error ? <Text style={styles.error} accessibilityLiveRegion="polite">{error}</Text> : null}
+          <Pressable accessibilityRole="button" accessibilityState={{ disabled: accepting, busy: accepting }} onPress={accept} disabled={accepting} style={({ pressed }) => [styles.button, pressed && styles.pressed, accepting && styles.disabled]}>{accepting ? <><ActivityIndicator color={COLORS.ink} /><Text style={styles.buttonText}>Reservando…</Text></> : <Text style={styles.buttonText}>Aceptar y reservar 24 h</Text>}</Pressable>
         </>}
       </View> : null}
     </ScrollView>
@@ -127,7 +138,8 @@ const styles = StyleSheet.create({
   productSubtotal: { color: COLORS.text, fontSize: 14, fontWeight: '800' },
   totalRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: SPACING.sm }, totalLabel: { color: COLORS.text, fontWeight: '800' }, total: { color: COLORS.primaryDark, fontSize: 25, fontWeight: '800' },
   notes: { padding: SPACING.md, color: COLORS.textSecondary, backgroundColor: COLORS.cardBackground, borderRadius: RADIUS.md }, disclaimer: { color: COLORS.textSecondary, fontSize: 13, lineHeight: 19 }, error: { color: COLORS.errorStrong, fontWeight: '700' },
-  button: { minHeight: 52, alignItems: 'center', justifyContent: 'center', borderRadius: RADIUS.md, backgroundColor: COLORS.primary }, buttonText: { color: COLORS.ink, fontWeight: '800' }, pressed: { opacity: 0.8 }, disabled: { opacity: 0.65 },
+  acceptanceInfo: { flexDirection: 'row', alignItems: 'flex-start', gap: SPACING.sm, padding: SPACING.md, borderRadius: RADIUS.md, backgroundColor: COLORS.primary + '18' }, acceptanceInfoCopy: { minWidth: 0, flex: 1 }, acceptanceInfoTitle: { marginBottom: 2, color: COLORS.text, fontSize: 14, fontWeight: '800' }, linkExpiry: { marginTop: SPACING.xs, color: COLORS.textSecondary, fontSize: 11, lineHeight: 16 },
+  button: { minHeight: 52, flexDirection: 'row', gap: SPACING.sm, alignItems: 'center', justifyContent: 'center', borderRadius: RADIUS.md, backgroundColor: COLORS.primary }, buttonText: { color: COLORS.ink, fontWeight: '800' }, pressed: { opacity: 0.8 }, disabled: { opacity: 0.65 },
   paymentHelp: { color: COLORS.textSecondary, fontSize: 13, lineHeight: 19 }, paymentButton: { backgroundColor: COLORS.secondaryDark },
   success: { flexDirection: 'row', gap: SPACING.md, padding: SPACING.md, borderRadius: RADIUS.md, backgroundColor: COLORS.secondary }, successCopy: { flex: 1 }, successTitle: { color: COLORS.text, fontSize: 17, fontWeight: '800' }, expiry: { marginTop: 4, color: COLORS.text, fontSize: 12, fontWeight: '700' },
   inactive: { flexDirection: 'row', gap: SPACING.md, padding: SPACING.md, borderRadius: RADIUS.md, backgroundColor: COLORS.cardBackground },

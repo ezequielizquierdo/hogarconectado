@@ -17,7 +17,7 @@ export interface PublicQuote {
 
 export interface PublicOrderResult {
   id: string;
-  estado: 'reserva-pendiente' | 'pago-informado' | 'pago-confirmado';
+  estado: 'reserva-pendiente' | 'pago-informado' | 'pago-confirmado' | 'cancelado' | 'vencido';
   reservaVenceAt: string;
   pagoInformadoAt?: string;
 }

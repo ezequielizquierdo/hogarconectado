@@ -200,6 +200,7 @@ export interface Cotizacion {
         total: number;
     };
     estado: CotizacionEstado;
+    creadaPor?: Pick<Usuario, '_id' | 'nombre' | 'email'> | string;
     aceptacionCliente?: {
         aceptadaAt?: string;
         pedido?: string | {

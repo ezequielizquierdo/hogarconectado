@@ -767,7 +767,7 @@ Una tarea de interfaz se considera terminada cuando:
 
 **Prioridad:** Alta
 
-**Estado:** Implementación preparada; pendiente de validación funcional
+**Estado:** Implementado — validación automática ampliada; pendiente de comprobación manual en producción
 
 - WhatsApp incorpora un enlace privado y no predecible para revisar la cotización sin iniciar sesión.
 - La vista pública muestra vendedor, cliente, productos, cantidades, precios, modalidad, cuotas y total, sin costos internos.
@@ -778,7 +778,9 @@ Una tarea de interfaz se considera terminada cuando:
 - Las reservas vencidas liberan automáticamente el stock. Una cancelación administrativa también devuelve las unidades.
 - Vendedor y administrador ven que el cliente aceptó y que existe una reserva pendiente de pago.
 
-**Validación pendiente:** enlace nuevo y vencido, doble toque, falta de stock parcial, aceptación mobile, devolución al vencer, cancelación, confirmación de pago y visibilidad por propietario.
+**Validación automática:** el backend comprueba tokens privados y vencimiento, idempotencia, estados reales al repetir una aceptación y liberación segura de reservas al iniciar el servicio. La regresión visual cubre la cotización pública inicial, reserva activa, pago informado y reserva vencida en escritorio y mobile; también verifica la identificación del responsable comercial en la supervisión administrativa.
+
+**Validación manual pendiente:** recorrer un enlace real en producción, probar doble toque y falta de stock parcial, comprobar la devolución efectiva de unidades al vencer o cancelar, y completar la confirmación de pago con visibilidad para vendedor y administrador.
 
 ### UX-021 — Historias de Instagram en lote
 

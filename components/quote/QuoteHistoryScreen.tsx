@@ -169,6 +169,11 @@ function ConfirmationSummary({ quote, detailed = false }: { quote: Cotizacion; d
   );
 }
 
+function CommercialOwner({ quote }: { quote: Cotizacion }) {
+  if (!quote.creadaPor || typeof quote.creadaPor === "string") return null;
+  return <Text style={styles.commercialOwner}>Responsable comercial: {quote.creadaPor.nombre}</Text>;
+}
+
 function CustomerAcceptance({ quote, isAdmin, processing, onUpdate }: {
   quote: Cotizacion;
   isAdmin: boolean;
@@ -573,6 +578,7 @@ export function QuoteHistoryScreen() {
                   <View style={styles.cardHeaderCopy}>
                     <Text numberOfLines={1} style={styles.clientName}>{quote.datosContacto.nombre}</Text>
                     <Text style={styles.cardMeta}>{formatDate(quote.createdAt)} · {quote.datosContacto.telefono}</Text>
+                    {isAdmin ? <CommercialOwner quote={quote} /> : null}
                   </View>
                   <View style={[styles.statusBadge, styles[`status_${quote.estado}`]]}>
                     <Text style={styles.statusText}>{STATE_LABEL[quote.estado]}</Text>
@@ -634,6 +640,7 @@ export function QuoteHistoryScreen() {
                   <Text style={styles.modalEyebrow}>COTIZACIÓN GUARDADA</Text>
                   <Text style={styles.modalTitle}>{selected.datosContacto.nombre}</Text>
                   <Text style={styles.modalMeta}>{formatDate(selected.createdAt)} · {selected.datosContacto.telefono}</Text>
+                  {isAdmin ? <CommercialOwner quote={selected} /> : null}
                 </View>
                 <Pressable onPress={() => { setSelected(null); setDetailError(""); }} style={styles.closeButton} accessibilityLabel="Cerrar detalle">
                   <MaterialIcons name="close" size={24} color={COLORS.text} />
@@ -820,6 +827,7 @@ const styles = StyleSheet.create({
   cardHeaderCopy: { minWidth: 0, flex: 1 },
   clientName: { color: COLORS.text, fontSize: 19, fontWeight: "800" },
   cardMeta: { marginTop: 2, color: COLORS.textSecondary, fontSize: 12 },
+  commercialOwner: { marginTop: 3, color: COLORS.primaryDark, fontSize: 12, fontWeight: "700" },
   statusBadge: { paddingHorizontal: SPACING.sm, paddingVertical: 5, borderRadius: RADIUS.sm },
   status_pendiente: { backgroundColor: COLORS.warning },
   status_enviada: { backgroundColor: COLORS.info },
