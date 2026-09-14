@@ -4,6 +4,7 @@ import { Stack, useRouter, useSegments } from 'expo-router';
 import Head from 'expo-router/head';
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect } from 'react';
+import { Platform } from 'react-native';
 import 'react-native-reanimated';
 
 import GoogleOAuthRoot from '@/components/auth/GoogleOAuthRoot';
@@ -63,7 +64,11 @@ function AuthenticatedNavigator() {
 
 export default function RootLayout() {
   const [loaded] = useFonts({ SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf') });
-  if (!loaded) return <AppLaunchScreen />;
+  // En la exportación estática la fuente ya está disponible al generar el HTML,
+  // mientras que el navegador puede informarla como pendiente en su primer
+  // render. No cambiar todo el árbol web por esa diferencia evita que React
+  // descarte la hidratación; el navegador aplica la fuente cuando termina.
+  if (!loaded && Platform.OS !== 'web') return <AppLaunchScreen />;
 
   return (
     <>
