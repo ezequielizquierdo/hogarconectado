@@ -8,7 +8,7 @@ import {
   TouchableOpacity,
   RefreshControl,
   Platform,
-  Dimensions,
+  useWindowDimensions,
   SafeAreaView,
   ActivityIndicator,
   Image as RNImage,
@@ -120,6 +120,8 @@ const initialForm: ProductoForm = {
 };
 
 export default function ProductosScreen() {
+  const { width } = useWindowDimensions();
+  const [hasMounted, setHasMounted] = useState(false);
   const { setAction: setDesktopHeaderAction } = useDesktopHeader();
   const { can, state, user } = useAuth();
   const { contains, addProduct, removeProduct } = useQuoteDraft();
@@ -183,6 +185,10 @@ export default function ProductosScreen() {
       (instagramStoryOptions.showDescripcion && selectedProductForInstagram?.descripcion)
   );
   const [imageAspectRatio, setImageAspectRatio] = useState<number>(1);
+
+  useEffect(() => {
+    setHasMounted(true);
+  }, []);
   const [editingProduct, setEditingProduct] = useState<Producto | null>(null);
   const [form, setForm] = useState<ProductoForm>(initialForm);
   const [saving, setSaving] = useState(false);
@@ -1447,8 +1453,10 @@ export default function ProductosScreen() {
   };
 
   const isWeb = Platform.OS === "web";
-  const { width } = Dimensions.get("window");
-  const isWideScreen = width > 768;
+  // Mantener el primer render web igual al HTML generado por Expo evita que
+  // React descarte la pantalla por una diferencia de hidratación. Después del
+  // montaje, useWindowDimensions mantiene el layout sincronizado al redimensionar.
+  const isWideScreen = hasMounted && width > 768;
 
   useEffect(() => {
     if (!(isWeb && isWideScreen && canEdit)) {
@@ -1480,6 +1488,16 @@ export default function ProductosScreen() {
     label: marca,
     value: marca,
   }));
+
+  const essenCategoryOptions = categoriaOptions
+    .filter((category) => category.label.startsWith("Essen · "))
+    .map((category) => ({
+      ...category,
+      label: category.label.replace(/^Essen · /, ""),
+    }));
+  const generalCategoryOptions = categoriaOptions.filter(
+    (category) => !category.label.startsWith("Essen · ")
+  );
 
   return (
     <>
@@ -3617,18 +3635,40 @@ export default function ProductosScreen() {
                 label="Categoría"
                 options={[
                   { label: "Todas las categorías", value: "" },
-                  ...categorias.map((cat) => ({
-                    label: cat.nombre,
-                    value: cat._id,
-                  })),
+                  ...generalCategoryOptions,
                 ]}
-                selectedValue={filtroCategoria}
+                selectedValue={
+                  generalCategoryOptions.some(option => option.value === filtroCategoria)
+                    ? filtroCategoria
+                    : ""
+                }
                 onSelect={(value) => handleCategoriaChange(value)}
                 placeholder="Filtrar por categoría"
                 searchable
                 searchPlaceholder="Buscar categoría"
               />
             </View>
+
+            {essenCategoryOptions.length > 0 && (
+              <View style={styles.filtersSection}>
+                <LabeledDropdown
+                  label="Línea Essen"
+                  options={[
+                    { label: "Todas las líneas Essen", value: "" },
+                    ...essenCategoryOptions,
+                  ]}
+                  selectedValue={
+                    essenCategoryOptions.some(option => option.value === filtroCategoria)
+                      ? filtroCategoria
+                      : ""
+                  }
+                  onSelect={(value) => handleCategoriaChange(value)}
+                  placeholder="Filtrar por línea Essen"
+                  searchable
+                  searchPlaceholder="Buscar línea Essen"
+                />
+              </View>
+            )}
 
             <View style={styles.filtersSection}>
               <LabeledDropdown
