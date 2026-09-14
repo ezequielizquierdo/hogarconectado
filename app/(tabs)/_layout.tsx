@@ -1,6 +1,6 @@
 import { BottomTabBar } from "@react-navigation/bottom-tabs";
 import { Tabs } from "expo-router";
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Platform, StyleSheet, Text, useWindowDimensions, View } from "react-native";
 
 import { HapticTab } from "@/components/HapticTab";
@@ -29,7 +29,9 @@ function ConsultasTabIcon({ color }: { color: string }) {
 export default function TabLayout() {
   const { state, user } = useAuth();
   const { width } = useWindowDimensions();
-  const isDesktop = Platform.OS === "web" && width >= 1024;
+  const [hasMounted, setHasMounted] = useState(false);
+  useEffect(() => setHasMounted(true), []);
+  const isDesktop = Platform.OS === "web" && hasMounted && width >= 1024;
   const isAdmin = user?.rol === "admin";
   const isSeller = user?.rol === "vendedor";
   const isAuthenticated = state === "authenticated";

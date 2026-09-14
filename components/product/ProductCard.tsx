@@ -1,5 +1,5 @@
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   TouchableOpacity,
@@ -54,8 +54,11 @@ export default function ProductCard({
   showConsultButton = false,
 }: ProductCardProps) {
   const { width } = useWindowDimensions();
-  const isCompact = Platform.OS !== "web" || width <= 768;
-  const isNarrow = width <= 480;
+  const [hasMounted, setHasMounted] = useState(false);
+  useEffect(() => setHasMounted(true), []);
+  const responsiveWidth = hasMounted ? width : 0;
+  const isCompact = Platform.OS !== "web" || responsiveWidth <= 768;
+  const isNarrow = responsiveWidth <= 480;
   const hasStock = producto.stock.disponible && producto.stock.cantidad > 0;
   const hasImage = Boolean(producto.imagenes?.length);
   const [menuOpen, setMenuOpen] = useState(false);
