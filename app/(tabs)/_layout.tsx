@@ -158,6 +158,17 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="metricas"
+        options={{
+          href: isAdmin || isSeller ? undefined : null,
+          title: "Métricas",
+          tabBarLabel: "Métricas",
+          tabBarIcon: ({ color }) => (
+            <IconSymbol size={28} name="chart.bar.fill" color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="usuarios"
         options={{
           title: "Usuarios",

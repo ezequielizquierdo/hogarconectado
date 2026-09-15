@@ -152,10 +152,19 @@ async function mockApi(page: Page, authenticated = false, currentUser = admin, c
       : { total: 1, pendientes: 1, totalGeneral: 1917500 } };
     else if (path.endsWith('/cotizaciones/estadisticas/tablero')) body = { success: true, data: {
       periodo: '2026-09',
-      rankingVendedores: [],
-      productosMasVendidos: [],
-      productosMasConsultados: [],
-      productosMayorVariacion: [],
+      resumen: currentUser.rol === 'vendedor'
+        ? { ventas: 1, montoVendido: 430000, ganancia: 29500, dineroARendir: 400500, consultas: 0, cambios: { ventas: 0, montoVendido: 0, ganancia: 0, consultas: 0 } }
+        : { ventas: 3, montoVendido: 1494600, ganancia: 88500, dineroARendir: 1406100, consultas: 12, cambios: { ventas: 50, montoVendido: 24.5, ganancia: 18, consultas: -7.7 } },
+      historialMensual: [
+        { periodo: '2026-06', ventas: 1, montoVendido: 430000, ganancia: 29500 },
+        { periodo: '2026-07', ventas: 2, montoVendido: 890000, ganancia: 59000 },
+        { periodo: '2026-08', ventas: 2, montoVendido: 1200000, ganancia: 75000 },
+        { periodo: '2026-09', ventas: 3, montoVendido: 1494600, ganancia: 88500 },
+      ],
+      rankingVendedores: [{ vendedorId: seller._id, nombre: seller.nombre, ventas: 3, montoVendido: 1494600, ganancia: 88500 }],
+      productosMasVendidos: [{ _id: product._id, marca: product.marca, modelo: product.modelo, unidades: 3 }],
+      productosMasConsultados: [{ _id: product._id, marca: product.marca, modelo: product.modelo, consultas: 5 }],
+      productosMayorVariacion: [{ productoId: product._id, marca: product.marca, modelo: product.modelo, minimo: 1500000, maximo: 1575000, cambios: 2, variacionAbsoluta: 75000 }],
     } };
     else if (path.endsWith(`/cotizaciones/${currentQuote._id}`)) body = { success: true, data: currentQuote };
     else if (path.includes('/cotizaciones')) body = { success: true, data: [currentQuote], pagination: { total: 1, pagina: 1, limite: 20, paginas: 1 } };
@@ -299,10 +308,10 @@ test('catálogo del vendedor', async ({ page }) => {
 
 test('negocio y liquidación del vendedor', async ({ page }) => {
   await mockApi(page, true, seller, sellerQuote);
-  await page.goto('/');
+  await page.goto('/metricas');
   await settle(page);
-  await expect(page.getByText('Mi negocio', { exact: true })).toBeVisible();
-  await expect(page.getByText('Tu ganancia confirmada', { exact: true })).toBeVisible();
+  await expect(page.getByText('Métricas', { exact: true }).first()).toBeVisible();
+  await expect(page.getByText('Tu ganancia', { exact: true })).toBeVisible();
   await expect(page.getByText('$ 29.500', { exact: true }).first()).toBeVisible();
   await expect(page.getByText('$ 400.500', { exact: true }).first()).toBeVisible();
   await expect(page).toHaveScreenshot('negocio-vendedor.png', { fullPage: true });
@@ -325,6 +334,7 @@ for (const surface of [
   { name: 'usuarios', path: '/usuarios', ready: 'Usuarios' },
   { name: 'perfil', path: '/perfil', ready: 'Perfil' },
   { name: 'consultas', path: '/consultas', ready: 'Consultas' },
+  { name: 'metricas', path: '/metricas', ready: 'Métricas' },
 ]) {
   test(surface.name, async ({ page }) => {
     await mockApi(page, true);

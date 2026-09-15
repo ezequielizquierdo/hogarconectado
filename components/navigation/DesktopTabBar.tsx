@@ -24,7 +24,7 @@ type NavigationItemProps = {
   badge?: number;
 };
 
-const PRIMARY_ROUTES = ["index", "productos", "calculadora", "consultas"];
+const PRIMARY_ROUTES = ["index", "productos", "calculadora", "metricas", "consultas"];
 const SECONDARY_ROUTES = ["usuarios", "perfil", "explore_clean"];
 
 const ACCOUNT_LABELS: Record<string, string> = {
@@ -95,7 +95,7 @@ export function DesktopTabBar({
 
   const visibleRoutes = (routeNames: string[]) => {
     if (!isAdmin) {
-      if (routeNames === PRIMARY_ROUTES) return isSeller ? ["index", "productos", "consultas"] : ["productos"];
+      if (routeNames === PRIMARY_ROUTES) return isSeller ? ["index", "productos", "metricas", "consultas"] : ["productos"];
       return isAuthenticated ? ["perfil"] : [];
     }
     return routeNames;

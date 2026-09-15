@@ -30,6 +30,7 @@ const MAPPING = {
   "exclamationmark.triangle.fill": "warning",
   "tray.fill": "inventory",
   "bubble.left.and.bubble.right.fill": "forum",
+  "chart.bar.fill": "analytics",
 } as IconMapping;
 
 /**

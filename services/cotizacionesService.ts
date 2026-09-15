@@ -11,6 +11,15 @@ import {
 
 export interface CommercialDashboard {
     periodo: string;
+    resumen: {
+        ventas: number;
+        montoVendido: number;
+        ganancia: number;
+        dineroARendir: number;
+        consultas: number;
+        cambios: { ventas: number; montoVendido: number; ganancia: number; consultas: number };
+    };
+    historialMensual: { periodo: string; ventas: number; montoVendido: number; ganancia: number }[];
     rankingVendedores: { vendedorId: string; nombre: string; ventas: number; montoVendido: number; ganancia: number }[];
     productosMasVendidos: { _id: string; marca: string; modelo: string; unidades: number }[];
     productosMasConsultados: { _id: string; marca: string; modelo: string; consultas: number }[];

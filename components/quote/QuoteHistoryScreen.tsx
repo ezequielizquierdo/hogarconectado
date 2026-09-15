@@ -24,7 +24,7 @@ import { COLORS, RADIUS, SHADOWS, SPACING } from "@/constants/theme";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQuoteDraft } from "@/contexts/QuoteDraftContext";
 import { useDebounce } from "@/hooks/useDebounce";
-import cotizacionesService, { CommercialDashboard } from "@/services/cotizacionesService";
+import cotizacionesService from "@/services/cotizacionesService";
 import pedidosService, { PedidoResumen } from "@/services/pedidosService";
 import type {
   Cotizacion,
@@ -251,40 +251,25 @@ export function QuoteHistoryScreen() {
   const [addShipping, setAddShipping] = useState(false);
   const [shippingCost, setShippingCost] = useState("");
   const [catalogAvailabilityConfirmed, setCatalogAvailabilityConfirmed] = useState(false);
-  const [sellerStats, setSellerStats] = useState<{
-    liquidacion: { totalVendido: number; dineroARendir: number; gananciaVendedor: number };
-    historialMensual?: { periodo: string; ventas: number; montoVendido: number; ganancia: number }[];
-  } | null>(null);
-  const [adminDashboard, setAdminDashboard] = useState<CommercialDashboard | null>(null);
-  const [sellerRankingSort, setSellerRankingSort] = useState<"ventas" | "montoVendido">("ventas");
-
   const load = useCallback(async () => {
     setLoading(true);
     setError("");
     try {
-      const [result, stats, dashboard] = await Promise.all([
-        cotizacionesService.obtenerCotizaciones({
+      const result = await cotizacionesService.obtenerCotizaciones({
           estado: filter,
           operacion: pendingCatalogOnly ? "por-confirmar" : undefined,
           buscar: debouncedSearch || undefined,
           limite: 100,
           pagina: 1,
-        }),
-        isSeller ? cotizacionesService.obtenerEstadisticas() : Promise.resolve(null),
-        isAdmin ? cotizacionesService.obtenerTableroComercial().catch(() => null) : Promise.resolve(null),
-      ]);
+        });
       setQuotes(result.cotizaciones);
       setTotal(result.pagination?.total ?? result.cotizaciones.length);
-      setSellerStats(stats);
-      setAdminDashboard(dashboard);
     } catch {
       setError("No pudimos cargar las cotizaciones guardadas.");
     } finally {
       setLoading(false);
     }
-  }, [debouncedSearch, filter, isAdmin, isSeller, pendingCatalogOnly]);
-
-  const sortedSellerRanking = useMemo(() => [...(adminDashboard?.rankingVendedores || [])].sort((a, b) => b[sellerRankingSort] - a[sellerRankingSort]), [adminDashboard, sellerRankingSort]);
+  }, [debouncedSearch, filter, pendingCatalogOnly]);
 
   useFocusEffect(useCallback(() => { void load(); }, [load]));
 
@@ -538,43 +523,6 @@ export function QuoteHistoryScreen() {
           actionIcon={<MaterialIcons name="add" size={20} color={COLORS.ink} />}
           onAction={() => router.push("/(tabs)/productos")}
         />
-
-        {isSeller && sellerStats ? (
-          <View style={styles.summaryRow}>
-            <View style={styles.summaryCard}>
-              <Text style={styles.summaryValue}>{formatMoney(sellerStats.liquidacion.gananciaVendedor)}</Text>
-              <Text style={styles.summaryLabel}>Tu ganancia confirmada</Text>
-            </View>
-            <View style={styles.summaryCard}>
-              <Text style={styles.summaryValue}>{formatMoney(sellerStats.liquidacion.dineroARendir)}</Text>
-              <Text style={styles.summaryLabel}>Dinero a rendir</Text>
-            </View>
-            <View style={styles.summaryCard}>
-              <Text style={styles.summaryValue}>{formatMoney(sellerStats.liquidacion.totalVendido)}</Text>
-              <Text style={styles.summaryLabel}>Ventas confirmadas</Text>
-            </View>
-          </View>
-        ) : null}
-
-        {isSeller && sellerStats?.historialMensual?.length ? <View style={styles.analyticsPanel}>
-          <Text style={styles.analyticsTitle}>Tu historial mensual</Text>
-          {sellerStats.historialMensual.map(month => <View key={month.periodo} style={styles.analyticsRow}>
-            <Text style={styles.analyticsName}>{month.periodo}</Text>
-            <Text style={styles.analyticsValue}>{month.ventas} ventas</Text>
-            <Text style={styles.analyticsValue}>{formatMoney(month.ganancia)} de ganancia</Text>
-          </View>)}
-        </View> : null}
-
-        {isAdmin && adminDashboard ? <View style={styles.analyticsPanel}>
-          <View style={styles.analyticsHeader}><View><Text style={styles.analyticsTitle}>Rendimiento comercial</Text><Text style={styles.analyticsSubtitle}>Período {adminDashboard.periodo}</Text></View><View style={styles.analyticsSort}><Pressable onPress={() => setSellerRankingSort("ventas")} style={[styles.analyticsChip, sellerRankingSort === "ventas" && styles.analyticsChipActive]}><Text style={styles.analyticsChipText}>Por ventas</Text></Pressable><Pressable onPress={() => setSellerRankingSort("montoVendido")} style={[styles.analyticsChip, sellerRankingSort === "montoVendido" && styles.analyticsChipActive]}><Text style={styles.analyticsChipText}>Por monto</Text></Pressable></View></View>
-          <Text style={styles.sectionLabel}>Posiciones de vendedores</Text>
-          {sortedSellerRanking.length ? sortedSellerRanking.map((seller, index) => <View key={seller.vendedorId} style={styles.analyticsRow}><Text style={styles.analyticsPosition}>{index + 1}</Text><Text style={styles.analyticsName}>{seller.nombre}</Text><Text style={styles.analyticsValue}>{seller.ventas} ventas</Text><Text style={styles.analyticsValue}>{formatMoney(seller.montoVendido)}</Text></View>) : <Text style={styles.analyticsEmpty}>Todavía no hay ventas de vendedores este mes.</Text>}
-          <View style={styles.analyticsColumns}>
-            <View style={styles.analyticsColumn}><Text style={styles.sectionLabel}>Más vendido</Text>{adminDashboard.productosMasVendidos.slice(0, 3).map(item => <Text key={item._id} style={styles.analyticsItem}>{item.marca} {item.modelo} · {item.unidades}</Text>)}</View>
-            <View style={styles.analyticsColumn}><Text style={styles.sectionLabel}>Más consultado</Text>{adminDashboard.productosMasConsultados.slice(0, 3).map(item => <Text key={item._id} style={styles.analyticsItem}>{item.marca} {item.modelo} · {item.consultas}</Text>)}</View>
-            <View style={styles.analyticsColumn}><Text style={styles.sectionLabel}>Mayor variación</Text>{adminDashboard.productosMayorVariacion.slice(0, 3).map(item => <Text key={item.productoId} style={styles.analyticsItem}>{item.marca} {item.modelo} · {formatMoney(item.variacionAbsoluta)}</Text>)}</View>
-          </View>
-        </View> : null}
 
         <View style={styles.summaryRow}>
           <View style={styles.summaryCard}>
@@ -924,22 +872,6 @@ const styles = StyleSheet.create({
   catalogQueueText: { color: COLORS.textSecondary, fontSize: 12, lineHeight: 17 },
   catalogStatus: { alignSelf: "flex-start", marginTop: 5, paddingHorizontal: 8, paddingVertical: 3, borderRadius: RADIUS.sm, overflow: "hidden", color: COLORS.primaryDark, backgroundColor: COLORS.primary + "20", fontSize: 11, fontWeight: "800" },
   catalogTrackingHelp: { marginBottom: SPACING.sm, color: COLORS.textSecondary, fontSize: 12, lineHeight: 18 },
-  analyticsPanel: { marginBottom: SPACING.lg, padding: SPACING.lg, borderWidth: 1, borderColor: COLORS.border, borderRadius: RADIUS.lg, backgroundColor: COLORS.surface },
-  analyticsHeader: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: SPACING.md },
-  analyticsTitle: { color: COLORS.text, fontSize: 18, fontWeight: "800" },
-  analyticsSubtitle: { color: COLORS.textSecondary, fontSize: 12 },
-  analyticsSort: { flexDirection: "row", gap: SPACING.xs },
-  analyticsChip: { paddingHorizontal: SPACING.sm, paddingVertical: 7, borderWidth: 1, borderColor: COLORS.border, borderRadius: RADIUS.full },
-  analyticsChipActive: { borderColor: COLORS.primaryDark, backgroundColor: COLORS.primary + "20" },
-  analyticsChipText: { color: COLORS.text, fontSize: 11, fontWeight: "700" },
-  analyticsRow: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: SPACING.md, paddingVertical: SPACING.sm, borderBottomWidth: 1, borderBottomColor: COLORS.border },
-  analyticsPosition: { width: 24, color: COLORS.primaryDark, fontWeight: "900" },
-  analyticsName: { minWidth: 120, flex: 1, color: COLORS.text, fontWeight: "700" },
-  analyticsValue: { color: COLORS.textSecondary, fontSize: 12, fontWeight: "700" },
-  analyticsColumns: { flexDirection: "row", flexWrap: "wrap", gap: SPACING.lg },
-  analyticsColumn: { minWidth: 190, flex: 1 },
-  analyticsItem: { marginBottom: 7, color: COLORS.text, fontSize: 12, lineHeight: 17 },
-  analyticsEmpty: { paddingVertical: SPACING.sm, color: COLORS.textSecondary, fontSize: 12 },
   grid: { flexDirection: "row", flexWrap: "wrap", gap: SPACING.md },
   card: { width: "100%", padding: SPACING.lg, borderWidth: 1, borderColor: COLORS.border, borderTopWidth: 4, borderTopColor: COLORS.primary, borderRadius: RADIUS.lg, backgroundColor: COLORS.surface, ...SHADOWS.sm },
   cardDesktop: { width: "48.9%" },
