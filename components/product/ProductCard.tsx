@@ -69,6 +69,9 @@ export default function ProductCard({
     ? catalogValidity.toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", year: "numeric" })
     : null;
   const hasStock = producto.stock.disponible && producto.stock.cantidad > 0;
+  const discountPercentage = Number(producto.precios?.descuentoPorcentaje ?? producto.descuento?.porcentaje ?? 0);
+  const hasDiscount = discountPercentage > 0;
+  const previousPrice = Number(producto.precios?.contadoSinDescuento ?? producto.descuento?.precioAnterior ?? 0);
   const hasImage = Boolean(producto.imagenes?.length);
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -90,6 +93,7 @@ export default function ProductCard({
         ]}
       >
         <View style={styles.cardAccent} />
+        {hasDiscount ? <View style={styles.discountFlag}><ThemedText style={styles.discountFlagText}>-{discountPercentage}%</ThemedText></View> : null}
         {showAdminButtons && (onEdit || onDelete || onInstagramStory || onShareImage || onStockQuery) && (
           <View style={styles.cardControls} pointerEvents="box-none">
             {onEdit ? (
@@ -313,7 +317,8 @@ export default function ProductCard({
                 {!isCompact && (
                   <ThemedText style={styles.priceLabel}>PRECIO CONTADO</ThemedText>
                 )}
-                <ThemedText style={[styles.price, isCompact && styles.priceCompact]}>
+                {hasDiscount && previousPrice > 0 ? <ThemedText style={styles.previousPrice}>{formatPrice(previousPrice)}</ThemedText> : null}
+                <ThemedText style={[styles.price, isCompact && styles.priceCompact, hasDiscount && styles.promotionalPrice]}>
                   {formatPrice(producto.precios.contado)}
                 </ThemedText>
               </View>
@@ -378,6 +383,8 @@ const styles = StyleSheet.create({
     height: 4,
     backgroundColor: COLORS.primary,
   },
+  discountFlag: { position: "absolute", top: 54, right: SPACING.sm, zIndex: 4, paddingHorizontal: 10, paddingVertical: 6, borderRadius: RADIUS.full, backgroundColor: COLORS.errorStrong },
+  discountFlagText: { color: COLORS.surface, fontSize: 13, fontWeight: "900" },
   cardControls: {
     position: "absolute",
     top: SPACING.sm,
@@ -627,6 +634,8 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: COLORS.primaryDark,
   },
+  previousPrice: { marginBottom: 2, color: COLORS.textSecondary, fontSize: 12, textDecorationLine: "line-through" },
+  promotionalPrice: { color: COLORS.errorStrong },
   priceCompact: {
     fontSize: 20,
   },

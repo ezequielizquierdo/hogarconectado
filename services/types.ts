@@ -36,6 +36,14 @@ export interface Producto {
     precioBase?: number;
     porcentajeGanancia?: number;
     porcentajeGananciaAplicado?: number;
+    descuento?: {
+        activo: boolean;
+        porcentaje: number;
+        desde?: string;
+        hasta?: string;
+        precioAnterior?: number;
+        precioPromocional?: number;
+    };
     tipoComercializacion?: 'stock-propio' | 'producto-tercero' | 'venta-catalogo';
     catalogo?: {
         nombre?: string;
@@ -47,6 +55,8 @@ export interface Producto {
     precioConGanancia?: number;
     precios?: {
         contado: number;
+        contadoSinDescuento?: number;
+        descuentoPorcentaje?: number;
         factura?: { costoBase: number; unPago: number };
         tresCuotas: { costoBase?: number; total: number; cuota: number };
         seisCuotas: { costoBase?: number; total: number; cuota: number };
@@ -129,6 +139,8 @@ export interface ConsultaResumen {
 export interface ProductoConPrecios extends Producto {
     precios: {
         contado: number;
+        contadoSinDescuento?: number;
+        descuentoPorcentaje?: number;
         factura?: {
             costoBase: number;
             unPago: number;
@@ -228,6 +240,9 @@ export interface Cotizacion {
     };
     disponibilidadCatalogo?: {
         requerida: boolean;
+        estado?: 'pendiente' | 'disponible' | 'no-disponible' | 'encargado' | 'recibido';
+        observacion?: string;
+        actualizadaAt?: string;
         confirmadaAt?: string;
         confirmadaPor?: string | Pick<Usuario, '_id' | 'nombre' | 'email'>;
     };
@@ -294,6 +309,7 @@ export interface ProductoFiltros {
 
 export interface CotizacionFiltros {
     estado?: string;
+    operacion?: 'por-confirmar';
     fechaDesde?: string;
     fechaHasta?: string;
     limite?: number;

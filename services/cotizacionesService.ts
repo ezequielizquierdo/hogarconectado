@@ -9,6 +9,14 @@ import {
     ApiListResponse,
 } from './types';
 
+export interface CommercialDashboard {
+    periodo: string;
+    rankingVendedores: { vendedorId: string; nombre: string; ventas: number; montoVendido: number; ganancia: number }[];
+    productosMasVendidos: { _id: string; marca: string; modelo: string; unidades: number }[];
+    productosMasConsultados: { _id: string; marca: string; modelo: string; consultas: number }[];
+    productosMayorVariacion: { productoId: string; marca: string; modelo: string; minimo: number; maximo: number; cambios: number; variacionAbsoluta: number }[];
+}
+
 class CotizacionesService {
     // Crear nueva cotización
     async crearCotizacion(datos: CrearCotizacionData): Promise<Cotizacion> {
@@ -30,6 +38,7 @@ class CotizacionesService {
             const params = new URLSearchParams();
 
             if (filtros.estado) params.append('estado', filtros.estado);
+            if (filtros.operacion) params.append('operacion', filtros.operacion);
             if (filtros.fechaDesde) params.append('fechaDesde', filtros.fechaDesde);
             if (filtros.fechaHasta) params.append('fechaHasta', filtros.fechaHasta);
             if (filtros.limite) params.append('limite', filtros.limite.toString());
@@ -84,6 +93,14 @@ class CotizacionesService {
         return response.data.data;
     }
 
+    async actualizarDisponibilidadCatalogo(id: string, cambios: {
+        estado: 'pendiente' | 'disponible' | 'no-disponible' | 'encargado' | 'recibido';
+        observacion?: string;
+    }): Promise<Cotizacion> {
+        const response = await apiClient.patch<ApiResponse<Cotizacion>>(`/cotizaciones/${id}/disponibilidad-catalogo`, cambios);
+        return response.data.data;
+    }
+
     // Eliminar cotización
     async eliminarCotizacion(id: string): Promise<void> {
         try {
@@ -114,6 +131,11 @@ class CotizacionesService {
             console.error('Error obteniendo estadísticas:', error);
             throw error;
         }
+    }
+
+    async obtenerTableroComercial(mes?: string): Promise<CommercialDashboard> {
+        const response = await apiClient.get<ApiResponse<CommercialDashboard>>('/cotizaciones/estadisticas/tablero', { params: mes ? { mes } : undefined });
+        return response.data.data;
     }
 
     // Obtener cotizaciones recientes

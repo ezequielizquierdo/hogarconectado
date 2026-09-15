@@ -24,7 +24,7 @@ import { COLORS, RADIUS, SHADOWS, SPACING } from "@/constants/theme";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQuoteDraft } from "@/contexts/QuoteDraftContext";
 import { useDebounce } from "@/hooks/useDebounce";
-import cotizacionesService from "@/services/cotizacionesService";
+import cotizacionesService, { CommercialDashboard } from "@/services/cotizacionesService";
 import pedidosService, { PedidoResumen } from "@/services/pedidosService";
 import type {
   Cotizacion,
@@ -68,6 +68,14 @@ const DELIVERY_STATE_LABEL = {
   coordinada: "Coordinada",
   entregada: "Entregada",
   cancelada: "Cancelada",
+} as const;
+
+const CATALOG_STATE_LABEL = {
+  pendiente: "Esperando disponibilidad",
+  disponible: "Disponible",
+  "no-disponible": "No disponible",
+  encargado: "Encargado al proveedor",
+  recibido: "Recibido",
 } as const;
 
 const formatMoney = (value: number) =>
@@ -226,6 +234,7 @@ export function QuoteHistoryScreen() {
   const isSeller = user?.rol === "vendedor";
   const [quotes, setQuotes] = useState<Cotizacion[]>([]);
   const [filter, setFilter] = useState<CotizacionEstado | "todas">("todas");
+  const [pendingCatalogOnly, setPendingCatalogOnly] = useState(false);
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebounce(search.trim(), 350);
   const [loading, setLoading] = useState(true);
@@ -244,30 +253,38 @@ export function QuoteHistoryScreen() {
   const [catalogAvailabilityConfirmed, setCatalogAvailabilityConfirmed] = useState(false);
   const [sellerStats, setSellerStats] = useState<{
     liquidacion: { totalVendido: number; dineroARendir: number; gananciaVendedor: number };
+    historialMensual?: { periodo: string; ventas: number; montoVendido: number; ganancia: number }[];
   } | null>(null);
+  const [adminDashboard, setAdminDashboard] = useState<CommercialDashboard | null>(null);
+  const [sellerRankingSort, setSellerRankingSort] = useState<"ventas" | "montoVendido">("ventas");
 
   const load = useCallback(async () => {
     setLoading(true);
     setError("");
     try {
-      const [result, stats] = await Promise.all([
+      const [result, stats, dashboard] = await Promise.all([
         cotizacionesService.obtenerCotizaciones({
           estado: filter,
+          operacion: pendingCatalogOnly ? "por-confirmar" : undefined,
           buscar: debouncedSearch || undefined,
           limite: 100,
           pagina: 1,
         }),
         isSeller ? cotizacionesService.obtenerEstadisticas() : Promise.resolve(null),
+        isAdmin ? cotizacionesService.obtenerTableroComercial().catch(() => null) : Promise.resolve(null),
       ]);
       setQuotes(result.cotizaciones);
       setTotal(result.pagination?.total ?? result.cotizaciones.length);
       setSellerStats(stats);
+      setAdminDashboard(dashboard);
     } catch {
       setError("No pudimos cargar las cotizaciones guardadas.");
     } finally {
       setLoading(false);
     }
-  }, [debouncedSearch, filter, isSeller]);
+  }, [debouncedSearch, filter, isAdmin, isSeller, pendingCatalogOnly]);
+
+  const sortedSellerRanking = useMemo(() => [...(adminDashboard?.rankingVendedores || [])].sort((a, b) => b[sellerRankingSort] - a[sellerRankingSort]), [adminDashboard, sellerRankingSort]);
 
   useFocusEffect(useCallback(() => { void load(); }, [load]));
 
@@ -371,6 +388,26 @@ export function QuoteHistoryScreen() {
       setFeedback("Seguimiento de la venta actualizado.");
     } catch {
       setFeedback("No pudimos actualizar el seguimiento de la venta.");
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
+  const updateCatalogAvailability = async (
+    quote: Cotizacion,
+    estado: NonNullable<Cotizacion["disponibilidadCatalogo"]>["estado"]
+  ) => {
+    if (!estado || processingId) return;
+    setProcessingId(quote._id);
+    setFeedback("");
+    try {
+      const updated = await cotizacionesService.actualizarDisponibilidadCatalogo(quote._id, { estado });
+      setQuotes(current => current.map(item => item._id === updated._id ? updated : item));
+      setSelected(current => current?._id === updated._id ? updated : current);
+      setFeedback(`Catálogo: ${CATALOG_STATE_LABEL[estado].toLowerCase()}.`);
+      if (pendingCatalogOnly && estado !== "pendiente") await load();
+    } catch (requestError: any) {
+      setFeedback(requestError.response?.data?.message || "No pudimos actualizar la disponibilidad.");
     } finally {
       setProcessingId(null);
     }
@@ -519,6 +556,26 @@ export function QuoteHistoryScreen() {
           </View>
         ) : null}
 
+        {isSeller && sellerStats?.historialMensual?.length ? <View style={styles.analyticsPanel}>
+          <Text style={styles.analyticsTitle}>Tu historial mensual</Text>
+          {sellerStats.historialMensual.map(month => <View key={month.periodo} style={styles.analyticsRow}>
+            <Text style={styles.analyticsName}>{month.periodo}</Text>
+            <Text style={styles.analyticsValue}>{month.ventas} ventas</Text>
+            <Text style={styles.analyticsValue}>{formatMoney(month.ganancia)} de ganancia</Text>
+          </View>)}
+        </View> : null}
+
+        {isAdmin && adminDashboard ? <View style={styles.analyticsPanel}>
+          <View style={styles.analyticsHeader}><View><Text style={styles.analyticsTitle}>Rendimiento comercial</Text><Text style={styles.analyticsSubtitle}>Período {adminDashboard.periodo}</Text></View><View style={styles.analyticsSort}><Pressable onPress={() => setSellerRankingSort("ventas")} style={[styles.analyticsChip, sellerRankingSort === "ventas" && styles.analyticsChipActive]}><Text style={styles.analyticsChipText}>Por ventas</Text></Pressable><Pressable onPress={() => setSellerRankingSort("montoVendido")} style={[styles.analyticsChip, sellerRankingSort === "montoVendido" && styles.analyticsChipActive]}><Text style={styles.analyticsChipText}>Por monto</Text></Pressable></View></View>
+          <Text style={styles.sectionLabel}>Posiciones de vendedores</Text>
+          {sortedSellerRanking.length ? sortedSellerRanking.map((seller, index) => <View key={seller.vendedorId} style={styles.analyticsRow}><Text style={styles.analyticsPosition}>{index + 1}</Text><Text style={styles.analyticsName}>{seller.nombre}</Text><Text style={styles.analyticsValue}>{seller.ventas} ventas</Text><Text style={styles.analyticsValue}>{formatMoney(seller.montoVendido)}</Text></View>) : <Text style={styles.analyticsEmpty}>Todavía no hay ventas de vendedores este mes.</Text>}
+          <View style={styles.analyticsColumns}>
+            <View style={styles.analyticsColumn}><Text style={styles.sectionLabel}>Más vendido</Text>{adminDashboard.productosMasVendidos.slice(0, 3).map(item => <Text key={item._id} style={styles.analyticsItem}>{item.marca} {item.modelo} · {item.unidades}</Text>)}</View>
+            <View style={styles.analyticsColumn}><Text style={styles.sectionLabel}>Más consultado</Text>{adminDashboard.productosMasConsultados.slice(0, 3).map(item => <Text key={item._id} style={styles.analyticsItem}>{item.marca} {item.modelo} · {item.consultas}</Text>)}</View>
+            <View style={styles.analyticsColumn}><Text style={styles.sectionLabel}>Mayor variación</Text>{adminDashboard.productosMayorVariacion.slice(0, 3).map(item => <Text key={item.productoId} style={styles.analyticsItem}>{item.marca} {item.modelo} · {formatMoney(item.variacionAbsoluta)}</Text>)}</View>
+          </View>
+        </View> : null}
+
         <View style={styles.summaryRow}>
           <View style={styles.summaryCard}>
             <Text style={styles.summaryValue}>{total}</Text>
@@ -535,6 +592,20 @@ export function QuoteHistoryScreen() {
             </View>
           )}
         </View>
+
+        {(isAdmin || isSeller) ? <Pressable
+          onPress={() => { setPendingCatalogOnly(current => !current); setFilter("todas"); }}
+          style={[styles.catalogQueue, pendingCatalogOnly && styles.catalogQueueActive]}
+          accessibilityRole="button"
+          accessibilityState={{ selected: pendingCatalogOnly }}
+        >
+          <MaterialIcons name="pending-actions" size={24} color={COLORS.primaryDark} />
+          <View style={styles.nextStepCopy}>
+            <Text style={styles.catalogQueueTitle}>Por confirmar</Text>
+            <Text style={styles.catalogQueueText}>Pedidos aceptados que esperan disponibilidad del catálogo.</Text>
+          </View>
+          <MaterialIcons name={pendingCatalogOnly ? "close" : "arrow-forward"} size={21} color={COLORS.primaryDark} />
+        </Pressable> : null}
 
         <View style={[styles.toolbar, !isDesktop && styles.toolbarMobile]}>
           <View style={styles.searchBox}>
@@ -589,6 +660,7 @@ export function QuoteHistoryScreen() {
                     <Text numberOfLines={1} style={styles.clientName}>{quote.datosContacto.nombre}</Text>
                     <Text style={styles.cardMeta}>{formatDate(quote.createdAt)} · {quote.datosContacto.telefono}</Text>
                     {isAdmin ? <CommercialOwner quote={quote} /> : null}
+                    {quote.disponibilidadCatalogo?.requerida ? <Text style={styles.catalogStatus}>{CATALOG_STATE_LABEL[quote.disponibilidadCatalogo.estado || "pendiente"]}</Text> : null}
                   </View>
                   <View style={[styles.statusBadge, styles[`status_${quote.estado}`]]}>
                     <Text style={styles.statusText}>{STATE_LABEL[quote.estado]}</Text>
@@ -689,6 +761,15 @@ export function QuoteHistoryScreen() {
                   <Text style={styles.detailTotalValue}>{formatMoney(selected.totales.total)}</Text>
                 </View>
                 <ConfirmationSummary quote={selected} detailed />
+                {selected.disponibilidadCatalogo?.requerida ? <View style={styles.saleTracking}>
+                  <Text style={styles.sectionLabel}>Disponibilidad del catálogo</Text>
+                  <Text style={styles.catalogTrackingHelp}>Actualizá este estado después de consultar al proveedor. El cliente no podrá informar el pago mientras siga pendiente.</Text>
+                  <View style={styles.stateActions}>{(Object.keys(CATALOG_STATE_LABEL) as (keyof typeof CATALOG_STATE_LABEL)[]).map(value => (
+                    <Pressable key={value} disabled={processingId === selected._id} onPress={() => void updateCatalogAvailability(selected, value)} style={[styles.stateButton, (selected.disponibilidadCatalogo?.estado || "pendiente") === value && styles.stateButtonActive]}>
+                      <Text style={[styles.stateButtonText, (selected.disponibilidadCatalogo?.estado || "pendiente") === value && styles.stateButtonTextActive]}>{CATALOG_STATE_LABEL[value]}</Text>
+                    </Pressable>
+                  ))}</View>
+                </View> : null}
                 {isAdmin && selected.estado === "confirmada" && selected.venta ? (
                   <View style={styles.saleTracking}>
                     <Text style={styles.sectionLabel}>Confirmación de pago</Text>
@@ -837,6 +918,28 @@ const styles = StyleSheet.create({
   filterText: { color: COLORS.textSecondary, fontSize: 13, fontWeight: "700" },
   filterTextActive: { color: COLORS.primaryDark },
   feedback: { marginBottom: SPACING.md, color: COLORS.text, fontSize: 14, fontWeight: "700" },
+  catalogQueue: { flexDirection: "row", alignItems: "center", gap: SPACING.md, marginBottom: SPACING.lg, padding: SPACING.md, borderWidth: 1, borderColor: COLORS.border, borderRadius: RADIUS.lg, backgroundColor: COLORS.surface },
+  catalogQueueActive: { borderColor: COLORS.primaryDark, backgroundColor: COLORS.primary + "18" },
+  catalogQueueTitle: { color: COLORS.text, fontSize: 15, fontWeight: "800" },
+  catalogQueueText: { color: COLORS.textSecondary, fontSize: 12, lineHeight: 17 },
+  catalogStatus: { alignSelf: "flex-start", marginTop: 5, paddingHorizontal: 8, paddingVertical: 3, borderRadius: RADIUS.sm, overflow: "hidden", color: COLORS.primaryDark, backgroundColor: COLORS.primary + "20", fontSize: 11, fontWeight: "800" },
+  catalogTrackingHelp: { marginBottom: SPACING.sm, color: COLORS.textSecondary, fontSize: 12, lineHeight: 18 },
+  analyticsPanel: { marginBottom: SPACING.lg, padding: SPACING.lg, borderWidth: 1, borderColor: COLORS.border, borderRadius: RADIUS.lg, backgroundColor: COLORS.surface },
+  analyticsHeader: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: SPACING.md },
+  analyticsTitle: { color: COLORS.text, fontSize: 18, fontWeight: "800" },
+  analyticsSubtitle: { color: COLORS.textSecondary, fontSize: 12 },
+  analyticsSort: { flexDirection: "row", gap: SPACING.xs },
+  analyticsChip: { paddingHorizontal: SPACING.sm, paddingVertical: 7, borderWidth: 1, borderColor: COLORS.border, borderRadius: RADIUS.full },
+  analyticsChipActive: { borderColor: COLORS.primaryDark, backgroundColor: COLORS.primary + "20" },
+  analyticsChipText: { color: COLORS.text, fontSize: 11, fontWeight: "700" },
+  analyticsRow: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: SPACING.md, paddingVertical: SPACING.sm, borderBottomWidth: 1, borderBottomColor: COLORS.border },
+  analyticsPosition: { width: 24, color: COLORS.primaryDark, fontWeight: "900" },
+  analyticsName: { minWidth: 120, flex: 1, color: COLORS.text, fontWeight: "700" },
+  analyticsValue: { color: COLORS.textSecondary, fontSize: 12, fontWeight: "700" },
+  analyticsColumns: { flexDirection: "row", flexWrap: "wrap", gap: SPACING.lg },
+  analyticsColumn: { minWidth: 190, flex: 1 },
+  analyticsItem: { marginBottom: 7, color: COLORS.text, fontSize: 12, lineHeight: 17 },
+  analyticsEmpty: { paddingVertical: SPACING.sm, color: COLORS.textSecondary, fontSize: 12 },
   grid: { flexDirection: "row", flexWrap: "wrap", gap: SPACING.md },
   card: { width: "100%", padding: SPACING.lg, borderWidth: 1, borderColor: COLORS.border, borderTopWidth: 4, borderTopColor: COLORS.primary, borderRadius: RADIUS.lg, backgroundColor: COLORS.surface, ...SHADOWS.sm },
   cardDesktop: { width: "48.9%" },

@@ -101,6 +101,9 @@ interface ProductoForm {
   categoria: string;
   precioBase: string;
   porcentajeGanancia: string;
+  descuentoActivo: string;
+  descuentoPorcentaje: string;
+  descuentoHasta: string;
   tipoComercializacion: "stock-propio" | "producto-tercero" | "venta-catalogo";
   catalogoNombre: string;
   catalogoCampania: string;
@@ -119,6 +122,9 @@ const initialForm: ProductoForm = {
   categoria: "",
   precioBase: "",
   porcentajeGanancia: "10",
+  descuentoActivo: "false",
+  descuentoPorcentaje: "",
+  descuentoHasta: "",
   tipoComercializacion: "stock-propio",
   catalogoNombre: "",
   catalogoCampania: "",
@@ -384,6 +390,9 @@ export default function ProductosScreen() {
             producto.porcentajeGananciaAplicado ??
             30
         ),
+        descuentoActivo: String(producto.descuento?.activo || false),
+        descuentoPorcentaje: producto.descuento?.porcentaje ? String(producto.descuento.porcentaje) : "",
+        descuentoHasta: producto.descuento?.hasta?.slice(0, 10) || "",
         tipoComercializacion: producto.tipoComercializacion || "stock-propio",
         catalogoNombre: producto.catalogo?.nombre || "",
         catalogoCampania: producto.catalogo?.campania || "",
@@ -900,6 +909,7 @@ export default function ProductosScreen() {
     }
     const precioNumerico = parsePrice(form.precioBase);
     const porcentajeGanancia = Number(form.porcentajeGanancia.replace(",", "."));
+    const descuentoPorcentaje = Number(form.descuentoPorcentaje.replace(",", "."));
     const nextErrors: Partial<Record<keyof ProductoForm, string>> = {};
     if (!form.marca.trim()) nextErrors.marca = "Seleccioná o escribí una marca.";
     if (!form.modelo.trim()) nextErrors.modelo = "Ingresá el modelo del producto.";
@@ -915,6 +925,12 @@ export default function ProductosScreen() {
     ) {
       nextErrors.porcentajeGanancia =
         "Ingresá un porcentaje entre 0 y 100.";
+    }
+    if (form.descuentoActivo === "true" && (!Number.isFinite(descuentoPorcentaje) || descuentoPorcentaje <= 0 || descuentoPorcentaje > 90)) {
+      nextErrors.descuentoPorcentaje = "Ingresá un descuento entre 1 y 90%.";
+    }
+    if (form.descuentoHasta && !/^\d{4}-\d{2}-\d{2}$/.test(form.descuentoHasta)) {
+      nextErrors.descuentoHasta = "Usá el formato AAAA-MM-DD.";
     }
     if (form.stockCantidad && (!/^\d+$/.test(form.stockCantidad) || Number(form.stockCantidad) < 0)) {
       nextErrors.stockCantidad = "Ingresá una cantidad entera igual o mayor a 0.";
@@ -970,6 +986,11 @@ export default function ProductosScreen() {
         categoria: form.categoria,
         precioBase: precioNumerico,
         porcentajeGanancia,
+        descuento: {
+          activo: form.descuentoActivo === "true",
+          porcentaje: form.descuentoActivo === "true" ? descuentoPorcentaje : 0,
+          hasta: form.descuentoActivo === "true" && form.descuentoHasta ? form.descuentoHasta : undefined,
+        },
         tipoComercializacion: form.tipoComercializacion,
         catalogo: form.tipoComercializacion === "venta-catalogo"
           ? {
@@ -2102,6 +2123,18 @@ export default function ProductosScreen() {
                     error={formErrors.porcentajeGanancia}
                   />
 
+                  <LabeledDropdown
+                    label="Promoción"
+                    options={[{ label: "Sin descuento", value: "false" }, { label: "Aplicar descuento", value: "true" }]}
+                    selectedValue={form.descuentoActivo}
+                    onSelect={(value) => updateFormField("descuentoActivo", value)}
+                    placeholder="Seleccionar promoción"
+                  />
+                  {form.descuentoActivo === "true" ? <>
+                    <AnimatedInput label="Porcentaje de descuento" required value={form.descuentoPorcentaje} onChangeText={(text) => updateFormField("descuentoPorcentaje", text.replace(/[^0-9.,]/g, ""))} placeholder="Ej.: 10" keyboardType="decimal-pad" error={formErrors.descuentoPorcentaje} />
+                    <AnimatedInput label="Vigente hasta" value={form.descuentoHasta} onChangeText={(text) => updateFormField("descuentoHasta", text)} placeholder="AAAA-MM-DD (opcional)" error={formErrors.descuentoHasta} />
+                  </> : null}
+
                   <AnimatedInput
                     label="Cantidad disponible"
                     value={form.stockCantidad}
@@ -2401,6 +2434,18 @@ export default function ProductosScreen() {
                   keyboardType="decimal-pad"
                   error={formErrors.porcentajeGanancia}
                 />
+
+                <LabeledDropdown
+                  label="Promoción"
+                  options={[{ label: "Sin descuento", value: "false" }, { label: "Aplicar descuento", value: "true" }]}
+                  selectedValue={form.descuentoActivo}
+                  onSelect={(value) => updateFormField("descuentoActivo", value)}
+                  placeholder="Seleccionar promoción"
+                />
+                {form.descuentoActivo === "true" ? <>
+                  <AnimatedInput label="Porcentaje de descuento" required value={form.descuentoPorcentaje} onChangeText={(text) => updateFormField("descuentoPorcentaje", text.replace(/[^0-9.,]/g, ""))} placeholder="Ej.: 10" keyboardType="decimal-pad" error={formErrors.descuentoPorcentaje} />
+                  <AnimatedInput label="Vigente hasta" value={form.descuentoHasta} onChangeText={(text) => updateFormField("descuentoHasta", text)} placeholder="AAAA-MM-DD (opcional)" error={formErrors.descuentoHasta} />
+                </> : null}
 
                 <AnimatedInput
                   label="Cantidad disponible"
