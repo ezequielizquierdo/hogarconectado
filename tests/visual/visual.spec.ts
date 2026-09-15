@@ -150,6 +150,13 @@ async function mockApi(page: Page, authenticated = false, currentUser = admin, c
     else if (path.endsWith('/cotizaciones/estadisticas/resumen')) body = { success: true, data: currentUser.rol === 'vendedor'
       ? { total: 1, pendientes: 0, totalGeneral: 430000, liquidacion: { totalVendido: 430000, dineroARendir: 400500, gananciaVendedor: 29500 } }
       : { total: 1, pendientes: 1, totalGeneral: 1917500 } };
+    else if (path.endsWith('/cotizaciones/estadisticas/tablero')) body = { success: true, data: {
+      periodo: '2026-09',
+      rankingVendedores: [],
+      productosMasVendidos: [],
+      productosMasConsultados: [],
+      productosMayorVariacion: [],
+    } };
     else if (path.endsWith(`/cotizaciones/${currentQuote._id}`)) body = { success: true, data: currentQuote };
     else if (path.includes('/cotizaciones')) body = { success: true, data: [currentQuote], pagination: { total: 1, pagina: 1, limite: 20, paginas: 1 } };
     else if (path.endsWith('/usuarios')) body = { success: true, data: [admin] };
