@@ -241,6 +241,7 @@ export function QuoteHistoryScreen() {
   const [deliveryAgreement, setDeliveryAgreement] = useState("");
   const [addShipping, setAddShipping] = useState(false);
   const [shippingCost, setShippingCost] = useState("");
+  const [catalogAvailabilityConfirmed, setCatalogAvailabilityConfirmed] = useState(false);
   const [sellerStats, setSellerStats] = useState<{
     liquidacion: { totalVendido: number; dineroARendir: number; gananciaVendedor: number };
   } | null>(null);
@@ -305,6 +306,7 @@ export function QuoteHistoryScreen() {
       setDeliveryAgreement("");
       setAddShipping(false);
       setShippingCost("");
+      setCatalogAvailabilityConfirmed(false);
       return;
     }
     setProcessingId(quote._id);
@@ -332,6 +334,13 @@ export function QuoteHistoryScreen() {
       setFeedback("Ingresá el costo del envío.");
       return;
     }
+    const includesCatalogProducts = confirming.productos.some(
+      item => item.detalles?.tipoComercializacion === "venta-catalogo"
+    );
+    if (includesCatalogProducts && !catalogAvailabilityConfirmed) {
+      setFeedback("Confirmá la disponibilidad de los productos de catálogo.");
+      return;
+    }
     setProcessingId(confirming._id);
     try {
       const updated = await cotizacionesService.actualizarEstadoCotizacion(confirming._id, "confirmada", {
@@ -339,13 +348,14 @@ export function QuoteHistoryScreen() {
         entregaAcordada: deliveryAgreement.trim(),
         agregarEnvio: addShipping,
         costoEnvio: parsedShipping,
+        disponibilidadCatalogoConfirmada: includesCatalogProducts ? catalogAvailabilityConfirmed : undefined,
       });
       setQuotes(current => current.map(item => item._id === updated._id ? updated : item));
       setSelected(current => current?._id === updated._id ? updated : current);
       setConfirming(null);
       setFeedback("Venta confirmada y liquidación calculada.");
-    } catch {
-      setFeedback("No pudimos confirmar la venta.");
+    } catch (requestError: any) {
+      setFeedback(requestError.response?.data?.message || "No pudimos confirmar la venta.");
     } finally {
       setProcessingId(null);
     }
@@ -766,6 +776,13 @@ export function QuoteHistoryScreen() {
               <TextInput value={buyerName} onChangeText={setBuyerName} style={styles.saleInput} placeholder="Nombre y apellido" />
               <Text style={styles.label}>Entrega acordada *</Text>
               <TextInput value={deliveryAgreement} onChangeText={setDeliveryAgreement} style={[styles.saleInput, styles.saleTextArea]} multiline placeholder="Retiro, domicilio, fecha u otra aclaración" />
+              {confirming?.productos.some(item => item.detalles?.tipoComercializacion === "venta-catalogo") ? <Pressable onPress={() => setCatalogAvailabilityConfirmed(current => !current)} style={styles.shippingToggle} accessibilityRole="checkbox" accessibilityState={{ checked: catalogAvailabilityConfirmed }}>
+                <MaterialIcons name={catalogAvailabilityConfirmed ? "check-box" : "check-box-outline-blank"} size={23} color={COLORS.primaryDark} />
+                <View style={styles.shippingToggleCopy}>
+                  <Text style={styles.shippingToggleText}>Disponibilidad de catálogo confirmada *</Text>
+                  <Text style={styles.shippingToggleHelp}>Verifiqué que los artículos pueden solicitarse y acordé el plazo de entrega.</Text>
+                </View>
+              </Pressable> : null}
               <Pressable onPress={() => setAddShipping(current => !current)} style={styles.shippingToggle} accessibilityRole="checkbox" accessibilityState={{ checked: addShipping }}>
                 <MaterialIcons name={addShipping ? "check-box" : "check-box-outline-blank"} size={23} color={COLORS.primaryDark} />
                 <View style={styles.shippingToggleCopy}>

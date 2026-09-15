@@ -5,11 +5,23 @@ export interface PublicQuote {
   id: string;
   cliente: string;
   vendedor: string;
-  productos: Array<{ marca: string; modelo: string; cantidad: number; imagen?: string; precioUnitario: number; subtotal: number }>;
+  productos: Array<{
+    marca: string;
+    modelo: string;
+    cantidad: number;
+    imagen?: string;
+    precioUnitario: number;
+    subtotal: number;
+    tipoComercializacion?: 'stock-propio' | 'producto-tercero' | 'venta-catalogo';
+    disponiblePorPedido?: boolean;
+    catalogo?: { nombre?: string; campania?: string; vigenciaHasta?: string; plazoEntrega?: string };
+  }>;
   modalidadPago: CotizacionModalidad;
   total: number;
   cuotas?: { cantidad: number; monto: number } | null;
   observaciones?: string;
+  incluyeProductosCatalogo?: boolean;
+  disponibilidadCatalogoConfirmada?: boolean;
   aceptada: boolean;
   pedido?: { estado: 'reserva-pendiente' | 'pago-informado' | 'pago-confirmado' | 'cancelado' | 'vencido'; reservaVenceAt: string; pagoInformadoAt?: string } | null;
   enlaceVenceAt: string;
@@ -34,7 +46,7 @@ async function get(token: string) {
 async function accept(token: string, key = idempotencyKey(token)) {
   const response = await apiClient.post<ApiResponse<PublicOrderResult>>(
     `/cotizaciones-publicas/${token}/aceptar`,
-    { aceptaReserva24h: true },
+    { aceptaReserva24h: true, aceptaCondicionesCatalogo: true },
     { headers: { 'x-idempotency-key': key } }
   );
   return response.data;

@@ -226,6 +226,11 @@ export interface Cotizacion {
             pagoInformadoAt?: string;
         };
     };
+    disponibilidadCatalogo?: {
+        requerida: boolean;
+        confirmadaAt?: string;
+        confirmadaPor?: string | Pick<Usuario, '_id' | 'nombre' | 'email'>;
+    };
     confirmadaPor?: Pick<Usuario, '_id' | 'nombre' | 'email'> | string;
     confirmadaAt?: string;
     resumenConfirmacion?: {

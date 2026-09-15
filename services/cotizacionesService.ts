@@ -65,6 +65,7 @@ class CotizacionesService {
         entregaAcordada: string;
         agregarEnvio: boolean;
         costoEnvio?: number;
+        disponibilidadCatalogoConfirmada?: boolean;
     }): Promise<Cotizacion> {
         try {
             const response = await apiClient.put<ApiResponse<Cotizacion>>(`/cotizaciones/${id}/estado`, { estado, ...confirmacion });
