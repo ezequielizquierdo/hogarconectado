@@ -18,6 +18,7 @@ class ProductosService {
 
             if (filtros.categoria) params.append('categoria', filtros.categoria);
             if (filtros.marca) params.append('marca', filtros.marca);
+            if (filtros.tipoComercializacion) params.append('tipoComercializacion', filtros.tipoComercializacion);
             if (filtros.disponible !== undefined) params.append('disponible', filtros.disponible.toString());
             if (filtros.limite) params.append('limite', filtros.limite.toString());
             if (filtros.pagina) params.append('pagina', filtros.pagina.toString());

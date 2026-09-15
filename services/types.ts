@@ -36,6 +36,14 @@ export interface Producto {
     precioBase?: number;
     porcentajeGanancia?: number;
     porcentajeGananciaAplicado?: number;
+    tipoComercializacion?: 'stock-propio' | 'producto-tercero' | 'venta-catalogo';
+    catalogo?: {
+        nombre?: string;
+        campania?: string;
+        vigenciaHasta?: string;
+        plazoEntrega?: string;
+    };
+    disponiblePorPedido?: boolean;
     precioConGanancia?: number;
     precios?: {
         contado: number;
@@ -176,6 +184,13 @@ export interface ProductoCotizacion {
         categoria: string;
         marca: string;
         modelo: string;
+        tipoComercializacion?: 'stock-propio' | 'producto-tercero' | 'venta-catalogo';
+        catalogo?: {
+            nombre?: string;
+            campania?: string;
+            vigenciaHasta?: string;
+            plazoEntrega?: string;
+        };
         precioBase: number;
         porcentajeAplicado?: number;
         precios: {
@@ -265,6 +280,7 @@ export interface ApiListResponse<T> extends ApiResponse<T[]> {
 export interface ProductoFiltros {
     categoria?: string;
     marca?: string;
+    tipoComercializacion?: 'stock-propio' | 'producto-tercero' | 'venta-catalogo';
     disponible?: boolean;
     limite?: number;
     pagina?: number;

@@ -26,6 +26,7 @@ interface ProductCardProps {
   onEdit?: () => void;
   onDelete?: () => void;
   onInstagramStory?: () => void;
+  onShareImage?: () => void;
   onQuote?: () => void;
   onStockQuery?: () => void;
   isQuoted?: boolean;
@@ -45,6 +46,7 @@ export default function ProductCard({
   onEdit,
   onDelete,
   onInstagramStory,
+  onShareImage,
   onQuote,
   onStockQuery,
   isQuoted = false,
@@ -59,6 +61,13 @@ export default function ProductCard({
   const responsiveWidth = hasMounted ? width : 0;
   const isCompact = Platform.OS !== "web" || responsiveWidth <= 768;
   const isNarrow = responsiveWidth <= 480;
+  const isCatalogProduct = producto.tipoComercializacion === "venta-catalogo";
+  const catalogValidity = producto.catalogo?.vigenciaHasta
+    ? new Date(producto.catalogo.vigenciaHasta)
+    : null;
+  const catalogValidityLabel = catalogValidity && !Number.isNaN(catalogValidity.getTime())
+    ? catalogValidity.toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", year: "numeric" })
+    : null;
   const hasStock = producto.stock.disponible && producto.stock.cantidad > 0;
   const hasImage = Boolean(producto.imagenes?.length);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -81,7 +90,7 @@ export default function ProductCard({
         ]}
       >
         <View style={styles.cardAccent} />
-        {showAdminButtons && (onEdit || onDelete || onInstagramStory || onStockQuery) && (
+        {showAdminButtons && (onEdit || onDelete || onInstagramStory || onShareImage || onStockQuery) && (
           <View style={styles.cardControls} pointerEvents="box-none">
             {onEdit ? (
               <TouchableOpacity
@@ -95,7 +104,7 @@ export default function ProductCard({
               </TouchableOpacity>
             ) : <View />}
 
-            {(onDelete || onInstagramStory || onStockQuery) && (
+            {(onDelete || onInstagramStory || onShareImage || onStockQuery) && (
               <TouchableOpacity
                 accessibilityRole="button"
                 accessibilityLabel={`Más acciones para ${producto.marca} ${producto.modelo}`}
@@ -112,6 +121,19 @@ export default function ProductCard({
 
         {menuOpen && (
           <View style={styles.moreMenu} accessibilityRole="menu">
+            {onShareImage && (
+              <TouchableOpacity
+                accessibilityRole="menuitem"
+                onPress={() => {
+                  setMenuOpen(false);
+                  onShareImage();
+                }}
+                style={styles.moreMenuItem}
+              >
+                <MaterialIcons name="share" size={19} color={COLORS.primaryDark} />
+                <ThemedText style={styles.moreMenuLabel}>Compartir imagen</ThemedText>
+              </TouchableOpacity>
+            )}
             {onInstagramStory && (
               <TouchableOpacity
                 accessibilityRole="menuitem"
@@ -227,15 +249,20 @@ export default function ProductCard({
               <View
                 style={[
                   styles.stockBadge,
+                  isCatalogProduct && styles.catalogBadge,
                   {
-                    backgroundColor: hasStock
+                    backgroundColor: isCatalogProduct
+                      ? COLORS.info
+                      : hasStock
                       ? COLORS.success
                       : COLORS.accent,
                   },
                 ]}
               >
                 <ThemedText style={styles.stockText}>
-                  {hasStock
+                  {isCatalogProduct
+                    ? "Disponible por pedido"
+                    : hasStock
                     ? `Disponible · ${producto.stock.cantidad}`
                     : "Sin stock"}
                 </ThemedText>
@@ -253,6 +280,27 @@ export default function ProductCard({
                 <ThemedText style={styles.modeloText} numberOfLines={2}>
                   {producto.modelo}
                 </ThemedText>
+                {isCatalogProduct && (
+                  <View style={styles.catalogInfo}>
+                    {(producto.catalogo?.nombre || producto.catalogo?.campania) && (
+                      <ThemedText style={styles.catalogInfoText} numberOfLines={1}>
+                        {[producto.catalogo?.nombre, producto.catalogo?.campania]
+                          .filter(Boolean)
+                          .join(" · ")}
+                      </ThemedText>
+                    )}
+                    {producto.catalogo?.plazoEntrega && (
+                      <ThemedText style={styles.catalogInfoText} numberOfLines={1}>
+                        Entrega estimada: {producto.catalogo.plazoEntrega}
+                      </ThemedText>
+                    )}
+                    {catalogValidityLabel && (
+                      <ThemedText style={styles.catalogInfoText} numberOfLines={1}>
+                        Precio vigente hasta {catalogValidityLabel}
+                      </ThemedText>
+                    )}
+                  </View>
+                )}
                 {producto.descripcion && (
                   <ThemedText style={styles.descriptionText} numberOfLines={2}>
                     {producto.descripcion}
@@ -520,6 +568,21 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: "700",
     color: COLORS.text,
+  },
+  catalogBadge: {
+    borderWidth: 1,
+    borderColor: COLORS.borderFocus,
+  },
+  catalogInfo: {
+    marginTop: SPACING.xs,
+    marginBottom: SPACING.xs,
+    gap: 2,
+  },
+  catalogInfoText: {
+    color: COLORS.textSecondary,
+    fontSize: 11,
+    lineHeight: 15,
+    fontWeight: "600",
   },
   productInfo: {
     marginBottom: SPACING.sm,

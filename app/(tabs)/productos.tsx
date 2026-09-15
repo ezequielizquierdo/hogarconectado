@@ -19,6 +19,7 @@ import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
 import * as DocumentPicker from "expo-document-picker";
 import * as Sharing from "expo-sharing";
+import * as FileSystem from "expo-file-system";
 import * as Clipboard from "expo-clipboard";
 import { captureRef } from "react-native-view-shot";
 import { ThemedText } from "@/components/ThemedText";
@@ -100,6 +101,11 @@ interface ProductoForm {
   categoria: string;
   precioBase: string;
   porcentajeGanancia: string;
+  tipoComercializacion: "stock-propio" | "producto-tercero" | "venta-catalogo";
+  catalogoNombre: string;
+  catalogoCampania: string;
+  catalogoVigenciaHasta: string;
+  catalogoPlazoEntrega: string;
   stockCantidad: string;
   stockDisponible: string;
   imagen: string;
@@ -113,6 +119,11 @@ const initialForm: ProductoForm = {
   categoria: "",
   precioBase: "",
   porcentajeGanancia: "10",
+  tipoComercializacion: "stock-propio",
+  catalogoNombre: "",
+  catalogoCampania: "",
+  catalogoVigenciaHasta: "",
+  catalogoPlazoEntrega: "",
   stockCantidad: "",
   stockDisponible: "true",
   imagen: "",
@@ -373,6 +384,11 @@ export default function ProductosScreen() {
             producto.porcentajeGananciaAplicado ??
             30
         ),
+        tipoComercializacion: producto.tipoComercializacion || "stock-propio",
+        catalogoNombre: producto.catalogo?.nombre || "",
+        catalogoCampania: producto.catalogo?.campania || "",
+        catalogoVigenciaHasta: producto.catalogo?.vigenciaHasta?.slice(0, 10) || "",
+        catalogoPlazoEntrega: producto.catalogo?.plazoEntrega || "",
         stockCantidad: producto.stock.cantidad.toString(),
         stockDisponible: producto.stock.disponible.toString(),
         imagen:
@@ -588,6 +604,71 @@ export default function ProductosScreen() {
       Alert.alert(
         "Error",
         "No se pudo obtener el precio contado actualizado del producto."
+      );
+    }
+  };
+
+  const shareProductImage = async (producto: Producto) => {
+    const imageUrl = producto.imagenes?.[0];
+    if (!imageUrl) {
+      Alert.alert("Imagen no disponible", "Este producto todavía no tiene una imagen para compartir.");
+      return;
+    }
+
+    const safeModel = (producto.modelo || "producto")
+      .trim()
+      .replace(/[^a-zA-Z0-9-_]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .toLowerCase();
+    const extension = imageUrl.match(/\.(png|webp|jpe?g)(?:\?|$)/i)?.[1]?.replace("jpeg", "jpg") || "jpg";
+    const filename = `hogar-conectado-${safeModel || "producto"}.${extension}`;
+
+    try {
+      if (Platform.OS === "web") {
+        const response = await fetch(imageUrl);
+        if (!response.ok) throw new Error(`No se pudo descargar la imagen (${response.status})`);
+        const blob = await response.blob();
+        const file = new File([blob], filename, { type: blob.type || `image/${extension}` });
+        const webNavigator = navigator as Navigator & { canShare?: (data?: ShareData) => boolean };
+        const shareData: ShareData = {
+          files: [file],
+          title: `${producto.marca} ${producto.modelo}`,
+        };
+
+        if (typeof webNavigator.share === "function" && webNavigator.canShare?.(shareData)) {
+          await webNavigator.share(shareData);
+          return;
+        }
+
+        const downloadUrl = URL.createObjectURL(file);
+        const link = document.createElement("a");
+        link.href = downloadUrl;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        window.setTimeout(() => URL.revokeObjectURL(downloadUrl), 1000);
+        Alert.alert("Imagen descargada", "Ya podés adjuntarla en WhatsApp o en la aplicación que prefieras.");
+        return;
+      }
+
+      if (!(await Sharing.isAvailableAsync()) || !FileSystem.cacheDirectory) {
+        throw new Error("El menú para compartir no está disponible en este dispositivo");
+      }
+      const downloaded = await FileSystem.downloadAsync(
+        imageUrl,
+        `${FileSystem.cacheDirectory}${filename}`
+      );
+      await Sharing.shareAsync(downloaded.uri, {
+        mimeType: downloaded.headers?.["content-type"] || `image/${extension}`,
+        dialogTitle: `Compartir ${producto.marca} ${producto.modelo}`,
+      });
+    } catch (error) {
+      if (error instanceof Error && error.name === "AbortError") return;
+      console.error("Error compartiendo imagen del producto:", error);
+      Alert.alert(
+        "No pudimos compartir la imagen",
+        "Intentá nuevamente o abrí el detalle del producto para guardarla manualmente."
       );
     }
   };
@@ -838,6 +919,16 @@ export default function ProductosScreen() {
     if (form.stockCantidad && (!/^\d+$/.test(form.stockCantidad) || Number(form.stockCantidad) < 0)) {
       nextErrors.stockCantidad = "Ingresá una cantidad entera igual o mayor a 0.";
     }
+    if (form.tipoComercializacion === "venta-catalogo" && !form.catalogoNombre.trim()) {
+      nextErrors.catalogoNombre = "Ingresá el nombre del catálogo.";
+    }
+    if (
+      form.tipoComercializacion === "venta-catalogo" &&
+      form.catalogoVigenciaHasta &&
+      !/^\d{4}-\d{2}-\d{2}$/.test(form.catalogoVigenciaHasta)
+    ) {
+      nextErrors.catalogoVigenciaHasta = "Usá el formato AAAA-MM-DD.";
+    }
     if (Object.keys(nextErrors).length > 0) {
       setFormErrors(nextErrors);
       productFormScrollRef.current?.scrollTo({ y: 0, animated: true });
@@ -879,6 +970,15 @@ export default function ProductosScreen() {
         categoria: form.categoria,
         precioBase: precioNumerico,
         porcentajeGanancia,
+        tipoComercializacion: form.tipoComercializacion,
+        catalogo: form.tipoComercializacion === "venta-catalogo"
+          ? {
+              nombre: form.catalogoNombre.trim(),
+              campania: form.catalogoCampania.trim() || undefined,
+              vigenciaHasta: form.catalogoVigenciaHasta || undefined,
+              plazoEntrega: form.catalogoPlazoEntrega.trim() || undefined,
+            }
+          : undefined,
         stock: {
           cantidad: parseInt(form.stockCantidad) || 0,
           disponible: form.stockDisponible === "true",
@@ -1440,6 +1540,7 @@ export default function ProductosScreen() {
           onEdit={canEdit ? () => openModal(item) : undefined}
           onDelete={canDelete ? () => handleDelete(item) : undefined}
           onInstagramStory={canShare ? () => openInstagramModal(item) : undefined}
+          onShareImage={canShare ? () => shareProductImage(item) : undefined}
           showConsultButton={!canEdit && !canQuote}
           isConsultSelected={consultProducts.some(product => product._id === item._id)}
           onConsult={!canEdit && !canQuote ? () => setConsultProducts(current => (
@@ -1910,6 +2011,54 @@ export default function ProductosScreen() {
                     onCreate={createCategory}
                   />
 
+                  <LabeledDropdown
+                    label="Tipo de venta"
+                    required
+                    options={[
+                      { label: "Stock propio", value: "stock-propio" },
+                      { label: "Producto de un tercero", value: "producto-tercero" },
+                      { label: "Venta por catálogo", value: "venta-catalogo" },
+                    ]}
+                    selectedValue={form.tipoComercializacion}
+                    onSelect={(value) => updateFormField(
+                      "tipoComercializacion",
+                      value as ProductoForm["tipoComercializacion"]
+                    )}
+                    placeholder="Seleccionar tipo de venta"
+                  />
+
+                  {form.tipoComercializacion === "venta-catalogo" && (
+                    <>
+                      <AnimatedInput
+                        label="Nombre del catálogo"
+                        required
+                        value={form.catalogoNombre}
+                        onChangeText={(text) => updateFormField("catalogoNombre", text)}
+                        placeholder="Ej.: Essen"
+                        error={formErrors.catalogoNombre}
+                      />
+                      <AnimatedInput
+                        label="Campaña"
+                        value={form.catalogoCampania}
+                        onChangeText={(text) => updateFormField("catalogoCampania", text)}
+                        placeholder="Ej.: C9"
+                      />
+                      <AnimatedInput
+                        label="Vigencia del precio"
+                        value={form.catalogoVigenciaHasta}
+                        onChangeText={(text) => updateFormField("catalogoVigenciaHasta", text)}
+                        placeholder="AAAA-MM-DD"
+                        error={formErrors.catalogoVigenciaHasta}
+                      />
+                      <AnimatedInput
+                        label="Entrega estimada"
+                        value={form.catalogoPlazoEntrega}
+                        onChangeText={(text) => updateFormField("catalogoPlazoEntrega", text)}
+                        placeholder="Ej.: 7 a 15 días"
+                      />
+                    </>
+                  )}
+
                   <View style={styles.formSectionHeader}>
                     <ThemedText style={styles.formSectionTitle}>Precio y disponibilidad</ThemedText>
                     <ThemedText style={styles.formSectionHint}>Usá el precio base del producto antes de aplicar cálculos comerciales.</ThemedText>
@@ -2161,6 +2310,54 @@ export default function ProductosScreen() {
                   createLabel="Crear categoría"
                   onCreate={createCategory}
                 />
+
+                <LabeledDropdown
+                  label="Tipo de venta"
+                  required
+                  options={[
+                    { label: "Stock propio", value: "stock-propio" },
+                    { label: "Producto de un tercero", value: "producto-tercero" },
+                    { label: "Venta por catálogo", value: "venta-catalogo" },
+                  ]}
+                  selectedValue={form.tipoComercializacion}
+                  onSelect={(value) => updateFormField(
+                    "tipoComercializacion",
+                    value as ProductoForm["tipoComercializacion"]
+                  )}
+                  placeholder="Seleccionar tipo de venta"
+                />
+
+                {form.tipoComercializacion === "venta-catalogo" && (
+                  <>
+                    <AnimatedInput
+                      label="Nombre del catálogo"
+                      required
+                      value={form.catalogoNombre}
+                      onChangeText={(text) => updateFormField("catalogoNombre", text)}
+                      placeholder="Ej.: Essen"
+                      error={formErrors.catalogoNombre}
+                    />
+                    <AnimatedInput
+                      label="Campaña"
+                      value={form.catalogoCampania}
+                      onChangeText={(text) => updateFormField("catalogoCampania", text)}
+                      placeholder="Ej.: C9"
+                    />
+                    <AnimatedInput
+                      label="Vigencia del precio"
+                      value={form.catalogoVigenciaHasta}
+                      onChangeText={(text) => updateFormField("catalogoVigenciaHasta", text)}
+                      placeholder="AAAA-MM-DD"
+                      error={formErrors.catalogoVigenciaHasta}
+                    />
+                    <AnimatedInput
+                      label="Entrega estimada"
+                      value={form.catalogoPlazoEntrega}
+                      onChangeText={(text) => updateFormField("catalogoPlazoEntrega", text)}
+                      placeholder="Ej.: 7 a 15 días"
+                    />
+                  </>
+                )}
 
                 <View style={styles.formSectionHeader}>
                   <ThemedText style={styles.formSectionTitle}>Precio y disponibilidad</ThemedText>
@@ -2575,6 +2772,15 @@ export default function ProductosScreen() {
 
                     {/* Botones de acción */}
                     <View style={styles.detailActionsContainer}>
+                      {canShare && selectedProduct.imagenes?.[0] && <TouchableOpacity
+                        style={styles.detailEditButton}
+                        onPress={() => shareProductImage(selectedProduct)}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Compartir imagen de ${selectedProduct.marca} ${selectedProduct.modelo}`}
+                      >
+                        <MaterialIcons name="share" size={20} color={COLORS.surface} />
+                        <ThemedText style={styles.detailActionText}>Compartir imagen</ThemedText>
+                      </TouchableOpacity>}
                       {canEdit && <TouchableOpacity
                         style={styles.detailEditButton}
                         onPress={() => {
@@ -2750,6 +2956,15 @@ export default function ProductosScreen() {
 
                   {/* Botones de acción */}
                   <View style={styles.detailActionsContainer}>
+                    {canShare && selectedProduct.imagenes?.[0] && <TouchableOpacity
+                      style={styles.detailEditButton}
+                      onPress={() => shareProductImage(selectedProduct)}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Compartir imagen de ${selectedProduct.marca} ${selectedProduct.modelo}`}
+                    >
+                      <MaterialIcons name="share" size={20} color={COLORS.surface} />
+                      <ThemedText style={styles.detailActionText}>Compartir imagen</ThemedText>
+                    </TouchableOpacity>}
                     {canEdit && <TouchableOpacity
                       style={styles.detailEditButton}
                       onPress={() => {
