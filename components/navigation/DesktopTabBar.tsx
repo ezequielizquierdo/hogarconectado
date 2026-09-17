@@ -166,6 +166,15 @@ export function DesktopTabBar({
       </View>
 
       <View style={styles.secondaryNavigation}>
+        {!isAuthenticated && <Pressable
+          onPress={() => router.push('/sumate')}
+          accessibilityRole="link"
+          accessibilityLabel="Sumate a Hogar Conectado"
+          style={({ pressed }) => [styles.joinLink, pressed && styles.itemPressed]}
+        >
+          <MaterialIcons name="handshake" size={18} color={COLORS.primaryDark} />
+          <Text style={styles.joinLinkLabel}>Sumate</Text>
+        </Pressable>}
         {action && (
           <Pressable
             onPress={action.onPress}
@@ -310,6 +319,19 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "flex-end",
     gap: SPACING.xs,
+  },
+  joinLink: {
+    minHeight: 40,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    paddingHorizontal: SPACING.sm,
+    borderRadius: RADIUS.md,
+  },
+  joinLinkLabel: {
+    color: COLORS.primaryDark,
+    fontSize: 13,
+    fontWeight: "800",
   },
   contextAction: {
     minHeight: 44,

@@ -129,9 +129,8 @@ class ProductosService {
     // Obtener marcas únicas
     async obtenerMarcas(): Promise<string[]> {
         try {
-            const { productos } = await this.obtenerProductos({ limite: 1000 });
-            const marcasUnicas = [...new Set(productos.map(p => p.marca).filter(Boolean))];
-            return marcasUnicas.sort();
+            const response = await apiClient.get<ApiResponse<string[]>>('/productos/marcas');
+            return response.data.data;
         } catch (error) {
             console.error('Error obteniendo marcas:', error);
             throw error;

@@ -1,10 +1,10 @@
 import { DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
-import { Stack, useRouter, useSegments } from 'expo-router';
+import { Href, Stack, useRootNavigationState, useRouter, useSegments } from 'expo-router';
 import Head from 'expo-router/head';
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect } from 'react';
-import { Platform } from 'react-native';
+import { Platform, StyleSheet, View } from 'react-native';
 import 'react-native-reanimated';
 
 import GoogleOAuthRoot from '@/components/auth/GoogleOAuthRoot';
@@ -16,37 +16,49 @@ import { AppLaunchScreen } from '@/components/ui/LoadingStates';
 function AuthenticatedNavigator() {
   const { state, user } = useAuth();
   const segments = useSegments() as string[];
+  const rootNavigationState = useRootNavigationState();
   const router = useRouter();
   const route = segments[0];
   const tab = segments[1];
   const isPublicCatalog = route === '(tabs)' && tab === 'productos';
+  const isPublicHome = route === '(tabs)' && !tab;
   const isPublicQuote = route === 'cotizacion';
+  const isPublicOnboarding = route === 'sumate';
 
   useEffect(() => {
-    if (state === 'loading') return;
-    if (state === 'unauthenticated' && route !== 'login' && !isPublicCatalog && !isPublicQuote) {
-      router.replace('/(tabs)/productos');
-    }
-    if ((state === 'pending' || state === 'blocked') && route !== 'acceso-pendiente') router.replace('/acceso-pendiente');
-    const isNonAdminAccountRoute = route === '(tabs)' && tab === 'perfil';
-    // La ruta inicial de Tabs (Cotizaciones) no agrega un segundo segmento:
-    // useSegments() devuelve solo ['(tabs)'] y `tab` queda undefined.
-    const sellerRoutes = ['', 'index', 'productos', 'consultas', 'metricas', 'perfil'];
-    if (state === 'authenticated' && user?.rol === 'vendedor' && route === '(tabs)' && !sellerRoutes.includes(tab || '')) {
-      router.replace('/(tabs)/productos');
-    } else if (state === 'authenticated' && !['admin', 'vendedor'].includes(user?.rol || '') && route === '(tabs)' && tab !== 'productos' && !isNonAdminAccountRoute) {
-      router.replace('/(tabs)/productos');
-    }
-    if (state === 'authenticated' && (route === 'login' || route === 'acceso-pendiente')) {
-      router.replace(user?.rol === 'admin' ? '/(tabs)' : '/(tabs)/productos');
-    }
-  }, [isPublicCatalog, isPublicQuote, route, router, state, tab, user]);
+    // Expo Router no permite navegar hasta que el Stack raíz tenga una key.
+    // Esperar este punto evita el error al ingresar directamente en `/`.
+    if (!rootNavigationState?.key) return;
+    let target: Href | null = null;
 
-  // El catálogo es público: no debe quedar bloqueado por la validación remota
-  // de una sesión guardada cuando el backend está iniciándose.
-  if (state === 'loading' && !isPublicCatalog && !isPublicQuote) {
-    return <AppLaunchScreen />;
-  }
+    if (state !== 'loading') {
+      if (state === 'unauthenticated' && route !== 'login' && !isPublicHome && !isPublicCatalog && !isPublicQuote && !isPublicOnboarding) {
+        target = '/(tabs)/productos';
+      } else if ((state === 'pending' || state === 'blocked') && route !== 'acceso-pendiente') {
+        target = '/acceso-pendiente';
+      } else {
+        const isNonAdminAccountRoute = route === '(tabs)' && tab === 'perfil';
+        // La ruta inicial de Tabs (Cotizaciones) no agrega un segundo segmento:
+        // useSegments() devuelve solo ['(tabs)'] y `tab` queda undefined.
+        const sellerRoutes = ['', 'index', 'productos', 'consultas', 'metricas', 'perfil'];
+        if (state === 'authenticated' && user?.rol === 'vendedor' && route === '(tabs)' && !sellerRoutes.includes(tab || '')) {
+          target = '/(tabs)/productos';
+        } else if (state === 'authenticated' && !['admin', 'vendedor'].includes(user?.rol || '') && route === '(tabs)' && tab !== 'productos' && !isNonAdminAccountRoute) {
+          target = '/(tabs)/productos';
+        } else if (state === 'authenticated' && (route === 'login' || route === 'acceso-pendiente')) {
+          target = user?.rol === 'admin' ? '/(tabs)' : '/(tabs)/productos';
+        }
+      }
+    }
+
+    if (!target) return;
+    // La key confirma que el contenedor existe; diferir un ciclo permite que su
+    // referencia termine de enlazarse antes de emitir la navegación.
+    const timer = setTimeout(() => router.replace(target), 0);
+    return () => clearTimeout(timer);
+  }, [isPublicCatalog, isPublicHome, isPublicOnboarding, isPublicQuote, rootNavigationState?.key, route, router, state, tab, user]);
+
+  const showLaunchOverlay = state === 'loading' && !isPublicHome && !isPublicCatalog && !isPublicQuote && !isPublicOnboarding;
 
   return (
     <ThemeProvider value={DefaultTheme}>
@@ -54,13 +66,26 @@ function AuthenticatedNavigator() {
         <Stack.Screen name="login" options={{ headerShown: false }} />
         <Stack.Screen name="acceso-pendiente" options={{ headerShown: false }} />
         <Stack.Screen name="cotizacion" options={{ headerShown: false }} />
+        <Stack.Screen name="sumate" options={{ headerShown: false }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="+not-found" />
       </Stack>
+      {showLaunchOverlay ? (
+        <View style={styles.launchOverlay} pointerEvents="auto">
+          <AppLaunchScreen />
+        </View>
+      ) : null}
       <StatusBar style="dark" />
     </ThemeProvider>
   );
 }
+
+const styles = StyleSheet.create({
+  launchOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 1000,
+  },
+});
 
 export default function RootLayout() {
   const [loaded] = useFonts({ SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf') });
@@ -83,6 +108,7 @@ export default function RootLayout() {
         <link rel="manifest" href="/manifest.webmanifest" />
         <link rel="icon" href="/pwa-icon.svg" type="image/svg+xml" />
         <link rel="apple-touch-icon" href="/pwa-icon.png" />
+        <style>{`@keyframes hc-launch-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
       </Head>
       <WebAppSetup />
       <GoogleOAuthRoot>

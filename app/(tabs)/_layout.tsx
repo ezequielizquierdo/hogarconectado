@@ -1,11 +1,12 @@
 import { BottomTabBar } from "@react-navigation/bottom-tabs";
 import { Tabs } from "expo-router";
-import React, { useEffect, useState } from "react";
+import React, { useLayoutEffect, useState } from "react";
 import { Platform, StyleSheet, Text, useWindowDimensions, View } from "react-native";
 
 import { HapticTab } from "@/components/HapticTab";
 import { DesktopTabBar } from "@/components/navigation/DesktopTabBar";
 import { IconSymbol } from "@/components/ui/IconSymbol";
+import { AppLaunchScreen } from "@/components/ui/LoadingStates";
 import TabBarBackground from "@/components/ui/TabBarBackground";
 import { COLORS, RADIUS, SPACING } from "@/constants/theme";
 import { useAuth } from "@/contexts/AuthContext";
@@ -30,12 +31,22 @@ export default function TabLayout() {
   const { state, user } = useAuth();
   const { width } = useWindowDimensions();
   const [hasMounted, setHasMounted] = useState(false);
-  useEffect(() => setHasMounted(true), []);
+  // Resolver el breakpoint antes del primer dibujo evita mostrar primero la
+  // navegación móvil y reemplazarla enseguida por el encabezado de escritorio.
+  useLayoutEffect(() => setHasMounted(true), []);
   const isDesktop = Platform.OS === "web" && hasMounted && width >= 1024;
   const isAdmin = user?.rol === "admin";
   const isSeller = user?.rol === "vendedor";
   const isAuthenticated = state === "authenticated";
   const showUsersInNavigation = isAdmin && isDesktop;
+
+  // El HTML estático todavía no conoce el ancho real del navegador. Mostrar
+  // allí una navegación móvil provoca el salto de encabezado que se veía en
+  // escritorio. Durante ese único estado previo a la hidratación usamos la
+  // pantalla de marca; después se monta directamente la estructura correcta.
+  if (Platform.OS === "web" && !hasMounted) {
+    return <AppLaunchScreen />;
+  }
 
   return (
     <DesktopHeaderProvider>

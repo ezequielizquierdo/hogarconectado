@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { Animated, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { Animated, Platform, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { Image } from 'expo-image';
 
 import { COLORS, RADIUS, SPACING } from '@/constants/theme';
@@ -37,7 +37,11 @@ export function AppLaunchScreen() {
   const spin = rotation.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] });
   return <View style={styles.launch} accessibilityLabel="Cargando Hogar Conectado">
     <View style={styles.launchBrand}>
-      <Animated.View style={[styles.launchRing, { transform: [{ rotate: spin }] }]} />
+      {Platform.OS === 'web' ? (
+        <View style={[styles.launchRing, webLaunchSpin]} />
+      ) : (
+        <Animated.View style={[styles.launchRing, { transform: [{ rotate: spin }] }]} />
+      )}
       <Animated.View style={[styles.launchLogoFrame, { opacity: pulse }]}>
         <Image
           source={require('@/assets/images/logo-transparent-circle.png')}
@@ -58,6 +62,13 @@ export function AppLaunchScreen() {
     <Text style={styles.launchHint}>Esto puede demorar unos segundos si el servicio está iniciando.</Text>
   </View>;
 }
+
+const webLaunchSpin = Platform.OS === 'web' ? ({
+  animationName: 'hc-launch-spin',
+  animationDuration: '1.25s',
+  animationIterationCount: 'infinite',
+  animationTimingFunction: 'linear',
+} as any) : undefined;
 
 export function LoadingBar({ label = 'Actualizando…' }: { label?: string }) {
   return <View style={styles.loadingBar} accessibilityLiveRegion="polite">

@@ -146,6 +146,7 @@ async function mockApi(page: Page, authenticated = false, currentUser = admin, c
     if (path.endsWith('/auth/me')) body = { success: true, data: currentUser };
     else if (path.endsWith('/cotizaciones-publicas/visual-token')) body = { success: true, data: currentPublicQuote };
     else if (path.endsWith('/categorias')) body = { success: true, data: [category] };
+    else if (path.endsWith('/productos/marcas')) body = { success: true, data: [product.marca] };
     else if (path.includes('/productos')) body = { success: true, data: [product], pagination: { total: 1, pagina: 1, limite: 20, paginas: 1 } };
     else if (path.endsWith('/cotizaciones/estadisticas/resumen')) body = { success: true, data: currentUser.rol === 'vendedor'
       ? { total: 1, pendientes: 0, totalGeneral: 430000, liquidacion: { totalVendido: 430000, dineroARendir: 400500, gananciaVendedor: 29500 } }
@@ -196,6 +197,32 @@ test('catálogo público', async ({ page }) => {
   if ((page.viewportSize()?.width ?? 0) >= 1024) await expect(page.getByText('CATÁLOGO', { exact: true })).toBeVisible();
   else await expect(page.getByText('Productos', { exact: true }).first()).toBeVisible();
   await expect(page).toHaveScreenshot('productos-publicos.png', { fullPage: true });
+});
+
+test('la raíz abre el catálogo sin error de navegación', async ({ page }) => {
+  await mockApi(page, false);
+  await page.goto('/');
+  await expect(page.getByText('Encontrá lo que necesitás')).toBeVisible();
+  await expect(page.getByText('Uncaught Error')).toHaveCount(0);
+});
+
+test('detalle público de producto', async ({ page }) => {
+  await mockApi(page);
+  await page.goto('/productos');
+  await settle(page);
+  await page.getByRole('button', { name: /Ver detalle de Electrolux IM7S 523L/ }).click();
+  await expect(page.getByText('Precio contado', { exact: true })).toBeVisible();
+  await expect(page.getByText('¡Lo quiero!', { exact: true }).last()).toBeVisible();
+  await expect(page).toHaveScreenshot('detalle-producto-publico.png', { fullPage: true });
+});
+
+test('solicitud pública para sumarse', async ({ page }) => {
+  await mockApi(page);
+  await page.goto('/sumate');
+  await settle(page);
+  await expect(page.getByText('¿Cómo querés participar?', { exact: true })).toBeVisible();
+  await expect(page.getByText('Quiero sumar productos', { exact: true })).toBeVisible();
+  await expect(page).toHaveScreenshot('sumate-publico.png', { fullPage: true });
 });
 
 test('selección para consulta', async ({ page }) => {

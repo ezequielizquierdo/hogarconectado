@@ -7,6 +7,7 @@ import { DataStatePanel } from '@/components/ui/DataStatePanel';
 import { CardListSkeleton, LoadingBar } from '@/components/ui/LoadingStates';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { COLORS, RADIUS, SHADOWS, SPACING } from '@/constants/theme';
+import { OnboardingRequestsPanel } from '@/components/admin/OnboardingRequestsPanel';
 
 const roles: UserRole[] = ['consulta', 'vendedor', 'editor', 'admin'];
 const roleInfo: Record<UserRole, { label: string; description: string }> = {
@@ -99,6 +100,7 @@ export default function UsuariosScreen() {
     <ScrollView contentContainerStyle={[styles.page, isDesktop && styles.pageDesktop]}>
       <View style={styles.shell}>
       <ScreenHeader eyebrow="ACCESOS Y PERMISOS" title="Usuarios" subtitle="Aprobá accesos, asigná roles y revisá el estado de cada cuenta." actionLabel="Cerrar sesión" actionVariant="secondary" onAction={logout} />
+      <OnboardingRequestsPanel />
       <View style={styles.roleGuide}>
         <View style={styles.guideHeading}>
           <Text style={styles.guideEyebrow}>GUÍA RÁPIDA</Text>
