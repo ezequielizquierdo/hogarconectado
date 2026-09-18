@@ -118,17 +118,6 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="explore_new"
-        options={{
-          href: null,
-          title: "Consulta Stock",
-          tabBarLabel: isDesktop ? "Consulta Stock" : "Stock",
-          tabBarIcon: ({ color }) => (
-            <IconSymbol size={28} name="doc.text.fill" color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
         name="productos"
         options={{
           title: "Productos",
@@ -198,12 +187,6 @@ export default function TabLayout() {
           tabBarIcon: ({ color }) => (
             <IconSymbol size={28} name="person.crop.circle.fill" color={color} />
           ),
-        }}
-      />
-      <Tabs.Screen
-        name="explore"
-        options={{
-          href: null, // Esto oculta la tab pero mantiene la ruta
         }}
       />
       </Tabs>

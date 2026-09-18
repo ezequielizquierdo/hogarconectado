@@ -36,8 +36,22 @@ import FadeInView from "@/components/ui/FadeInView";
 import ProductCard from "@/components/product/ProductCard";
 import CatalogProductCard from "@/components/product/CatalogProductCard";
 import { ProductImageImportModal } from "@/components/product/ProductImageImportModal";
+import { InventoryStatsModal } from "@/components/product/InventoryStatsModal";
+import { SmartProductImage } from "@/components/product/SmartProductImage";
+import {
+  formatModeloToUpperCase,
+  formatPrecioLocal,
+  formatPrice,
+  getShortCategoryName,
+  parsePrice,
+} from "@/components/product/productFormatting";
+import {
+  initialProductForm,
+  ProductoForm,
+} from "@/components/product/productForm";
 import { QuoteDraftBar } from "@/components/quote/QuoteDraftBar";
 import { SidebarFilters } from "@/components/filters";
+import { ProductFiltersModal } from "@/components/filters/ProductFiltersModal";
 import { Pagination } from "@/components/Pagination";
 import { useCategorias } from "@/hooks/useCategorias";
 import { useProductos } from "@/hooks/useProductos";
@@ -55,87 +69,6 @@ import { InstagramStoryRenderData } from "@/utils/instagramStoryRenderer";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { ConsultaProductoModal } from "@/components/modals/ConsultaProductoModal";
 import sellerReferralService, { SellerReferral } from "@/services/sellerReferralService";
-
-// Funciones de utilidad
-const formatPrice = (price: number | string): string => {
-  const numPrice = typeof price === "string" ? parseFloat(price) : price;
-  if (isNaN(numPrice)) return "0,00";
-
-  return numPrice.toLocaleString("es-ES", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
-};
-
-const parsePrice = (formattedPrice: string): number => {
-  // Convierte de formato local (1.234,56) a formato numérico (1234.56)
-  const numericString = formattedPrice.replace(/\./g, "").replace(",", ".");
-  return parseFloat(numericString);
-};
-
-const formatModeloToUpperCase = (modelo: string): string => {
-  return modelo.toUpperCase().trim();
-};
-
-const formatPrecioLocal = (precio: number): string =>
-  precio.toLocaleString("es-AR", {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  });
-
-const getShortCategoryName = (categoryName: string): string => {
-  if (
-    categoryName.toLowerCase().includes("electrodomésticos de cocina") ||
-    categoryName.toLowerCase().includes("electrodomesticos de cocina")
-  ) {
-    return "Electrodomésticos";
-  }
-
-  const words = categoryName.split(" ");
-  return words.length > 2 ? words.slice(0, 2).join(" ") : categoryName;
-};
-
-interface ProductoForm {
-  marca: string;
-  modelo: string;
-  descripcion: string;
-  categoria: string;
-  precioBase: string;
-  porcentajeGanancia: string;
-  descuentoActivo: string;
-  descuentoPorcentaje: string;
-  descuentoHasta: string;
-  tipoComercializacion: "stock-propio" | "producto-tercero" | "venta-catalogo";
-  catalogoNombre: string;
-  catalogoCampania: string;
-  catalogoVigenciaHasta: string;
-  catalogoPlazoEntrega: string;
-  stockCantidad: string;
-  stockDisponible: string;
-  imagen: string;
-  imagenPublicId: string;
-}
-
-const initialForm: ProductoForm = {
-  marca: "",
-  modelo: "",
-  descripcion: "",
-  categoria: "",
-  precioBase: "",
-  porcentajeGanancia: "10",
-  descuentoActivo: "false",
-  descuentoPorcentaje: "",
-  descuentoHasta: "",
-  tipoComercializacion: "stock-propio",
-  catalogoNombre: "",
-  catalogoCampania: "",
-  catalogoVigenciaHasta: "",
-  catalogoPlazoEntrega: "",
-  stockCantidad: "",
-  stockDisponible: "true",
-  imagen: "",
-  imagenPublicId: "",
-};
 
 export default function ProductosScreen() {
   const { width } = useWindowDimensions();
@@ -209,7 +142,7 @@ export default function ProductosScreen() {
     setHasMounted(true);
   }, []);
   const [editingProduct, setEditingProduct] = useState<Producto | null>(null);
-  const [form, setForm] = useState<ProductoForm>(initialForm);
+  const [form, setForm] = useState<ProductoForm>(initialProductForm);
   const [saving, setSaving] = useState(false);
   const [sharingInstagram, setSharingInstagram] = useState(false);
   const [preparedInstagramFile, setPreparedInstagramFile] = useState<File | null>(null);
@@ -220,7 +153,7 @@ export default function ProductosScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [modeloError, setModeloError] = useState<string>("");
   const [formErrors, setFormErrors] = useState<Partial<Record<keyof ProductoForm, string>>>({});
-  const initialFormSnapshot = useRef(JSON.stringify(initialForm));
+  const initialFormSnapshot = useRef(JSON.stringify(initialProductForm));
   const productFormScrollRef = useRef<ScrollView>(null);
 
   const createCategory = async (name: string) => {
@@ -412,8 +345,8 @@ export default function ProductosScreen() {
       initialFormSnapshot.current = JSON.stringify(editForm);
     } else {
       setEditingProduct(null);
-      setForm(initialForm);
-      initialFormSnapshot.current = JSON.stringify(initialForm);
+      setForm(initialProductForm);
+      initialFormSnapshot.current = JSON.stringify(initialProductForm);
     }
     setFormErrors({});
     setModeloError("");
@@ -423,7 +356,7 @@ export default function ProductosScreen() {
   const resetAndCloseModal = () => {
     setModalVisible(false);
     setEditingProduct(null);
-    setForm(initialForm);
+    setForm(initialProductForm);
     setModeloError("");
     setFormErrors({});
   };
@@ -1108,233 +1041,6 @@ export default function ProductosScreen() {
     }
     return true;
   };
-
-  // Cache para evitar múltiples peticiones de la misma imagen
-  const imageCache = new Map<string, string>();
-  const imageRequestQueue = new Map<string, Promise<string>>();
-  const lastImageRequestTime = { value: 0 };
-
-  // Función para convertir URL del servidor a data URL en web con cache y manejo de errores mejorado
-  const getImageUrl = async (originalUrl: string): Promise<string> => {
-    // Si ya es un data URL, devolverlo tal como está
-    if (originalUrl.startsWith("data:")) {
-      return originalUrl;
-    }
-
-    // Verificar cache primero
-    if (imageCache.has(originalUrl)) {
-      return imageCache.get(originalUrl)!;
-    }
-
-    // Si ya hay una request en progreso para esta URL, esperar a que termine
-    if (imageRequestQueue.has(originalUrl)) {
-      return imageRequestQueue.get(originalUrl)!;
-    }
-
-    // Si es una URL externa (http/https), devolverla tal como está
-    if (
-      originalUrl.startsWith("http://") &&
-      !originalUrl.includes("192.168.1.13:3000") &&
-      !originalUrl.includes("localhost:3000")
-    ) {
-      imageCache.set(originalUrl, originalUrl);
-      return originalUrl;
-    }
-
-    // En web, si es una URL del servidor local, intentar convertir a data URL
-    if (
-      Platform.OS === "web" &&
-      (originalUrl.includes("192.168.1.13:3000") ||
-        originalUrl.includes("localhost:3000"))
-    ) {
-      const imagePromise = (async () => {
-        try {
-          // Rate limiting más agresivo para imágenes
-          const now = Date.now();
-          const timeSinceLastRequest = now - lastImageRequestTime.value;
-          const minDelay = 500; // 500ms entre requests de imágenes
-
-          if (timeSinceLastRequest < minDelay) {
-            await new Promise((resolve) =>
-              setTimeout(resolve, minDelay - timeSinceLastRequest)
-            );
-          }
-
-          lastImageRequestTime.value = Date.now();
-
-          console.log(
-            "Convirtiendo URL del servidor a data URL en web:",
-            originalUrl
-          );
-
-          // Intentar obtener la imagen del servidor con timeout extendido
-          const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 segundos timeout
-
-          const response = await fetch(originalUrl, {
-            signal: controller.signal,
-            mode: "cors",
-            headers: {
-              Accept: "image/*",
-              "Cache-Control": "max-age=3600", // Cache por 1 hora
-            },
-          });
-
-          clearTimeout(timeoutId);
-
-          if (response.ok) {
-            const blob = await response.blob();
-            const dataUrl = await new Promise<string>((resolve) => {
-              const reader = new FileReader();
-              reader.onload = () => resolve(reader.result as string);
-              reader.readAsDataURL(blob);
-            });
-
-            // Guardar en cache
-            imageCache.set(originalUrl, dataUrl);
-            imageRequestQueue.delete(originalUrl);
-            return dataUrl;
-          } else {
-            console.warn(
-              `No se pudo obtener la imagen del servidor (${response.status}), usando placeholder`
-            );
-            // En caso de 429 o otros errores, no intentar de nuevo
-            const fallbackUrl = originalUrl;
-            imageCache.set(originalUrl, fallbackUrl);
-            imageRequestQueue.delete(originalUrl);
-            return fallbackUrl;
-          }
-        } catch (error: any) {
-          console.error(
-            "Error al convertir imagen del servidor:",
-            error.message
-          );
-          // Para errores CORS, timeout o rate limiting, usar URL original
-          const fallbackUrl = originalUrl;
-          imageCache.set(originalUrl, fallbackUrl);
-          imageRequestQueue.delete(originalUrl);
-          return fallbackUrl;
-        }
-      })();
-
-      // Guardar la promesa en la cola para evitar requests duplicados
-      imageRequestQueue.set(originalUrl, imagePromise);
-      return imagePromise;
-    }
-
-    // En móvil, devolver la URL original
-    imageCache.set(originalUrl, originalUrl);
-    return originalUrl;
-  };
-
-  // Componente de imagen que maneja conversión automática para web con manejo de errores mejorado
-  const SmartImage: React.FC<{
-    source: { uri: string };
-    style: any;
-    onError?: (error: any) => void;
-    onLoad?: () => void;
-  }> = ({ source, style, onError, onLoad }) => {
-    const [imageUri, setImageUri] = useState(source.uri);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(false);
-
-    React.useEffect(() => {
-      const loadImage = async () => {
-        setLoading(true);
-        setError(false);
-
-        try {
-          const convertedUri = await getImageUrl(source.uri);
-          setImageUri(convertedUri);
-        } catch (error) {
-          console.error("Error al procesar imagen:", error);
-          setError(true);
-          setImageUri(source.uri); // Fallback
-        } finally {
-          setLoading(false);
-        }
-      };
-
-      loadImage();
-    }, [source.uri]);
-
-    const handleImageError = (errorEvent: any) => {
-      console.error("Error al cargar imagen:", errorEvent);
-      setError(true);
-      if (onError) {
-        onError(errorEvent);
-      }
-    };
-
-    const handleImageLoad = () => {
-      setError(false);
-      if (onLoad) {
-        onLoad();
-      }
-    };
-
-    if (loading) {
-      return (
-        <View
-          style={[
-            style,
-            {
-              backgroundColor: COLORS.surface,
-              justifyContent: "center",
-              alignItems: "center",
-              borderRadius: RADIUS.md,
-            },
-          ]}
-        >
-          <ThemedText style={{ fontSize: 28, color: COLORS.textSecondary }}>
-            📷
-          </ThemedText>
-        </View>
-      );
-    }
-
-    if (error) {
-      return (
-        <View
-          style={[
-            style,
-            {
-              backgroundColor: COLORS.surface,
-              justifyContent: "center",
-              alignItems: "center",
-              borderRadius: RADIUS.md,
-              borderWidth: 1,
-              borderColor: COLORS.border,
-            },
-          ]}
-        >
-          <ThemedText style={{ fontSize: 20, color: COLORS.textSecondary }}>
-            ❌
-          </ThemedText>
-          <ThemedText
-            style={{
-              fontSize: 10,
-              color: COLORS.textSecondary,
-              textAlign: "center",
-            }}
-          >
-            Error cargando imagen
-          </ThemedText>
-        </View>
-      );
-    }
-
-    return (
-      <Image
-        source={{ uri: imageUri }}
-        style={style}
-        onError={handleImageError}
-        onLoad={handleImageLoad}
-        contentFit="cover"
-      />
-    );
-  };
-
 
   const selectImageFromGallery = async () => {
     const hasPermissions = await requestPermissions();
@@ -2266,7 +1972,7 @@ export default function ProductosScreen() {
                       form.imagen.startsWith("blob:") ||
                       form.imagen.startsWith("data:")) ? (
                       <View style={styles.imagePreviewContainer}>
-                        <SmartImage
+                        <SmartProductImage
                           source={{ uri: form.imagen }}
                           style={styles.imagePreview}
                           onLoad={() =>
@@ -2578,7 +2284,7 @@ export default function ProductosScreen() {
                     form.imagen.startsWith("blob:") ||
                     form.imagen.startsWith("data:")) ? (
                     <View style={styles.imagePreviewContainer}>
-                      <SmartImage
+                      <SmartProductImage
                         source={{ uri: form.imagen }}
                         style={styles.imagePreview}
                         onLoad={() =>
@@ -2675,64 +2381,11 @@ export default function ProductosScreen() {
         onClose={() => setConsultModalVisible(false)}
       />
 
-      {/* Modal de estadísticas detalladas */}
-      <Modal
+      <InventoryStatsModal
         visible={statsModalVisible}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setStatsModalVisible(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.statsModalContainer}>
-            <View style={styles.statsModalHeader}>
-              <ThemedText style={styles.statsModalTitle}>
-                📊 Resumen del Inventario
-              </ThemedText>
-              <TouchableOpacity
-                accessibilityRole="button"
-                accessibilityLabel="Cerrar resumen del inventario"
-                style={styles.closeButton}
-                onPress={() => setStatsModalVisible(false)}
-              >
-                <ThemedText style={styles.closeButtonText}>✕</ThemedText>
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.statsDetailGrid}>
-              <View style={styles.statDetailItem}>
-                <ThemedText style={styles.statNumber}>
-                  {estadisticas.total}
-                </ThemedText>
-                <ThemedText style={styles.statLabel}>
-                  Total de Productos
-                </ThemedText>
-              </View>
-              <View style={styles.statDetailItem}>
-                <ThemedText style={[styles.statNumber, styles.availableColor]}>
-                  {estadisticas.disponibles}
-                </ThemedText>
-                <ThemedText style={styles.statLabel}>Disponibles</ThemedText>
-              </View>
-              <View style={styles.statDetailItem}>
-                <ThemedText
-                  style={[styles.statNumber, styles.unavailableColor]}
-                >
-                  {estadisticas.agotados}
-                </ThemedText>
-                <ThemedText style={styles.statLabel}>Agotados</ThemedText>
-              </View>
-              <View style={styles.statDetailItem}>
-                <ThemedText style={[styles.statNumber, styles.valueColor]}>
-                  ${estadisticas.valorTotal.toLocaleString()}
-                </ThemedText>
-                <ThemedText style={styles.statLabel}>
-                  Valor Total del Inventario
-                </ThemedText>
-              </View>
-            </View>
-          </View>
-        </View>
-      </Modal>
+        stats={estadisticas}
+        onClose={() => setStatsModalVisible(false)}
+      />
 
       {/* Modal de detalle del producto */}
       <Modal
@@ -2773,7 +2426,7 @@ export default function ProductosScreen() {
                     {selectedProduct.imagenes &&
                       selectedProduct.imagenes.length > 0 && (
                         <View style={styles.detailImageContainer}>
-                          <SmartImage
+                          <SmartProductImage
                             source={{ uri: selectedProduct.imagenes[0] }}
                             style={[
                               styles.detailImage,
@@ -2990,7 +2643,7 @@ export default function ProductosScreen() {
                   {selectedProduct.imagenes &&
                     selectedProduct.imagenes.length > 0 && (
                       <View style={styles.detailImageContainer}>
-                        <SmartImage
+                        <SmartProductImage
                           source={{ uri: selectedProduct.imagenes[0] }}
                           style={[
                             styles.detailImage,
@@ -4000,133 +3653,23 @@ export default function ProductosScreen() {
         )}
       </Modal>
 
-      {/* Modal de filtros móvil */}
-      <Modal
+      <ProductFiltersModal
         visible={filtersModalVisible}
-        animationType="slide"
-        presentationStyle="pageSheet"
-        onRequestClose={() => setFiltersModalVisible(false)}
-      >
-        <SafeAreaView style={styles.filtersModalContainer}>
-          <View style={styles.filtersModalHeader}>
-            <View style={styles.filtersModalHeaderCopy}>
-              <ThemedText style={styles.filtersModalEyebrow}>EXPLORAR CATÁLOGO</ThemedText>
-              <ThemedText style={styles.filtersModalTitle}>Filtrar productos</ThemedText>
-              <ThemedText style={styles.filtersModalSubtitle}>Combiná categoría, marca y disponibilidad.</ThemedText>
-            </View>
-            <TouchableOpacity
-              onPress={() => setFiltersModalVisible(false)}
-              style={styles.filtersModalClose}
-              accessibilityRole="button"
-              accessibilityLabel="Cerrar filtros"
-            >
-              <MaterialIcons name="close" size={22} color={COLORS.text} />
-            </TouchableOpacity>
-          </View>
-
-          <ScrollView style={styles.filtersModalContent} contentContainerStyle={styles.filtersModalContentContainer} keyboardShouldPersistTaps="handled">
-            <View style={styles.filtersSection}>
-              <LabeledDropdown
-                label="Categoría"
-                options={[
-                  { label: "Todas las categorías", value: "" },
-                  ...generalCategoryOptions,
-                ]}
-                selectedValue={
-                  generalCategoryOptions.some(option => option.value === filtroCategoria)
-                    ? filtroCategoria
-                    : ""
-                }
-                onSelect={(value) => handleCategoriaChange(value)}
-                placeholder="Filtrar por categoría"
-                searchable
-                searchPlaceholder="Buscar categoría"
-              />
-            </View>
-
-            {essenCategoryOptions.length > 0 && (
-              <View style={styles.filtersSection}>
-                <LabeledDropdown
-                  label="Línea Essen"
-                  options={[
-                    { label: "Todas las líneas Essen", value: "" },
-                    ...essenCategoryOptions,
-                  ]}
-                  selectedValue={
-                    essenCategoryOptions.some(option => option.value === filtroCategoria)
-                      ? filtroCategoria
-                      : ""
-                  }
-                  onSelect={(value) => handleCategoriaChange(value)}
-                  placeholder="Filtrar por línea Essen"
-                  searchable
-                  searchPlaceholder="Buscar línea Essen"
-                />
-              </View>
-            )}
-
-            <View style={styles.filtersSection}>
-              <LabeledDropdown
-                label="Marca"
-                options={[
-                  { label: "Todas las marcas", value: "" },
-                  ...marcas.map((marca) => ({
-                    label: marca,
-                    value: marca,
-                  })),
-                ]}
-                selectedValue={filtroMarca}
-                onSelect={(value) => handleMarcaChange(value)}
-                placeholder="Filtrar por marca"
-                searchable
-                searchPlaceholder="Buscar marca"
-              />
-            </View>
-
-            <View style={styles.filtersSection}>
-              <LabeledDropdown
-                label="Stock"
-                options={[
-                  { label: "Todo el stock", value: "" },
-                  { label: "Disponible", value: "disponible" },
-                  { label: "Agotado", value: "agotado" },
-                ]}
-                selectedValue={filtroStock}
-                onSelect={(value) => handleStockChange(value)}
-                placeholder="Filtrar por stock"
-              />
-            </View>
-          </ScrollView>
-
-          <View style={styles.filtersModalActions}>
-            {hasActiveFilters && (
-              <TouchableOpacity
-                style={styles.clearAllFiltersButton}
-                onPress={clearAllFilters}
-                accessibilityRole="button"
-                accessibilityLabel="Limpiar búsqueda y filtros"
-              >
-                <ThemedText style={styles.clearAllFiltersText}>
-                  Limpiar filtros
-                </ThemedText>
-              </TouchableOpacity>
-            )}
-
-            <TouchableOpacity
-              style={styles.applyFiltersButton}
-              onPress={() => setFiltersModalVisible(false)}
-            >
-              <ThemedText style={styles.applyFiltersText}>
-                {productosLoading
-                  ? "Actualizando…"
-                  : `Ver ${totalProductos} ${
-                      totalProductos === 1 ? "producto" : "productos"
-                    }`}
-              </ThemedText>
-            </TouchableOpacity>
-          </View>
-        </SafeAreaView>
-      </Modal>
+        generalCategories={generalCategoryOptions}
+        essenCategories={essenCategoryOptions}
+        brands={marcas}
+        selectedCategory={filtroCategoria}
+        selectedBrand={filtroMarca}
+        selectedStock={filtroStock}
+        hasActiveFilters={hasActiveFilters}
+        loading={productosLoading}
+        totalProducts={totalProductos}
+        onCategoryChange={handleCategoriaChange}
+        onBrandChange={handleMarcaChange}
+        onStockChange={handleStockChange}
+        onClear={clearAllFilters}
+        onClose={() => setFiltersModalVisible(false)}
+      />
 
       {canQuote && <QuoteDraftBar />}
       {!canEdit && !canQuote && consultProducts.length > 0 && !consultModalVisible ? (
@@ -4626,22 +4169,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     ...SHADOWS.sm,
   },
-  statNumber: {
-    fontSize: 20,
-    fontWeight: "bold",
-    color: COLORS.text,
-  },
-  statLabel: {
-    fontSize: 12,
-    color: COLORS.textSecondary,
-    marginTop: SPACING.xs,
-  },
-  availableColor: {
-    color: COLORS.success,
-  },
-  unavailableColor: {
-    color: COLORS.error,
-  },
   filtersRow: {
     flexDirection: Platform.OS === "web" ? "row" : "column",
     gap: SPACING.sm, // Reducir de SPACING.md a SPACING.sm
@@ -5053,36 +4580,6 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
 
-  // Estilos para modal de estadísticas
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.5)",
-    justifyContent: "center",
-    alignItems: "center",
-    padding: SPACING.lg,
-  },
-  statsModalContainer: {
-    backgroundColor: COLORS.background,
-    borderRadius: RADIUS.lg,
-    padding: SPACING.lg,
-    maxWidth: 400,
-    width: "100%",
-    maxHeight: "80%",
-  },
-  statsModalHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: SPACING.lg,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-    paddingBottom: SPACING.md,
-  },
-  statsModalTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: COLORS.text,
-  },
   closeButton: {
     padding: SPACING.sm,
     backgroundColor: COLORS.cardBackground,
@@ -5096,20 +4593,6 @@ const styles = StyleSheet.create({
     color: COLORS.text,
     fontSize: 16,
     fontWeight: "600",
-  },
-  statsDetailGrid: {
-    gap: SPACING.lg,
-  },
-  statDetailItem: {
-    alignItems: "center",
-    padding: SPACING.md,
-    backgroundColor: COLORS.surface,
-    borderRadius: RADIUS.md,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  valueColor: {
-    color: COLORS.warning,
   },
   cardContainer: {
     marginBottom: 0,
@@ -5836,77 +5319,6 @@ const styles = StyleSheet.create({
     fontSize: 11, // Reducido de 13
     fontWeight: "700" as const,
     textAlign: "center" as const,
-  },
-  // Estilos para modal de filtros
-  filtersModalContainer: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  filtersModalHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    padding: SPACING.lg,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-    backgroundColor: COLORS.surface,
-  },
-  filtersModalHeaderCopy: { minWidth: 0, flex: 1 },
-  filtersModalEyebrow: { color: COLORS.primaryDark, fontSize: 11, fontWeight: "800", letterSpacing: 1 },
-  filtersModalTitle: {
-    marginTop: 2,
-    fontSize: 24,
-    fontWeight: "800",
-    color: COLORS.text,
-  },
-  filtersModalSubtitle: { marginTop: 3, color: COLORS.textSecondary, fontSize: 13, lineHeight: 18 },
-  filtersModalClose: {
-    width: 42,
-    height: 42,
-    borderRadius: RADIUS.full,
-    backgroundColor: COLORS.cardBackground,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  filtersModalContent: {
-    flex: 1,
-  },
-  filtersModalContentContainer: { padding: SPACING.lg },
-  filtersSection: {
-    marginBottom: SPACING.md,
-  },
-  filtersModalActions: {
-    flexDirection: "row",
-    padding: SPACING.lg,
-    gap: SPACING.md,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.border,
-    backgroundColor: COLORS.surface,
-  },
-  clearAllFiltersButton: {
-    flex: 1,
-    paddingVertical: SPACING.md,
-    borderRadius: RADIUS.md,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    alignItems: "center",
-  },
-  clearAllFiltersText: {
-    color: COLORS.textSecondary,
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  applyFiltersButton: {
-    flex: 1,
-    backgroundColor: COLORS.primary,
-    paddingVertical: SPACING.md,
-    borderRadius: RADIUS.md,
-    alignItems: "center",
-  },
-  applyFiltersText: {
-    color: "#FFFFFF",
-    fontSize: 16,
-    fontWeight: "600",
   },
   // Estilos para contenedor de categoría pequeño debajo de la imagen
   storyCategoryContainerBelow: {

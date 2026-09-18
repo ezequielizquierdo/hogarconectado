@@ -7,8 +7,8 @@ Hogar Conectado es una aplicación universal construida con Expo, React Native y
 ## Capas principales
 
 ```text
-app/            Rutas y pantallas de Expo Router
-components/     Componentes visuales y formularios reutilizables
+app/            Rutas livianas y layouts de Expo Router
+components/     Pantallas, componentes visuales y formularios reutilizables
 contexts/       Estado global de autenticación
 hooks/          Consulta y composición de estado remoto
 services/       Cliente HTTP y contratos con la API
@@ -18,11 +18,20 @@ assets/         Imágenes y fuentes incluidas en la aplicación
 
 Las pantallas no deben acceder directamente a Axios. Toda comunicación con el backend pasa por `services/apiClient.ts` y los servicios de dominio.
 
+Dentro de `components/`, cada responsabilidad tiene una ubicación explícita:
+
+- `screens/`: composición de una pantalla completa cargada por una ruta.
+- `product/`, `quote/`, `admin/`: componentes y modelos de interfaz por dominio.
+- `forms/`, `filters/`, `search/`: controles reutilizables de entrada y búsqueda.
+- `layout/`, `navigation/`, `ui/`: estructura, navegación y primitivas visuales.
+
+Los archivos de `app/` deben limitarse a definir rutas, permisos y carga diferida. La lógica extensa pertenece a componentes, hooks o servicios según su responsabilidad. No se conservan copias `*.backup*` dentro del árbol compilado; Git mantiene el historial.
+
 ## Navegación
 
 - `app/_layout.tsx` monta Google OAuth, autenticación y el navegador raíz.
 - `app/(tabs)/_layout.tsx` define la navegación principal.
-- Los usuarios no autenticados son enviados a `/login`.
+- El catálogo en `/` y `/productos` es público; las operaciones internas solicitan autenticación.
 - Los usuarios pendientes o bloqueados son enviados a `/acceso-pendiente`.
 - La pestaña de usuarios solo se muestra a administradores; el backend sigue siendo responsable de autorizar las operaciones.
 
@@ -40,7 +49,7 @@ El frontend no es dueño de las fórmulas. Para cálculos dinámicos utiliza `se
 
 ## Imágenes y contenido social
 
-Las imágenes se seleccionan en el cliente, pero se almacenan mediante la API del backend en Cloudinary. MongoDB conserva la referencia correspondiente. La generación para Instagram se realiza en el frontend a partir de los datos y el precio contado actualizado.
+Las imágenes se seleccionan en el cliente, pero se almacenan mediante la API del backend en Cloudinary. MongoDB conserva la referencia correspondiente. `components/product/SmartProductImage.tsx` centraliza la resolución y caché de imágenes del catálogo para que no se reinicien con cada render. La generación para Instagram se realiza en el frontend a partir de los datos y el precio contado actualizado.
 
 ## Sistema visual
 
