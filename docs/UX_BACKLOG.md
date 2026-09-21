@@ -756,7 +756,7 @@ Una tarea de interfaz se considera terminada cuando:
 - Sus cotizaciones son privadas frente a otros vendedores; el administrador conserva la vista completa.
 - La confirmación exige nombre del comprador y acuerdo de entrega.
 - El envío es opcional, requiere importe y se reintegra íntegro sin generar comisión.
-- La liquidación divide el margen comercial en partes iguales y muestra al vendedor su ganancia y dinero a rendir.
+- Las nuevas cotizaciones atribuidas liquidan 60% del margen comercial al vendedor y 40% a Hogar Conectado; las históricas 50/50 conservan su regla. El vendedor ve su ganancia y dinero a rendir.
 - El administrador ve la venta confirmada y actualiza por separado el estado de pago y de entrega.
 
 **Validación automática:** el backend comprueba propiedad de cotizaciones y consultas, liquidación con y sin envío, el ejemplo comercial de $371.000 vendido a $430.000 y serialización sin precio base, costos, porcentajes ni participación interna. La regresión visual cubre catálogo sin controles administrativos, tablero `Mi negocio`, ganancia, dinero a rendir e identificación del vendedor con seguimiento administrativo de pago y entrega en escritorio y mobile.

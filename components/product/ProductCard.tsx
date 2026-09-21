@@ -27,6 +27,7 @@ interface ProductCardProps {
   onDelete?: () => void;
   onInstagramStory?: () => void;
   onShareImage?: () => void;
+  onShareSellerLink?: () => void;
   onQuote?: () => void;
   onStockQuery?: () => void;
   isQuoted?: boolean;
@@ -47,6 +48,7 @@ export default function ProductCard({
   onDelete,
   onInstagramStory,
   onShareImage,
+  onShareSellerLink,
   onQuote,
   onStockQuery,
   isQuoted = false,
@@ -94,7 +96,7 @@ export default function ProductCard({
       >
         <View style={styles.cardAccent} />
         {hasDiscount ? <View style={styles.discountFlag}><ThemedText style={styles.discountFlagText}>-{discountPercentage}%</ThemedText></View> : null}
-        {showAdminButtons && (onEdit || onDelete || onInstagramStory || onShareImage || onStockQuery) && (
+        {showAdminButtons && (onEdit || onDelete || onInstagramStory || onShareImage || onShareSellerLink || onStockQuery) && (
           <View style={styles.cardControls} pointerEvents="box-none">
             {onEdit ? (
               <TouchableOpacity
@@ -108,7 +110,7 @@ export default function ProductCard({
               </TouchableOpacity>
             ) : <View />}
 
-            {(onDelete || onInstagramStory || onShareImage || onStockQuery) && (
+            {(onDelete || onInstagramStory || onShareImage || onShareSellerLink || onStockQuery) && (
               <TouchableOpacity
                 accessibilityRole="button"
                 accessibilityLabel={`Más acciones para ${producto.marca} ${producto.modelo}`}
@@ -125,6 +127,19 @@ export default function ProductCard({
 
         {menuOpen && (
           <View style={styles.moreMenu} accessibilityRole="menu">
+            {onShareSellerLink && (
+              <TouchableOpacity
+                accessibilityRole="menuitem"
+                onPress={() => {
+                  setMenuOpen(false);
+                  onShareSellerLink();
+                }}
+                style={styles.moreMenuItem}
+              >
+                <MaterialIcons name="link" size={19} color={COLORS.primaryDark} />
+                <ThemedText style={styles.moreMenuLabel}>Compartir mi vidriera</ThemedText>
+              </TouchableOpacity>
+            )}
             {onShareImage && (
               <TouchableOpacity
                 accessibilityRole="menuitem"

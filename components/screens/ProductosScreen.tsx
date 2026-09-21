@@ -4,6 +4,7 @@ import {
   ScrollView,
   View,
   Alert,
+  Share,
   Modal,
   TouchableOpacity,
   RefreshControl,
@@ -36,8 +37,10 @@ import FadeInView from "@/components/ui/FadeInView";
 import ProductCard from "@/components/product/ProductCard";
 import CatalogProductCard from "@/components/product/CatalogProductCard";
 import { ProductImageImportModal } from "@/components/product/ProductImageImportModal";
+import { ProductConsultationDraftBar } from "@/components/product/ProductConsultationDraftBar";
 import { InventoryStatsModal } from "@/components/product/InventoryStatsModal";
 import { SmartProductImage } from "@/components/product/SmartProductImage";
+import { SellerReferralBanner } from "@/components/product/SellerReferralBanner";
 import {
   formatModeloToUpperCase,
   formatPrecioLocal,
@@ -549,6 +552,28 @@ export default function ProductosScreen() {
         "Error",
         "No se pudo obtener el precio contado actualizado del producto."
       );
+    }
+  };
+
+  const shareSellerStorefront = async () => {
+    if (user?.rol !== "vendedor" || !user.codigoVendedor) return;
+    const link = `https://hogarconectado.onrender.com/productos?ref=${encodeURIComponent(user.codigoVendedor)}`;
+    try {
+      if (Platform.OS === "web") {
+        if (typeof navigator.share === "function") {
+          await navigator.share({ title: "Mi vidriera en Hogar Conectado", url: link });
+        } else {
+          await Clipboard.setStringAsync(link);
+          Alert.alert("Enlace copiado", "Compartilo para que las consultas queden asociadas a vos.");
+        }
+      } else {
+        await Share.share({ message: `Mirá mi vidriera en Hogar Conectado: ${link}`, url: link });
+      }
+    } catch (error) {
+      if ((error as Error)?.name !== "AbortError") {
+        await Clipboard.setStringAsync(link);
+        Alert.alert("Enlace copiado", "Podés compartirlo con tus clientes.");
+      }
     }
   };
 
@@ -1289,6 +1314,7 @@ export default function ProductosScreen() {
           onDelete={canDelete ? () => handleDelete(item) : undefined}
           onInstagramStory={canShare ? () => openInstagramModal(item) : undefined}
           onShareImage={canShare ? () => shareProductImage(item) : undefined}
+          onShareSellerLink={user?.rol === "vendedor" && user.codigoVendedor ? shareSellerStorefront : undefined}
           showConsultButton={!canEdit && !canQuote}
           isConsultSelected={consultProducts.some(product => product._id === item._id)}
           onConsult={!canEdit && !canQuote ? () => setConsultProducts(current => (
@@ -1393,10 +1419,7 @@ export default function ProductosScreen() {
                     subtitle={canEdit ? "Gestioná el catálogo, el stock y los recursos comerciales desde un solo lugar." : "Explorá el catálogo y elegí los productos que te interesan."}
                   />
                   {sellerReferral && !canEdit && !canQuote ? (
-                    <View style={styles.sellerReferralBanner}>
-                      <MaterialIcons name="support-agent" size={18} color={COLORS.primaryDark} />
-                      <ThemedText style={styles.sellerReferralText}>Te atiende {sellerReferral.nombre}</ThemedText>
-                    </View>
+                    <SellerReferralBanner sellerName={sellerReferral.nombre} />
                   ) : null}
                   {canEdit ? (
                     <View style={styles.assistedImportRow}>
@@ -1468,10 +1491,7 @@ export default function ProductosScreen() {
                 </View>
               ) : null}
               {sellerReferral && !canEdit && !canQuote ? (
-                <View style={styles.sellerReferralBanner}>
-                  <MaterialIcons name="support-agent" size={18} color={COLORS.primaryDark} />
-                  <ThemedText style={styles.sellerReferralText}>Te atiende {sellerReferral.nombre}</ThemedText>
-                </View>
+                <SellerReferralBanner sellerName={sellerReferral.nombre} />
               ) : null}
               {/* Barra de acciones: Agregar + Filtrar en la misma línea */}
               {!isStorefront ? <View style={styles.mobileActionsBar}>
@@ -3672,39 +3692,18 @@ export default function ProductosScreen() {
       />
 
       {canQuote && <QuoteDraftBar />}
-      {!canEdit && !canQuote && consultProducts.length > 0 && !consultModalVisible ? (
-        <View style={styles.consultDraftBar}>
-          <View style={styles.consultDraftCopy}>
-            <ThemedText style={styles.consultDraftTitle}>
-              {consultProducts.length} {consultProducts.length === 1 ? 'producto elegido' : 'productos elegidos'}
-            </ThemedText>
-            <TouchableOpacity onPress={() => setConsultProducts([])} accessibilityRole="button">
-              <ThemedText style={styles.consultDraftClear}>Vaciar selección</ThemedText>
-            </TouchableOpacity>
-          </View>
-          <TouchableOpacity style={styles.consultDraftButton} onPress={() => setConsultModalVisible(true)} accessibilityRole="button">
-            <MaterialIcons name="favorite" size={20} color={COLORS.ink} />
-            <ThemedText style={styles.consultDraftButtonText}>Consultar lista</ThemedText>
-          </TouchableOpacity>
-        </View>
+      {!canEdit && !canQuote && !consultModalVisible ? (
+        <ProductConsultationDraftBar
+          productCount={consultProducts.length}
+          onClear={() => setConsultProducts([])}
+          onContinue={() => setConsultModalVisible(true)}
+        />
       ) : null}
     </>
   );
 }
 
 const styles = StyleSheet.create({
-  sellerReferralBanner: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm, paddingHorizontal: SPACING.md, paddingVertical: SPACING.sm, borderWidth: 1, borderColor: COLORS.primary, borderRadius: RADIUS.md, backgroundColor: COLORS.cardBackground },
-  sellerReferralText: { color: COLORS.text, fontSize: 13, fontWeight: '700' },
-  consultDraftBar: {
-    position: 'absolute', left: SPACING.md, right: SPACING.md, bottom: Platform.OS === 'web' ? SPACING.md : 78,
-    maxWidth: 680, alignSelf: 'center', flexDirection: 'row', alignItems: 'center', gap: SPACING.md,
-    padding: SPACING.md, borderRadius: RADIUS.lg, backgroundColor: COLORS.surface, ...SHADOWS.lg,
-  },
-  consultDraftCopy: { flex: 1 },
-  consultDraftTitle: { color: COLORS.text, fontSize: 15, fontWeight: '800' },
-  consultDraftClear: { marginTop: 3, color: COLORS.errorStrong, fontSize: 12, fontWeight: '700' },
-  consultDraftButton: { minHeight: 46, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: SPACING.sm, paddingHorizontal: SPACING.md, borderRadius: RADIUS.md, backgroundColor: COLORS.secondary },
-  consultDraftButtonText: { color: COLORS.ink, fontSize: 14, fontWeight: '800' },
   container: {
     flex: 1,
   },
