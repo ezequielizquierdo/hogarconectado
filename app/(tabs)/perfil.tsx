@@ -8,9 +8,11 @@ import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'rea
 
 export default function PerfilScreen() {
   const { user, logout } = useAuth();
-  const sellerLink = user?.codigoVendedor
-    ? `https://hogarconectado.onrender.com/productos?ref=${user.codigoVendedor}`
-    : '';
+  const sellerLink = user?.slugVendedor
+    ? `https://hogarconectado.onrender.com/v/${user.slugVendedor}`
+    : user?.codigoVendedor
+      ? `https://hogarconectado.onrender.com/productos?ref=${user.codigoVendedor}`
+      : '';
 
   const copySellerLink = async () => {
     await Clipboard.setStringAsync(sellerLink);

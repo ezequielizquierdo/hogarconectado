@@ -14,7 +14,7 @@ export interface SellerReferral {
 
 async function validate(codigo: string) {
   const normalizedCode = codigo.trim().toLowerCase();
-  if (!/^[a-z0-9-]{6,32}$/.test(normalizedCode)) return null;
+  if (!/^[a-z0-9-]{3,32}$/.test(normalizedCode)) return null;
   try {
     const response = await apiClient.get<ApiResponse<{ codigo: string; nombre: string }>>(`/vendedores/${normalizedCode}`);
     return response.data.data;

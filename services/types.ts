@@ -12,6 +12,7 @@ export interface Usuario {
     rol: UserRole;
     estado: UserStatus;
     codigoVendedor?: string;
+    slugVendedor?: string;
     ultimoAcceso?: string;
     createdAt: string;
     updatedAt: string;

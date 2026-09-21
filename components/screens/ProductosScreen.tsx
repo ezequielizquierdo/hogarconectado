@@ -557,7 +557,9 @@ export default function ProductosScreen() {
 
   const shareSellerStorefront = async () => {
     if (user?.rol !== "vendedor" || !user.codigoVendedor) return;
-    const link = `https://hogarconectado.onrender.com/productos?ref=${encodeURIComponent(user.codigoVendedor)}`;
+    const link = user.slugVendedor
+      ? `https://hogarconectado.onrender.com/v/${encodeURIComponent(user.slugVendedor)}`
+      : `https://hogarconectado.onrender.com/productos?ref=${encodeURIComponent(user.codigoVendedor)}`;
     try {
       if (Platform.OS === "web") {
         if (typeof navigator.share === "function") {

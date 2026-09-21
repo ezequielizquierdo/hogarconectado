@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Hogar Conectado · Vidriera</title>
+    <meta name="robots" content="noindex" />
+  </head>
+  <body>
+    <p>Abriendo la vidriera de Hogar Conectado…</p>
+    <script>
+      const match = /^\/v\/([a-z0-9]{3,32})\/?$/.exec(window.location.pathname);
+      window.location.replace(match
+        ? `/productos?ref=${encodeURIComponent(match[1])}`
+        : '/productos');
+    </script>
+  </body>
+</html>
