@@ -54,6 +54,7 @@ import {
 } from "@/components/product/productForm";
 import { QuoteDraftBar } from "@/components/quote/QuoteDraftBar";
 import { SidebarFilters } from "@/components/filters";
+import { CatalogSortMenu } from "@/components/filters/CatalogSortMenu";
 import { ProductFiltersModal } from "@/components/filters/ProductFiltersModal";
 import { Pagination } from "@/components/Pagination";
 import { useCategorias } from "@/hooks/useCategorias";
@@ -62,7 +63,7 @@ import { useMarcas } from "@/hooks/useMarcas";
 import { useDebounce } from "@/hooks/useDebounce";
 import { categoriasService, productosService } from "@/services";
 import { uploadService, UploadedImage } from "@/services/uploadService";
-import { ProductImageDraft, Producto, ProductoConPrecios } from "@/services/types";
+import { ProductImageDraft, Producto, ProductoConPrecios, ProductoFiltros } from "@/services/types";
 import { COLORS, SPACING, RADIUS, SHADOWS } from "@/constants/theme";
 import { useAuth } from "@/contexts/AuthContext";
 import { useDesktopHeader } from "@/contexts/DesktopHeaderContext";
@@ -219,8 +220,11 @@ export default function ProductosScreen() {
   // Los productos ya vienen filtrados del backend, no necesitamos filtrar localmente
   const productosFiltrados = productos;
   const totalProductos = pagination?.total ?? productosFiltrados.length;
+  const selectedUpdated = filtros.actualizados || "todos";
+  const selectedOrder = filtros.ordenar || "recientes";
   const hasActiveFilters = Boolean(
-    searchText.trim() || filtroCategoria || filtroMarca || filtroStock
+    searchText.trim() || filtroCategoria || filtroMarca || filtroStock ||
+    selectedUpdated !== "todos"
   );
   // Función para limpiar filtros (ahora usa el backend)
   const clearAllFilters = () => {
@@ -287,6 +291,22 @@ export default function ProductosScreen() {
       ...filtros,
       disponible,
       pagina: 1, // Reiniciar a primera página
+    });
+  };
+
+  const handleUpdatedChange = (value: string) => {
+    setFiltros({
+      ...filtros,
+      actualizados: value as ProductoFiltros["actualizados"],
+      pagina: 1,
+    });
+  };
+
+  const handleOrderChange = (value: string) => {
+    setFiltros({
+      ...filtros,
+      ordenar: value as ProductoFiltros["ordenar"],
+      pagina: 1,
     });
   };
 
@@ -1391,10 +1411,12 @@ export default function ProductosScreen() {
               selectedCategoria={filtroCategoria}
               selectedMarca={filtroMarca}
               selectedStock={filtroStock}
+              selectedUpdated={selectedUpdated}
               searchText={searchText}
               onCategoriaChange={handleCategoriaChange}
               onMarcaChange={handleMarcaChange}
               onStockChange={handleStockChange}
+              onUpdatedChange={handleUpdatedChange}
               onSearchChange={setSearchText}
               onClearFilters={clearAllFilters}
               resultCount={totalProductos}
@@ -1432,6 +1454,9 @@ export default function ProductosScreen() {
                       <ThemedText style={styles.assistedImportHint}>Seleccioná varias imágenes y revisá un borrador por producto.</ThemedText>
                     </View>
                   ) : null}
+                  <View style={styles.catalogSortRow}>
+                    <CatalogSortMenu selectedValue={selectedOrder} onSelect={handleOrderChange} />
+                  </View>
                   {productosLoading && productosFiltrados.length > 0 ? <LoadingBar label="Actualizando catálogo…" /> : null}
                   {productosFiltrados.length === 0 ? (
                     productosLoading ? <ProductCatalogSkeleton /> : <DataStatePanel {...catalogState} />
@@ -1519,11 +1544,11 @@ export default function ProductosScreen() {
                     color={COLORS.primaryDark}
                   />
                   <ThemedText style={styles.filterButtonText}>Filtrar</ThemedText>
-                  {(filtroCategoria || filtroMarca || filtroStock) && (
+                  {(filtroCategoria || filtroMarca || filtroStock || selectedUpdated !== "todos") && (
                     <View style={styles.activeFiltersBadge}>
                       <ThemedText style={styles.badgeText}>
                         {
-                          [filtroCategoria, filtroMarca, filtroStock].filter(
+                          [filtroCategoria, filtroMarca, filtroStock, selectedUpdated !== "todos" ? selectedUpdated : ""].filter(
                             (f) => f
                           ).length
                         }
@@ -1584,7 +1609,7 @@ export default function ProductosScreen() {
                   onPress={() => setFiltersModalVisible(true)}
                 >
                   <MaterialIcons name="tune" size={20} color={COLORS.primaryDark} />
-                  {(filtroMarca || filtroStock) ? <View style={styles.storefrontFilterDot} /> : null}
+                  {(filtroMarca || filtroStock || selectedUpdated !== "todos" || selectedOrder !== "recientes") ? <View style={styles.storefrontFilterDot} /> : null}
                 </TouchableOpacity>
               ) : null}
               </View>
@@ -1635,7 +1660,7 @@ export default function ProductosScreen() {
               )}
 
               {/* Chips de filtros activos */}
-              {(filtroCategoria || filtroMarca || filtroStock) && (
+              {(filtroCategoria || filtroMarca || filtroStock || selectedUpdated !== "todos") && (
                 <FadeInView delay={300}>
                   <View style={styles.activeFiltersChips}>
                     {filtroCategoria && (
@@ -1692,6 +1717,22 @@ export default function ProductosScreen() {
                           <ThemedText style={styles.chipRemoveText}>
                             ×
                           </ThemedText>
+                        </TouchableOpacity>
+                      </View>
+                    )}
+                    {selectedUpdated !== "todos" && (
+                      <View style={styles.filterChip}>
+                        <ThemedText style={styles.chipText}>
+                          {selectedUpdated === "dia" ? "Último día" : selectedUpdated === "semana" ? "Última semana" : "Último mes"}
+                        </ThemedText>
+                        <TouchableOpacity
+                          accessibilityRole="button"
+                          accessibilityLabel="Quitar filtro de actualización"
+                          hitSlop={12}
+                          onPress={() => handleUpdatedChange("todos")}
+                          style={styles.chipRemove}
+                        >
+                          <ThemedText style={styles.chipRemoveText}>×</ThemedText>
                         </TouchableOpacity>
                       </View>
                     )}
@@ -3683,12 +3724,16 @@ export default function ProductosScreen() {
         selectedCategory={filtroCategoria}
         selectedBrand={filtroMarca}
         selectedStock={filtroStock}
+        selectedUpdated={selectedUpdated}
+        selectedOrder={selectedOrder}
         hasActiveFilters={hasActiveFilters}
         loading={productosLoading}
         totalProducts={totalProductos}
         onCategoryChange={handleCategoriaChange}
         onBrandChange={handleMarcaChange}
         onStockChange={handleStockChange}
+        onUpdatedChange={handleUpdatedChange}
+        onOrderChange={handleOrderChange}
         onClear={clearAllFilters}
         onClose={() => setFiltersModalVisible(false)}
       />
@@ -4431,6 +4476,14 @@ const styles = StyleSheet.create({
     flexWrap: "wrap" as const,
     justifyContent: "flex-start" as const,
     gap: SPACING.lg,
+  },
+  catalogSortRow: {
+    position: "relative",
+    zIndex: 20,
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    alignItems: "center",
+    gap: SPACING.sm,
   },
   mobileList: {
     flexDirection: "column",

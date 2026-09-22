@@ -24,10 +24,12 @@ interface SidebarFiltersProps {
   selectedCategoria: string;
   selectedMarca: string;
   selectedStock: string;
+  selectedUpdated: string;
   searchText: string;
   onCategoriaChange: (value: string) => void;
   onMarcaChange: (value: string) => void;
   onStockChange: (value: string) => void;
+  onUpdatedChange: (value: string) => void;
   onSearchChange: (value: string) => void;
   onClearFilters: () => void;
   resultCount: number;
@@ -42,10 +44,12 @@ const SidebarFilters: React.FC<SidebarFiltersProps> = ({
   selectedCategoria,
   selectedMarca,
   selectedStock,
+  selectedUpdated,
   searchText,
   onCategoriaChange,
   onMarcaChange,
   onStockChange,
+  onUpdatedChange,
   onSearchChange,
   onClearFilters,
   resultCount,
@@ -55,6 +59,14 @@ const SidebarFilters: React.FC<SidebarFiltersProps> = ({
   const [essenCollapsed, setEssenCollapsed] = useState(false);
   const [marcasCollapsed, setMarcasCollapsed] = useState(false);
   const [stockCollapsed, setStockCollapsed] = useState(false);
+  const [updatedCollapsed, setUpdatedCollapsed] = useState(false);
+
+  const updatedOptions = [
+    { label: "Todos los productos", value: "todos" },
+    { label: "Último día", value: "dia" },
+    { label: "Última semana", value: "semana" },
+    { label: "Último mes", value: "mes" },
+  ];
 
   const stockOptions = [
     { label: "Disponible", value: "disponible" },
@@ -163,6 +175,7 @@ const SidebarFilters: React.FC<SidebarFiltersProps> = ({
     selectedCategoria !== "" ||
     selectedMarca !== "" ||
     selectedStock !== "" ||
+    selectedUpdated !== "todos" ||
     searchText.trim() !== "";
 
   return (
@@ -216,6 +229,19 @@ const SidebarFilters: React.FC<SidebarFiltersProps> = ({
             </TouchableOpacity>
           )}
         </View>
+
+        {renderFilterSection(
+          "Actualizados",
+          "update",
+          updatedOptions,
+          selectedUpdated,
+          onUpdatedChange,
+          false,
+          updatedCollapsed,
+          () => setUpdatedCollapsed(!updatedCollapsed)
+        )}
+
+        <View style={styles.divider} />
 
         {/* Categorías */}
         {renderFilterSection(

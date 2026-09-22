@@ -4,6 +4,7 @@ import { Modal, SafeAreaView, ScrollView, StyleSheet, TouchableOpacity, View } f
 
 import { ThemedText } from "@/components/ThemedText";
 import LabeledDropdown from "@/components/forms/LabeledDropdown";
+import { PRODUCT_SORT_OPTIONS } from "@/components/filters/CatalogSortMenu";
 import { COLORS, RADIUS, SPACING } from "@/constants/theme";
 
 interface FilterOption {
@@ -19,12 +20,16 @@ interface ProductFiltersModalProps {
   selectedCategory: string;
   selectedBrand: string;
   selectedStock: string;
+  selectedUpdated: string;
+  selectedOrder: string;
   hasActiveFilters: boolean;
   loading: boolean;
   totalProducts: number;
   onCategoryChange: (value: string) => void;
   onBrandChange: (value: string) => void;
   onStockChange: (value: string) => void;
+  onUpdatedChange: (value: string) => void;
+  onOrderChange: (value: string) => void;
   onClear: () => void;
   onClose: () => void;
 }
@@ -37,12 +42,16 @@ export function ProductFiltersModal({
   selectedCategory,
   selectedBrand,
   selectedStock,
+  selectedUpdated,
+  selectedOrder,
   hasActiveFilters,
   loading,
   totalProducts,
   onCategoryChange,
   onBrandChange,
   onStockChange,
+  onUpdatedChange,
+  onOrderChange,
   onClear,
   onClose,
 }: ProductFiltersModalProps) {
@@ -66,7 +75,7 @@ export function ProductFiltersModal({
             <ThemedText style={styles.eyebrow}>EXPLORAR CATÁLOGO</ThemedText>
             <ThemedText style={styles.title}>Filtrar productos</ThemedText>
             <ThemedText style={styles.subtitle}>
-              Combiná categoría, marca y disponibilidad.
+              Combiná fecha, categoría, marca y disponibilidad.
             </ThemedText>
           </View>
           <TouchableOpacity
@@ -84,6 +93,29 @@ export function ProductFiltersModal({
           contentContainerStyle={styles.contentContainer}
           keyboardShouldPersistTaps="handled"
         >
+          <View style={styles.section}>
+            <LabeledDropdown
+              label="Ordenar por"
+              options={PRODUCT_SORT_OPTIONS}
+              selectedValue={selectedOrder}
+              onSelect={onOrderChange}
+            />
+          </View>
+
+          <View style={styles.section}>
+            <LabeledDropdown
+              label="Actualizados"
+              options={[
+                { label: "Todos los productos", value: "todos" },
+                { label: "Último día", value: "dia" },
+                { label: "Última semana", value: "semana" },
+                { label: "Último mes", value: "mes" },
+              ]}
+              selectedValue={selectedUpdated}
+              onSelect={onUpdatedChange}
+            />
+          </View>
+
           <FilterSection
             label="Categoría"
             options={[{ label: "Todas las categorías", value: "" }, ...generalCategories]}

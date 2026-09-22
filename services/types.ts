@@ -306,6 +306,8 @@ export interface ProductoFiltros {
     limite?: number;
     pagina?: number;
     buscar?: string;
+    actualizados?: 'todos' | 'dia' | 'semana' | 'mes';
+    ordenar?: 'recientes' | 'precio-asc' | 'precio-desc';
 }
 
 export interface CotizacionFiltros {
