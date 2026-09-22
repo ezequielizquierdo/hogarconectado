@@ -327,6 +327,9 @@ export default function ConsultasScreen() {
                   <Text style={styles.contactName}>{item.contacto.nombre}</Text>
                   <Text style={styles.phone}>{item.contacto.telefono}</Text>
                   <Text style={styles.date}>{formatDate(item.createdAt)}</Text>
+                  {user?.rol === 'admin' && item.vendedorOrigen && (
+                    <Text style={styles.owner}>Llegó por: {item.vendedorOrigen.nombre}</Text>
+                  )}
                   {item.asignadaA && <Text style={styles.owner}>Responsable: {item.asignadaA.nombre}</Text>}
                 </View>
                 <View style={styles.contactActions}>
