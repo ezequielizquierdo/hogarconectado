@@ -58,6 +58,29 @@ export function ProductImageImportModal({ visible, onClose, onCreateDraft, onUpd
   const [items, setItems] = useState<DraftItem[]>([]);
   const [selecting, setSelecting] = useState(false);
 
+  const analyzeItem = async (item: Pick<DraftItem, 'id' | 'uri'>) => {
+    setItems(current => current.map(candidate => candidate.id === item.id
+      ? { ...candidate, status: 'analyzing', error: undefined }
+      : candidate));
+    try {
+      const draft = await productAssistantService.analizarImagen(item.uri);
+      const firstDuplicate = draft.possibleDuplicates?.[0];
+      setItems(current => current.map(candidate => candidate.id === item.id ? {
+        ...candidate,
+        status: 'ready',
+        draft: firstDuplicate ? { ...draft, ...getDuplicateOriginalValues(firstDuplicate) } : draft,
+        detectedDraft: draft,
+        selectedDuplicateId: firstDuplicate?._id,
+        duplicateImageSource: 'original',
+        fieldSelections: Object.fromEntries(comparisonFields.map(field => [field.key, 'original'])) as Record<ComparisonFieldKey, ComparisonSource>,
+      } : candidate));
+    } catch (error) {
+      setItems(current => current.map(candidate => candidate.id === item.id
+        ? { ...candidate, status: 'error', error: getErrorMessage(error) }
+        : candidate));
+    }
+  };
+
   const addAndAnalyze = async (assets: { uri: string; name?: string | null; fileName?: string | null }[]) => {
     const additions = assets.slice(0, 10).map((asset, index) => ({
       id: `${Date.now()}-${index}`,
@@ -67,24 +90,12 @@ export function ProductImageImportModal({ visible, onClose, onCreateDraft, onUpd
     }));
     setItems(current => [...current, ...additions]);
 
-    for (const item of additions) {
-      setItems(current => current.map(candidate => candidate.id === item.id ? { ...candidate, status: 'analyzing' } : candidate));
-      try {
-        const draft = await productAssistantService.analizarImagen(item.uri);
-        const firstDuplicate = draft.possibleDuplicates?.[0];
-        setItems(current => current.map(candidate => candidate.id === item.id ? {
-          ...candidate,
-          status: 'ready',
-          draft: firstDuplicate ? { ...draft, ...getDuplicateOriginalValues(firstDuplicate) } : draft,
-          detectedDraft: draft,
-          selectedDuplicateId: draft.possibleDuplicates?.[0]?._id,
-          duplicateImageSource: 'original',
-          fieldSelections: Object.fromEntries(comparisonFields.map(field => [field.key, 'original'])) as Record<ComparisonFieldKey, ComparisonSource>,
-        } : candidate));
-      } catch (error) {
-        setItems(current => current.map(candidate => candidate.id === item.id ? { ...candidate, status: 'error', error: getErrorMessage(error) } : candidate));
-      }
-    }
+    for (const item of additions) await analyzeItem(item);
+  };
+
+  const retryFailed = async () => {
+    const failed = items.filter(item => item.status === 'error');
+    for (const item of failed) await analyzeItem(item);
   };
 
   const pickGallery = async () => {
@@ -249,6 +260,13 @@ export function ProductImageImportModal({ visible, onClose, onCreateDraft, onUpd
             </TouchableOpacity>
           </View>
 
+          {items.some(item => item.status === 'error') && !busy ? (
+            <TouchableOpacity style={styles.retryAllButton} onPress={retryFailed} accessibilityLabel="Reintentar imágenes fallidas">
+              <MaterialIcons name="refresh" size={19} color={COLORS.primaryDark} />
+              <ThemedText style={styles.retryButtonText}>Reintentar fallidas</ThemedText>
+            </TouchableOpacity>
+          ) : null}
+
           <ScrollView style={styles.list} contentContainerStyle={styles.listContent} keyboardShouldPersistTaps="handled">
             {items.length === 0 ? (
               <View style={styles.empty}>
@@ -265,7 +283,13 @@ export function ProductImageImportModal({ visible, onClose, onCreateDraft, onUpd
                     {item.status === 'analyzing' || item.status === 'pending' ? (
                       <View style={styles.statusRow}><ActivityIndicator color={COLORS.primaryDark} /><ThemedText style={styles.statusText}>Leyendo producto…</ThemedText></View>
                     ) : item.status === 'error' ? (
-                      <ThemedText style={styles.errorText}>{item.error}</ThemedText>
+                      <View style={styles.errorBlock}>
+                        <ThemedText style={styles.errorText}>{item.error}</ThemedText>
+                        <TouchableOpacity style={styles.retryButton} onPress={() => analyzeItem(item)} accessibilityLabel={`Reintentar ${item.name}`}>
+                          <MaterialIcons name="refresh" size={17} color={COLORS.primaryDark} />
+                          <ThemedText style={styles.retryButtonText}>Reintentar</ThemedText>
+                        </TouchableOpacity>
+                      </View>
                     ) : item.status === 'created' ? (
                       <ThemedText style={styles.readyText}>{item.savedAs === 'updated' ? 'Producto actualizado correctamente' : 'Producto creado correctamente'}</ThemedText>
                     ) : (
@@ -467,5 +491,9 @@ const styles = StyleSheet.create({
   duplicateUpdate: { flex: 1, minWidth: 145, minHeight: 42, alignItems: 'center', justifyContent: 'center', borderRadius: RADIUS.md, backgroundColor: COLORS.secondary },
   duplicateConfirm: { flex: 1, minHeight: 42, alignItems: 'center', justifyContent: 'center', borderRadius: RADIUS.md, backgroundColor: COLORS.warning },
   duplicateConfirmText: { color: COLORS.ink, fontSize: 13, fontWeight: '800', textAlign: 'center' },
+  errorBlock: { alignItems: 'flex-start', gap: SPACING.xs },
+  retryAllButton: { alignSelf: 'flex-end', marginHorizontal: SPACING.lg, marginTop: SPACING.sm, minHeight: 38, paddingHorizontal: SPACING.md, borderRadius: RADIUS.md, borderWidth: 1, borderColor: COLORS.primaryDark, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: SPACING.xs },
+  retryButton: { minHeight: 34, paddingHorizontal: SPACING.sm, borderRadius: RADIUS.sm, backgroundColor: COLORS.cardBackground, borderWidth: 1, borderColor: COLORS.primaryDark, flexDirection: 'row', alignItems: 'center', gap: SPACING.xs },
+  retryButtonText: { color: COLORS.primaryDark, fontWeight: '800', fontSize: 13 },
   reviewButton: { minHeight: 46, backgroundColor: COLORS.secondary, borderRadius: RADIUS.md, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: SPACING.sm }, reviewButtonDisabled: { opacity: 0.7 }, reviewButtonText: { color: COLORS.ink, fontWeight: '800' },
 });

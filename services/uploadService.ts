@@ -17,12 +17,36 @@ const blobToDataUrl = (blob: Blob): Promise<string> => new Promise((resolve, rej
   reader.readAsDataURL(blob);
 });
 
+const optimizeWebImage = async (uri: string): Promise<string> => {
+  const response = await fetch(uri);
+  if (!response.ok) throw new Error('No se pudo leer la imagen seleccionada');
+  const blob = await response.blob();
+  const objectUrl = URL.createObjectURL(blob);
+  try {
+    const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const element = new window.Image();
+      element.onload = () => resolve(element);
+      element.onerror = () => reject(new Error('No se pudo preparar la imagen seleccionada'));
+      element.src = objectUrl;
+    });
+    const maxSide = 1600;
+    const scale = Math.min(1, maxSide / Math.max(image.naturalWidth, image.naturalHeight));
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
+    canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
+    const context = canvas.getContext('2d');
+    if (!context) return blobToDataUrl(blob);
+    context.drawImage(image, 0, 0, canvas.width, canvas.height);
+    return canvas.toDataURL('image/jpeg', 0.82);
+  } finally {
+    URL.revokeObjectURL(objectUrl);
+  }
+};
+
 export const uriToDataUrl = async (uri: string): Promise<string> => {
   if (uri.startsWith('data:')) return uri;
   if (Platform.OS === 'web') {
-    const response = await fetch(uri);
-    if (!response.ok) throw new Error('No se pudo leer la imagen seleccionada');
-    return blobToDataUrl(await response.blob());
+    return optimizeWebImage(uri);
   }
   const base64 = await FileSystem.readAsStringAsync(uri, { encoding: FileSystem.EncodingType.Base64 });
   const extension = uri.split('.').pop()?.toLowerCase();
