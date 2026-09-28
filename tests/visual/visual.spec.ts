@@ -18,7 +18,8 @@ const seller = {
   email: 'vendedor@hogarconectado.test',
   nombre: 'Vendedor de muestra',
   rol: 'vendedor',
-  codigoVendedor: 'VENDEMO',
+  codigoVendedor: 'v-demo123',
+  slugVendedor: 'vmuestra',
 };
 
 const category = {
@@ -145,6 +146,8 @@ async function mockApi(page: Page, authenticated = false, currentUser = admin, c
 
     if (path.endsWith('/auth/me')) body = { success: true, data: currentUser };
     else if (path.endsWith('/cotizaciones-publicas/visual-token')) body = { success: true, data: currentPublicQuote };
+    else if (path === '/api/vendedores') body = { success: true, data: [{ nombre: seller.nombre, codigo: seller.codigoVendedor, slug: seller.slugVendedor }] };
+    else if (path.includes('/vendedores/')) body = { success: true, data: { nombre: seller.nombre, codigo: seller.codigoVendedor, slug: seller.slugVendedor } };
     else if (path.endsWith('/categorias')) body = { success: true, data: [category] };
     else if (path.endsWith('/productos/marcas')) body = { success: true, data: [product.marca] };
     else if (path.includes('/productos')) body = { success: true, data: [product], pagination: { total: 1, pagina: 1, limite: 20, paginas: 1 } };
@@ -197,6 +200,22 @@ test('catálogo público', async ({ page }) => {
   if ((page.viewportSize()?.width ?? 0) >= 1024) await expect(page.getByText('CATÁLOGO', { exact: true })).toBeVisible();
   else await expect(page.getByText('Productos', { exact: true }).first()).toBeVisible();
   await expect(page).toHaveScreenshot('productos-publicos.png', { fullPage: true });
+});
+
+test('catálogo público atribuye y muestra al vendedor correcto', async ({ page }) => {
+  await mockApi(page);
+  await page.goto('/productos?ref=vmuestra');
+  await settle(page);
+  await expect(page.getByText(`Te atiende ${seller.nombre}`, { exact: true })).toBeVisible();
+});
+
+test('catálogo general permite elegir un vendedor conocido', async ({ page }) => {
+  await mockApi(page);
+  await page.goto('/productos');
+  await settle(page);
+  await page.getByText('Elegir vendedor', { exact: true }).click();
+  await page.getByText(seller.nombre, { exact: true }).click();
+  await expect(page.getByText(`Te atiende ${seller.nombre}`, { exact: true })).toBeVisible();
 });
 
 test('la raíz abre el catálogo sin error de navegación', async ({ page }) => {

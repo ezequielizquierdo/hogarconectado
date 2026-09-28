@@ -1,8 +1,10 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { UserRole, Usuario } from '@/services/types';
 import { usuariosService } from '@/services/usuariosService';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import * as Clipboard from 'expo-clipboard';
 import React, { useCallback, useEffect, useState } from 'react';
-import { Alert, Platform, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { Alert, Linking, Platform, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { DataStatePanel } from '@/components/ui/DataStatePanel';
 import { CardListSkeleton, LoadingBar } from '@/components/ui/LoadingStates';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
@@ -20,6 +22,14 @@ const statusInfo: Record<Usuario['estado'], { label: string; description: string
   pendiente: { label: 'Pendiente', description: 'Todavía no puede ingresar. Requiere aprobación y un rol.' },
   activo: { label: 'Activo', description: 'Puede ingresar y operar según el rol asignado.' },
   bloqueado: { label: 'Bloqueado', description: 'No puede ingresar hasta que un administrador lo reactive.' },
+};
+const storefrontBaseUrl = 'https://hogarconectado.onrender.com';
+
+const getSellerLink = (item: Usuario) => {
+  if (item.rol !== 'vendedor') return null;
+  if (item.slugVendedor) return `${storefrontBaseUrl}/v/${encodeURIComponent(item.slugVendedor)}`;
+  if (item.codigoVendedor) return `${storefrontBaseUrl}/productos?ref=${encodeURIComponent(item.codigoVendedor)}`;
+  return null;
 };
 
 export default function UsuariosScreen() {
@@ -86,6 +96,13 @@ export default function UsuariosScreen() {
     rol === 'admin',
   );
 
+  const copySellerLink = async (item: Usuario) => {
+    const link = getSellerLink(item);
+    if (!link) return;
+    await Clipboard.setStringAsync(link);
+    Alert.alert('Enlace copiado', `Ya podés compartir el espacio de ventas de ${item.nombre}.`);
+  };
+
   if (user?.rol !== 'admin') return (
     <View style={styles.center}>
       <DataStatePanel
@@ -145,6 +162,29 @@ export default function UsuariosScreen() {
             </View>
             <Text style={styles.statusDescription}>{statusInfo[item.estado].description}</Text>
             <Text style={styles.currentRole}>Rol actual: {roleInfo[item.rol].label}</Text>
+            {item.rol === 'vendedor' ? (
+              <View style={styles.sellerLinkBox}>
+                <View style={styles.sellerLinkHeading}>
+                  <MaterialIcons name="storefront" size={18} color={COLORS.primaryDark} />
+                  <Text style={styles.sellerLinkLabel}>Enlace directo de ventas</Text>
+                </View>
+                {getSellerLink(item) ? (
+                  <>
+                    <Text selectable numberOfLines={2} style={styles.sellerLinkText}>{getSellerLink(item)}</Text>
+                    <View style={styles.sellerLinkActions}>
+                      <Pressable accessibilityRole="button" accessibilityLabel={`Copiar enlace de ventas de ${item.nombre}`} style={styles.linkAction} onPress={() => copySellerLink(item)}>
+                        <MaterialIcons name="content-copy" size={17} color={COLORS.primaryDark} />
+                        <Text style={styles.linkActionText}>Copiar</Text>
+                      </Pressable>
+                      <Pressable accessibilityRole="link" accessibilityLabel={`Abrir espacio de ventas de ${item.nombre}`} style={styles.linkAction} onPress={() => Linking.openURL(getSellerLink(item)!)}>
+                        <MaterialIcons name="open-in-new" size={17} color={COLORS.primaryDark} />
+                        <Text style={styles.linkActionText}>Abrir</Text>
+                      </Pressable>
+                    </View>
+                  </>
+                ) : <Text style={styles.sellerLinkPending}>El enlace se generará cuando el vendedor vuelva a iniciar sesión.</Text>}
+              </View>
+            ) : null}
           </View>
           <View style={styles.actions}>
             {item.estado === 'pendiente' && roles.map(rol => (
@@ -218,6 +258,14 @@ const styles = StyleSheet.create({
   statusText: { color: COLORS.text, fontSize: 12, fontWeight: '700' },
   statusDescription: { color: COLORS.textSecondary, fontSize: 13 },
   currentRole: { color: COLORS.text, fontWeight: '600', marginTop: SPACING.xs },
+  sellerLinkBox: { marginTop: SPACING.sm, padding: SPACING.sm, gap: SPACING.xs, borderRadius: RADIUS.md, borderWidth: 1, borderColor: COLORS.border, backgroundColor: COLORS.cardBackground },
+  sellerLinkHeading: { flexDirection: 'row', alignItems: 'center', gap: SPACING.xs },
+  sellerLinkLabel: { color: COLORS.text, fontSize: 13, fontWeight: '800' },
+  sellerLinkText: { color: COLORS.primaryDark, fontSize: 13, lineHeight: 18 },
+  sellerLinkActions: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.sm, marginTop: SPACING.xs },
+  linkAction: { minHeight: 36, paddingHorizontal: SPACING.sm, borderRadius: RADIUS.sm, borderWidth: 1, borderColor: COLORS.primary, backgroundColor: COLORS.surface, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: SPACING.xs },
+  linkActionText: { color: COLORS.primaryDark, fontSize: 13, fontWeight: '800' },
+  sellerLinkPending: { color: COLORS.textSecondary, fontSize: 13, lineHeight: 18 },
   actions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingTop: SPACING.sm, borderTopWidth: 1, borderTopColor: COLORS.border },
   button: { backgroundColor: COLORS.secondary, borderRadius: RADIUS.md, paddingHorizontal: 12, paddingVertical: 8, minHeight: 40, justifyContent: 'center' },
   roleButton: { backgroundColor: COLORS.cardBackground, borderWidth: 1, borderColor: COLORS.primary, borderRadius: RADIUS.md, paddingHorizontal: 12, paddingVertical: 8, minHeight: 40, justifyContent: 'center' },

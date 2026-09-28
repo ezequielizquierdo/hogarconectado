@@ -72,7 +72,7 @@ import { captureWebStory } from "@/utils/captureWebStory";
 import { InstagramStoryRenderData } from "@/utils/instagramStoryRenderer";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { ConsultaProductoModal } from "@/components/modals/ConsultaProductoModal";
-import sellerReferralService, { SellerReferral } from "@/services/sellerReferralService";
+import sellerReferralService, { ActiveSeller, SellerReferral } from "@/services/sellerReferralService";
 
 export default function ProductosScreen() {
   const { width } = useWindowDimensions();
@@ -121,6 +121,8 @@ export default function ProductosScreen() {
   const [consultProducts, setConsultProducts] = useState<Producto[]>([]);
   const [consultModalVisible, setConsultModalVisible] = useState(false);
   const [sellerReferral, setSellerReferral] = useState<SellerReferral | null>(null);
+  const [activeSellers, setActiveSellers] = useState<ActiveSeller[]>([]);
+  const [loadingSellers, setLoadingSellers] = useState(false);
   const [selectedProductForInstagram, setSelectedProductForInstagram] =
     useState<ProductoConPrecios | null>(null);
   const [instagramStoryOptions, setInstagramStoryOptions] = useState({
@@ -198,6 +200,22 @@ export default function ProductosScreen() {
       .then(referral => { if (active) setSellerReferral(referral); });
     return () => { active = false; };
   }, [sellerRefParam]);
+
+  useEffect(() => {
+    if (!isStorefront) return;
+    let active = true;
+    setLoadingSellers(true);
+    void sellerReferralService.listActive()
+      .then(sellers => { if (active) setActiveSellers(sellers); })
+      .catch(() => { if (active) setActiveSellers([]); })
+      .finally(() => { if (active) setLoadingSellers(false); });
+    return () => { active = false; };
+  }, [isStorefront]);
+
+  const selectKnownSeller = async (seller: ActiveSeller) => {
+    const referral = await sellerReferralService.remember(seller.slug || seller.codigo);
+    if (referral) setSellerReferral(referral);
+  };
 
   // Efecto para sincronizar búsqueda con backend
   useEffect(() => {
@@ -1442,8 +1460,14 @@ export default function ProductosScreen() {
                     title={isStorefront ? "Encontrá lo que necesitás" : "Productos"}
                     subtitle={canEdit ? "Gestioná el catálogo, el stock y los recursos comerciales desde un solo lugar." : "Explorá el catálogo y elegí los productos que te interesan."}
                   />
-                  {sellerReferral && !canEdit && !canQuote ? (
-                    <SellerReferralBanner sellerName={sellerReferral.nombre} />
+                  {isStorefront ? (
+                    <SellerReferralBanner
+                      sellerName={sellerReferral?.nombre}
+                      selectedCode={sellerReferral?.codigo}
+                      sellers={activeSellers}
+                      loading={loadingSellers}
+                      onSelect={selectKnownSeller}
+                    />
                   ) : null}
                   {canEdit ? (
                     <View style={styles.assistedImportRow}>
@@ -1517,8 +1541,14 @@ export default function ProductosScreen() {
                   </TouchableOpacity>
                 </View>
               ) : null}
-              {sellerReferral && !canEdit && !canQuote ? (
-                <SellerReferralBanner sellerName={sellerReferral.nombre} />
+              {isStorefront ? (
+                <SellerReferralBanner
+                  sellerName={sellerReferral?.nombre}
+                  selectedCode={sellerReferral?.codigo}
+                  sellers={activeSellers}
+                  loading={loadingSellers}
+                  onSelect={selectKnownSeller}
+                />
               ) : null}
               {/* Barra de acciones: Agregar + Filtrar en la misma línea */}
               {!isStorefront ? <View style={styles.mobileActionsBar}>

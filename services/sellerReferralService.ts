@@ -9,14 +9,21 @@ const ATTRIBUTION_MS = 30 * 24 * 60 * 60 * 1000;
 export interface SellerReferral {
   codigo: string;
   nombre: string;
+  slug?: string | null;
   expiresAt: number;
+}
+
+export interface ActiveSeller {
+  codigo: string;
+  nombre: string;
+  slug?: string | null;
 }
 
 async function validate(codigo: string) {
   const normalizedCode = codigo.trim().toLowerCase();
   if (!/^[a-z0-9-]{3,32}$/.test(normalizedCode)) return null;
   try {
-    const response = await apiClient.get<ApiResponse<{ codigo: string; nombre: string }>>(`/vendedores/${normalizedCode}`);
+    const response = await apiClient.get<ApiResponse<ActiveSeller>>(`/vendedores/${normalizedCode}`);
     return response.data.data;
   } catch {
     return null;
@@ -40,11 +47,23 @@ async function current(): Promise<SellerReferral | null> {
       await AsyncStorage.removeItem(STORAGE_KEY);
       return null;
     }
-    return referral;
+    const seller = await validate(referral.codigo);
+    if (!seller) {
+      await AsyncStorage.removeItem(STORAGE_KEY);
+      return null;
+    }
+    const refreshed = { ...seller, expiresAt: referral.expiresAt };
+    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(refreshed));
+    return refreshed;
   } catch {
     await AsyncStorage.removeItem(STORAGE_KEY);
     return null;
   }
 }
 
-export default { current, remember };
+async function listActive(): Promise<ActiveSeller[]> {
+  const response = await apiClient.get<ApiResponse<ActiveSeller[]>>('/vendedores');
+  return response.data.data;
+}
+
+export default { current, remember, listActive };
