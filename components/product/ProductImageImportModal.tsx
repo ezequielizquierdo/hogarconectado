@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Image, Modal, Platform, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import * as ImagePicker from 'expo-image-picker';
@@ -37,6 +37,11 @@ type Props = {
 };
 
 const getErrorMessage = (error: any) => error?.response?.data?.message || error?.message || 'No pudimos analizar esta imagen.';
+const getAnalysisErrorDetails = (error: any) => ({
+  message: getErrorMessage(error),
+  rateLimited: error?.response?.data?.code === 'IMAGE_ANALYSIS_RATE_LIMITED' || error?.response?.status === 429,
+  retryAfterSeconds: Math.max(0, Number(error?.response?.data?.retryAfterSeconds) || 0),
+});
 const comparisonFields = [
   { key: 'marca', label: 'Marca' },
   { key: 'modelo', label: 'Modelo' },
@@ -57,8 +62,15 @@ const displayComparisonValue = (value: unknown) => {
 export function ProductImageImportModal({ visible, onClose, onCreateDraft, onUpdateDuplicate }: Props) {
   const [items, setItems] = useState<DraftItem[]>([]);
   const [selecting, setSelecting] = useState(false);
+  const [cooldownSeconds, setCooldownSeconds] = useState(0);
 
-  const analyzeItem = async (item: Pick<DraftItem, 'id' | 'uri'>) => {
+  useEffect(() => {
+    if (cooldownSeconds <= 0) return undefined;
+    const timer = setTimeout(() => setCooldownSeconds(current => Math.max(0, current - 1)), 1000);
+    return () => clearTimeout(timer);
+  }, [cooldownSeconds]);
+
+  const analyzeItem = async (item: Pick<DraftItem, 'id' | 'uri'>): Promise<{ rateLimited: boolean }> => {
     setItems(current => current.map(candidate => candidate.id === item.id
       ? { ...candidate, status: 'analyzing', error: undefined }
       : candidate));
@@ -74,10 +86,14 @@ export function ProductImageImportModal({ visible, onClose, onCreateDraft, onUpd
         duplicateImageSource: 'original',
         fieldSelections: Object.fromEntries(comparisonFields.map(field => [field.key, 'original'])) as Record<ComparisonFieldKey, ComparisonSource>,
       } : candidate));
+      return { rateLimited: false };
     } catch (error) {
+      const details = getAnalysisErrorDetails(error);
+      if (details.rateLimited) setCooldownSeconds(Math.max(details.retryAfterSeconds, 60));
       setItems(current => current.map(candidate => candidate.id === item.id
-        ? { ...candidate, status: 'error', error: getErrorMessage(error) }
+        ? { ...candidate, status: 'error', error: details.message }
         : candidate));
+      return { rateLimited: details.rateLimited };
     }
   };
 
@@ -90,12 +106,24 @@ export function ProductImageImportModal({ visible, onClose, onCreateDraft, onUpd
     }));
     setItems(current => [...current, ...additions]);
 
-    for (const item of additions) await analyzeItem(item);
+    for (const item of additions) {
+      const result = await analyzeItem(item);
+      if (result.rateLimited) {
+        setItems(current => current.map(candidate => candidate.status === 'pending'
+          ? { ...candidate, status: 'error', error: 'Análisis pausado para respetar el límite de Gemini.' }
+          : candidate));
+        break;
+      }
+    }
   };
 
   const retryFailed = async () => {
+    if (cooldownSeconds > 0) return;
     const failed = items.filter(item => item.status === 'error');
-    for (const item of failed) await analyzeItem(item);
+    for (const item of failed) {
+      const result = await analyzeItem(item);
+      if (result.rateLimited) break;
+    }
   };
 
   const pickGallery = async () => {
@@ -260,10 +288,17 @@ export function ProductImageImportModal({ visible, onClose, onCreateDraft, onUpd
             </TouchableOpacity>
           </View>
 
+          {cooldownSeconds > 0 ? (
+            <View style={styles.cooldownNotice}>
+              <MaterialIcons name="schedule" size={19} color="#8a5b00" />
+              <ThemedText style={styles.cooldownText}>Gemini alcanzó su límite. Podrás reintentar en {cooldownSeconds} s.</ThemedText>
+            </View>
+          ) : null}
+
           {items.some(item => item.status === 'error') && !busy ? (
-            <TouchableOpacity style={styles.retryAllButton} onPress={retryFailed} accessibilityLabel="Reintentar imágenes fallidas">
+            <TouchableOpacity style={[styles.retryAllButton, cooldownSeconds > 0 && styles.retryButtonDisabled]} disabled={cooldownSeconds > 0} onPress={retryFailed} accessibilityLabel="Reintentar imágenes fallidas">
               <MaterialIcons name="refresh" size={19} color={COLORS.primaryDark} />
-              <ThemedText style={styles.retryButtonText}>Reintentar fallidas</ThemedText>
+              <ThemedText style={styles.retryButtonText}>{cooldownSeconds > 0 ? `Esperá ${cooldownSeconds} s` : 'Reintentar fallidas'}</ThemedText>
             </TouchableOpacity>
           ) : null}
 
@@ -285,9 +320,9 @@ export function ProductImageImportModal({ visible, onClose, onCreateDraft, onUpd
                     ) : item.status === 'error' ? (
                       <View style={styles.errorBlock}>
                         <ThemedText style={styles.errorText}>{item.error}</ThemedText>
-                        <TouchableOpacity style={styles.retryButton} onPress={() => analyzeItem(item)} accessibilityLabel={`Reintentar ${item.name}`}>
+                        <TouchableOpacity style={[styles.retryButton, cooldownSeconds > 0 && styles.retryButtonDisabled]} disabled={cooldownSeconds > 0} onPress={() => analyzeItem(item)} accessibilityLabel={`Reintentar ${item.name}`}>
                           <MaterialIcons name="refresh" size={17} color={COLORS.primaryDark} />
-                          <ThemedText style={styles.retryButtonText}>Reintentar</ThemedText>
+                          <ThemedText style={styles.retryButtonText}>{cooldownSeconds > 0 ? `Esperá ${cooldownSeconds} s` : 'Reintentar'}</ThemedText>
                         </TouchableOpacity>
                       </View>
                     ) : item.status === 'created' ? (
@@ -492,8 +527,11 @@ const styles = StyleSheet.create({
   duplicateConfirm: { flex: 1, minHeight: 42, alignItems: 'center', justifyContent: 'center', borderRadius: RADIUS.md, backgroundColor: COLORS.warning },
   duplicateConfirmText: { color: COLORS.ink, fontSize: 13, fontWeight: '800', textAlign: 'center' },
   errorBlock: { alignItems: 'flex-start', gap: SPACING.xs },
+  cooldownNotice: { marginHorizontal: SPACING.lg, marginTop: SPACING.sm, padding: SPACING.sm, borderRadius: RADIUS.md, backgroundColor: '#fff5d6', flexDirection: 'row', alignItems: 'center', gap: SPACING.sm },
+  cooldownText: { color: '#704900', fontWeight: '700', flex: 1 },
   retryAllButton: { alignSelf: 'flex-end', marginHorizontal: SPACING.lg, marginTop: SPACING.sm, minHeight: 38, paddingHorizontal: SPACING.md, borderRadius: RADIUS.md, borderWidth: 1, borderColor: COLORS.primaryDark, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: SPACING.xs },
   retryButton: { minHeight: 34, paddingHorizontal: SPACING.sm, borderRadius: RADIUS.sm, backgroundColor: COLORS.cardBackground, borderWidth: 1, borderColor: COLORS.primaryDark, flexDirection: 'row', alignItems: 'center', gap: SPACING.xs },
+  retryButtonDisabled: { opacity: 0.55 },
   retryButtonText: { color: COLORS.primaryDark, fontWeight: '800', fontSize: 13 },
   reviewButton: { minHeight: 46, backgroundColor: COLORS.secondary, borderRadius: RADIUS.md, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: SPACING.sm }, reviewButtonDisabled: { opacity: 0.7 }, reviewButtonText: { color: COLORS.ink, fontWeight: '800' },
 });
