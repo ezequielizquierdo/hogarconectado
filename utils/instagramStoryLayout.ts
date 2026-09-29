@@ -6,13 +6,13 @@ export const INSTAGRAM_STORY_SIZE = {
 } as const;
 
 export const INSTAGRAM_STORY_SAFE_AREA = {
-  horizontal: 96,
-  top: 150,
-  bottom: 190,
+  horizontal: 128,
+  top: 190,
+  bottom: 230,
 } as const;
 
-const PANEL_BASE_HEIGHT = 72;
-const PRODUCT_PANEL_GAP = 44;
+const PANEL_BASE_HEIGHT = 104;
+const PRODUCT_PANEL_GAP = 56;
 const CONSULTATION_HEIGHT = 92;
 const CONSULTATION_GAP = 28;
 

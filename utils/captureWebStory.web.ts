@@ -200,10 +200,10 @@ export async function captureWebStory(
     drawImageContain(
       context,
       productImage,
-      imageLayout.x + 32,
-      imageLayout.y + 32,
-      imageLayout.width - 64,
-      imageLayout.height - 64
+      imageLayout.x + 44,
+      imageLayout.y + 44,
+      imageLayout.width - 88,
+      imageLayout.height - 88
     );
     context.restore();
   }
@@ -214,7 +214,7 @@ export async function captureWebStory(
     context.fill();
   }
 
-  let textY = (panel?.y ?? 0) + 44;
+  let textY = (panel?.y ?? 0) + 60;
   context.fillStyle = TEXT_COLOR;
 
   if (data.categoria) {

@@ -85,7 +85,8 @@ export default function ProductosScreen() {
   const canEdit = can("editor", "admin");
   const canQuote = can("admin", "vendedor");
   const canShare = can("admin", "editor", "vendedor");
-  const canCreateInstagramStory = can("admin");
+  const canCreateInstagramStory = can("admin", "vendedor");
+  const canShowSellerCommission = can("admin");
   const isStorefront = !canEdit && !canQuote;
   const canDelete = can("admin");
   const {
@@ -141,7 +142,9 @@ export default function ProductosScreen() {
       (instagramStoryOptions.showModelo && selectedProductForInstagram?.modelo) ||
       (instagramStoryOptions.showMarca && selectedProductForInstagram?.marca) ||
       (instagramStoryOptions.showPrecio && selectedProductForInstagram?.precios?.contado != null) ||
-      (instagramStoryOptions.showComisionVendedor && selectedProductForInstagram?.comisionVendedor != null) ||
+      (canShowSellerCommission &&
+        instagramStoryOptions.showComisionVendedor &&
+        selectedProductForInstagram?.comisionVendedor != null) ||
       (instagramStoryOptions.showStock && selectedProductForInstagram?.stock) ||
       (instagramStoryOptions.showDescripcion && selectedProductForInstagram?.descripcion)
   );
@@ -568,6 +571,7 @@ export default function ProductosScreen() {
           ? formatPrecioLocal(selectedProductForInstagram.precios.contado)
           : undefined,
       comisionVendedor:
+        canShowSellerCommission &&
         instagramStoryOptions.showComisionVendedor &&
         selectedProductForInstagram.comisionVendedor != null
           ? formatPrecioLocal(selectedProductForInstagram.comisionVendedor)
@@ -584,7 +588,7 @@ export default function ProductosScreen() {
         ? "Consultá por el mejor precio"
         : undefined,
     };
-  }, [instagramStoryOptions, selectedProductForInstagram]);
+  }, [canShowSellerCommission, instagramStoryOptions, selectedProductForInstagram]);
 
   const openInstagramModal = async (producto: Producto) => {
     try {
@@ -817,7 +821,7 @@ export default function ProductosScreen() {
     }
   };
 
-  const savePreparedInstagramImage = () => {
+  const savePreparedInstagramImage = async () => {
     if (Platform.OS !== "web" || !preparedInstagramFile) return;
 
     const downloadUrl = URL.createObjectURL(preparedInstagramFile);
@@ -826,10 +830,33 @@ export default function ProductosScreen() {
       (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
 
     if (isAppleMobileBrowser) {
+      const webNavigator = navigator as Navigator & {
+        canShare?: (data?: ShareData) => boolean;
+      };
+      const shareData: ShareData = {
+        files: [preparedInstagramFile],
+        title: "Historia de Hogar Conectado",
+      };
+      if (
+        typeof webNavigator.share === "function" &&
+        webNavigator.canShare?.(shareData)
+      ) {
+        try {
+          await webNavigator.share(shareData);
+          return;
+        } catch (error) {
+          if (error instanceof Error && error.name === "AbortError") return;
+        }
+      }
+
       const imageWindow = window.open(downloadUrl, "_blank");
       if (imageWindow) imageWindow.opener = null;
       else window.location.href = downloadUrl;
       window.setTimeout(() => URL.revokeObjectURL(downloadUrl), 60_000);
+      Alert.alert(
+        "Imagen lista",
+        "Mantené presionada únicamente la imagen y elegí “Guardar en Fotos”. No hace falta tomar una captura de pantalla."
+      );
       return;
     }
 
@@ -1546,6 +1573,10 @@ export default function ProductosScreen() {
                   <TouchableOpacity style={styles.storefrontJoinLink} onPress={() => router.push('/sumate')} accessibilityRole="link">
                     <ThemedText style={styles.storefrontJoinLinkText}>¿Querés vender o sumar tus productos?</ThemedText>
                     <MaterialIcons name="arrow-forward" size={17} color={COLORS.primaryDark} />
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.storefrontJoinLink} onPress={() => router.push('/preguntas-frecuentes')} accessibilityRole="link">
+                    <ThemedText style={styles.storefrontJoinLinkText}>Preguntas frecuentes</ThemedText>
+                    <MaterialIcons name="help-outline" size={17} color={COLORS.primaryDark} />
                   </TouchableOpacity>
                 </View>
               ) : null}
@@ -3048,7 +3079,8 @@ export default function ProductosScreen() {
                             </>
                           )}
 
-                        {instagramStoryOptions.showComisionVendedor &&
+                        {canShowSellerCommission &&
+                          instagramStoryOptions.showComisionVendedor &&
                           selectedProductForInstagram?.comisionVendedor != null && (
                             <View style={styles.storyCommissionBlock}>
                               <ThemedText style={styles.storyCommissionLabel}>
@@ -3258,7 +3290,7 @@ export default function ProductosScreen() {
                       </ThemedText>
                     </TouchableOpacity>
 
-                    <TouchableOpacity
+                    {canShowSellerCommission && <TouchableOpacity
                       accessibilityRole="checkbox"
                       accessibilityLabel="Mostrar comisión para vendedor"
                       accessibilityState={{ checked: instagramStoryOptions.showComisionVendedor }}
@@ -3283,7 +3315,7 @@ export default function ProductosScreen() {
                       <ThemedText style={styles.checkboxLabel}>
                         Comisión para vendedor
                       </ThemedText>
-                    </TouchableOpacity>
+                    </TouchableOpacity>}
 
                     <TouchableOpacity
                       accessibilityRole="checkbox"
@@ -3409,8 +3441,8 @@ export default function ProductosScreen() {
                 </View>
                 {preparedInstagramFile && !isWideScreen ? (
                   <ThemedText style={styles.instagramSaveHint}>
-                    En iPhone, abrí “Guardar imagen” y mantenela presionada
-                    para guardarla en Fotos.
+                    En iPhone, “Guardar imagen” abre las opciones del archivo
+                    final para guardarlo directamente en Fotos.
                   </ThemedText>
                 ) : null}
                 {instagramPreparationError ? (
@@ -3445,7 +3477,7 @@ export default function ProductosScreen() {
                 {/* Vista previa de la historia para móvil */}
                 <View
                   ref={instagramViewRefMobile}
-                  style={[styles.storyPreview, { width: 250, height: 444 }]}
+                  style={styles.storyPreview}
                 >
                   <Image
                     source={require("@/assets/images/back-history.png")}
@@ -3521,7 +3553,8 @@ export default function ProductosScreen() {
                           </>
                         )}
 
-                      {instagramStoryOptions.showComisionVendedor &&
+                      {canShowSellerCommission &&
+                        instagramStoryOptions.showComisionVendedor &&
                         selectedProductForInstagram?.comisionVendedor != null && (
                           <View style={styles.storyCommissionBlock}>
                             <ThemedText style={styles.storyCommissionLabel}>
@@ -3715,7 +3748,7 @@ export default function ProductosScreen() {
                       </ThemedText>
                     </TouchableOpacity>
 
-                    <TouchableOpacity
+                    {canShowSellerCommission && <TouchableOpacity
                       accessibilityRole="checkbox"
                       accessibilityLabel="Mostrar comisión para vendedor"
                       accessibilityState={{ checked: instagramStoryOptions.showComisionVendedor }}
@@ -3740,7 +3773,7 @@ export default function ProductosScreen() {
                       <ThemedText style={styles.checkboxLabel}>
                         Comisión para vendedor
                       </ThemedText>
-                    </TouchableOpacity>
+                    </TouchableOpacity>}
 
                     {/* Checkbox Descripción */}
                     <TouchableOpacity
@@ -3857,8 +3890,9 @@ export default function ProductosScreen() {
       {canQuote && <QuoteDraftBar />}
       {!canEdit && !canQuote && !consultModalVisible ? (
         <ProductConsultationDraftBar
-          productCount={consultProducts.length}
+          products={consultProducts}
           onClear={() => setConsultProducts([])}
+          onRemove={(productId) => setConsultProducts(current => current.filter(product => product._id !== productId))}
           onContinue={() => setConsultModalVisible(true)}
         />
       ) : null}
@@ -5223,21 +5257,21 @@ const styles = StyleSheet.create({
   },
   storyContent: {
     flex: 1,
-    paddingHorizontal: 22,
-    paddingTop: SPACING.lg,
-    paddingBottom: 28,
+    paddingHorizontal: 36,
+    paddingTop: 53,
+    paddingBottom: 64,
     position: "relative" as const,
   },
   storyProductImageContainer: {
     flex: 1,
-    width: "88%" as const,
+    width: "100%" as const,
     alignSelf: "center" as const,
     alignItems: "center" as const,
     justifyContent: "center" as const,
-    marginTop: SPACING.sm,
+    marginTop: 0,
     marginBottom: SPACING.md,
     minHeight: 0,
-    padding: SPACING.xs,
+    padding: 12,
     borderRadius: RADIUS.lg,
     backgroundColor: "rgba(255, 255, 255, 0.92)" as const,
     overflow: "hidden" as const,
@@ -5314,7 +5348,7 @@ const styles = StyleSheet.create({
     padding: SPACING.md,
     borderRadius: RADIUS.lg,
     alignItems: "center" as const,
-    width: "88%" as const,
+    width: "100%" as const,
     alignSelf: "center" as const,
     flexShrink: 0,
   },

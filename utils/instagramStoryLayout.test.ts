@@ -13,12 +13,17 @@ describe("instagramStoryLayout", () => {
     expect(INSTAGRAM_STORY_SIZE).toEqual({ width: 1080, height: 1920 });
     expect(layout.image.x).toBe(INSTAGRAM_STORY_SAFE_AREA.horizontal);
     expect(layout.image.y).toBe(INSTAGRAM_STORY_SAFE_AREA.top);
-    expect(layout.contentWidth).toBe(888);
+    expect(layout.contentWidth).toBe(824);
     expect(layout.panel?.x).toBe(INSTAGRAM_STORY_SAFE_AREA.horizontal);
     expect(
       INSTAGRAM_STORY_SIZE.width -
         ((layout.panel?.x ?? 0) + (layout.panel?.width ?? 0))
     ).toBe(INSTAGRAM_STORY_SAFE_AREA.horizontal);
+    expect(layout.image.y).toBeGreaterThanOrEqual(180);
+    expect(
+      INSTAGRAM_STORY_SIZE.height -
+        ((layout.panel?.y ?? 0) + (layout.panel?.height ?? 0))
+    ).toBeGreaterThanOrEqual(220);
   });
 
   it("da más protagonismo a la imagen cuando se quitan datos", () => {

@@ -250,7 +250,9 @@ test('selección para consulta', async ({ page }) => {
   await settle(page);
   await page.getByText('¡Lo quiero!').click();
   await expect(page.getByText('1 producto elegido')).toBeVisible();
-  await page.getByText('Consultar lista').click();
+  await page.getByText('Ver selección').click();
+  await expect(page.getByText('CONSULTA EN PREPARACIÓN', { exact: true })).toBeVisible();
+  await page.getByText('Preparar consulta').click();
   await expect(page.getByText('Tus productos (1)')).toBeVisible();
   await expect(page).toHaveScreenshot('consulta-productos.png', { fullPage: true });
 });
