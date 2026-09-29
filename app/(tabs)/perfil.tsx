@@ -60,14 +60,6 @@ export default function PerfilScreen() {
               <Text style={styles.secondaryButtonText}>Usuarios y permisos</Text>
             </Pressable>
           ) : null}
-          <Pressable
-            style={({ pressed }) => [styles.secondaryButton, pressed && styles.buttonPressed]}
-            onPress={() => router.push('/(tabs)/explore_clean')}
-            accessibilityRole="button"
-            accessibilityLabel="Ver información de contacto"
-          >
-            <Text style={styles.secondaryButtonText}>Contacto</Text>
-          </Pressable>
         </View>
         <View style={styles.divider} />
         <Pressable

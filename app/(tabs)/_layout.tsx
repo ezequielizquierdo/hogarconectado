@@ -128,16 +128,6 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="explore_clean"
-        options={{
-          href: null,
-          title: "Contacto",
-          tabBarIcon: ({ color }) => (
-            <IconSymbol size={28} name="person.fill" color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
         name="calculadora"
         options={{
           href: isAdmin ? undefined : null,

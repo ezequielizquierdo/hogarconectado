@@ -25,12 +25,11 @@ type NavigationItemProps = {
 };
 
 const PRIMARY_ROUTES = ["index", "productos", "calculadora", "metricas", "consultas"];
-const SECONDARY_ROUTES = ["usuarios", "perfil", "explore_clean"];
+const SECONDARY_ROUTES = ["usuarios", "perfil"];
 
 const ACCOUNT_LABELS: Record<string, string> = {
   usuarios: "Usuarios",
   perfil: "Perfil",
-  explore_clean: "Contacto",
 };
 
 function NavigationItem({
