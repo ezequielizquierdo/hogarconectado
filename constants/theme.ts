@@ -5,6 +5,7 @@ export const COLORS = {
     primaryDark: '#8b99e8',    // Azul lavanda más intenso
     secondary: '#b8f5d1',      // Verde menta suave
     secondaryDark: '#9ae6b9',  // Verde menta más intenso
+    secondaryStrong: '#3f8f68', // Verde menta oscuro para bordes y énfasis accesibles
     accent: '#ffd6a8',         // Durazno suave
     accentDark: '#ffb380',     // Durazno más intenso
 
@@ -44,6 +45,19 @@ export const COLORS = {
     // Marcas externas: usar únicamente en la acción correspondiente
     instagram: '#c13584',
 };
+
+// Lenguaje cromático por intención. Estos tonos se eligen por el propósito de
+// la superficie, no por preferencia visual.
+export const SEMANTIC_TONES = {
+    purchase: { surface: COLORS.secondary, strong: COLORS.secondaryStrong },
+    sales: { surface: COLORS.primary, strong: COLORS.primaryDark },
+    finance: { surface: COLORS.warning, strong: '#b7791f' },
+    insights: { surface: COLORS.info, strong: '#3f83a8' },
+    danger: { surface: COLORS.error, strong: COLORS.errorStrong },
+    neutral: { surface: COLORS.cardBackground, strong: COLORS.textLight },
+} as const;
+
+export type SemanticTone = keyof typeof SEMANTIC_TONES;
 
 // Jerarquía tipográfica compartida. Los componentes pueden ajustar tamaño por
 // plataforma, pero deben partir de este vocabulario y no de valores aislados.

@@ -149,7 +149,7 @@ export default function CalculadoraScreen() {
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.shell}>
-          <ScreenHeader eyebrow="OPERACIÓN COMERCIAL" title="Calculadora" subtitle="Calculá precios y copiá cada modalidad en pocos pasos." />
+          <ScreenHeader eyebrow="OPERACIÓN COMERCIAL" title="Calculadora" subtitle="Calculá precios y copiá cada modalidad en pocos pasos." icon="calculate" iconTone="finance" />
 
           <View style={[styles.content, isDesktop && styles.contentDesktop]}>
           <View style={[styles.inputPanel, isDesktop && styles.inputPanelDesktop]}>

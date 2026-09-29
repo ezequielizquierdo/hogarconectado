@@ -116,7 +116,7 @@ export default function UsuariosScreen() {
   return (
     <ScrollView contentContainerStyle={[styles.page, isDesktop && styles.pageDesktop]}>
       <View style={styles.shell}>
-      <ScreenHeader eyebrow="ACCESOS Y PERMISOS" title="Usuarios" subtitle="Aprobá accesos, asigná roles y revisá el estado de cada cuenta." actionLabel="Cerrar sesión" actionVariant="secondary" onAction={logout} />
+      <ScreenHeader eyebrow="ACCESOS Y PERMISOS" title="Usuarios" subtitle="Aprobá accesos, asigná roles y revisá el estado de cada cuenta." icon="manage-accounts" iconTone="neutral" actionLabel="Cerrar sesión" actionVariant="secondary" onAction={logout} />
       <OnboardingRequestsPanel />
       <View style={styles.roleGuide}>
         <View style={styles.guideHeading}>
@@ -246,7 +246,7 @@ const styles = StyleSheet.create({
   guideDescription: { color: COLORS.textSecondary, fontSize: 13, lineHeight: 18 },
   userGrid: { gap: SPACING.md },
   userGridDesktop: { flexDirection: 'row', flexWrap: 'wrap' },
-  card: { flexGrow: 1, flexBasis: 430, backgroundColor: COLORS.surface, borderRadius: RADIUS.lg, padding: SPACING.md, gap: 12, borderWidth: 1, borderTopWidth: 4, borderColor: COLORS.border, borderTopColor: COLORS.primary, ...SHADOWS.sm }, userInfo: { gap: SPACING.xs },
+  card: { flexGrow: 1, flexBasis: 430, backgroundColor: COLORS.surface, borderRadius: RADIUS.lg, padding: SPACING.md, gap: 12, borderWidth: 1, borderTopWidth: 4, borderColor: COLORS.border, borderTopColor: COLORS.textLight, ...SHADOWS.sm }, userInfo: { gap: SPACING.xs },
   userHeading: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: SPACING.sm },
   name: { fontSize: 18, fontWeight: '700', color: COLORS.text },
   email: { color: COLORS.textSecondary },
@@ -267,7 +267,7 @@ const styles = StyleSheet.create({
   linkActionText: { color: COLORS.primaryDark, fontSize: 13, fontWeight: '800' },
   sellerLinkPending: { color: COLORS.textSecondary, fontSize: 13, lineHeight: 18 },
   actions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingTop: SPACING.sm, borderTopWidth: 1, borderTopColor: COLORS.border },
-  button: { backgroundColor: COLORS.secondary, borderRadius: RADIUS.md, paddingHorizontal: 12, paddingVertical: 8, minHeight: 40, justifyContent: 'center' },
+  button: { backgroundColor: COLORS.primary, borderRadius: RADIUS.md, paddingHorizontal: 12, paddingVertical: 8, minHeight: 40, justifyContent: 'center' },
   roleButton: { backgroundColor: COLORS.cardBackground, borderWidth: 1, borderColor: COLORS.primary, borderRadius: RADIUS.md, paddingHorizontal: 12, paddingVertical: 8, minHeight: 40, justifyContent: 'center' },
   dangerButton: { backgroundColor: COLORS.error, borderRadius: RADIUS.md, paddingHorizontal: 12, paddingVertical: 8, minHeight: 40, justifyContent: 'center' },
   buttonPressed: { opacity: 0.65 },

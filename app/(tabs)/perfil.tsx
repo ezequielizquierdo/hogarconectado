@@ -21,7 +21,7 @@ export default function PerfilScreen() {
 
   return (
     <ScrollView contentContainerStyle={styles.page}>
-      <ScreenHeader eyebrow="CUENTA Y ACCESOS" title="Perfil" subtitle="Revisá tu identidad, permisos y accesos disponibles." />
+      <ScreenHeader eyebrow="CUENTA Y ACCESOS" title="Perfil" subtitle="Revisá tu identidad, permisos y accesos disponibles." icon="person" iconTone="neutral" />
       <View style={styles.card}>
         <View style={styles.identity}>
           {user?.foto ? <Image source={{ uri: user.foto }} style={styles.avatar} /> : (
@@ -89,7 +89,7 @@ const styles = StyleSheet.create({
   eyebrow: { color: COLORS.primaryDark, fontSize: 11, fontWeight: '800', letterSpacing: 1 },
   screenTitle: { color: COLORS.text, fontSize: 30, lineHeight: 36, fontWeight: '800' },
   screenSubtitle: { color: COLORS.textSecondary, lineHeight: 20 },
-  card: { width: '100%', maxWidth: 560, alignSelf: 'center', gap: SPACING.md, padding: SPACING.lg, borderRadius: RADIUS.lg, backgroundColor: COLORS.surface, borderWidth: 1, borderTopWidth: 4, borderColor: COLORS.border, borderTopColor: COLORS.primary, ...SHADOWS.sm },
+  card: { width: '100%', maxWidth: 560, alignSelf: 'center', gap: SPACING.md, padding: SPACING.lg, borderRadius: RADIUS.lg, backgroundColor: COLORS.surface, borderWidth: 1, borderTopWidth: 4, borderColor: COLORS.border, borderTopColor: COLORS.textLight, ...SHADOWS.sm },
   identity: { flexDirection: 'row', alignItems: 'center', gap: SPACING.md },
   identityCopy: { flex: 1, minWidth: 0, gap: 2 },
   avatar: { width: 72, height: 72, borderRadius: 36, borderWidth: 3, borderColor: COLORS.secondary },

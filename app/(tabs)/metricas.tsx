@@ -96,7 +96,7 @@ export default function MetricsScreen() {
   const ranking = useMemo(() => [...(data?.rankingVendedores || [])].sort((a, b) => b[rankingSort] - a[rankingSort]), [data, rankingSort]);
   const summary = data?.resumen;
   return <View style={styles.screen}><ScrollView contentContainerStyle={[styles.content, compact && styles.contentCompact]} showsVerticalScrollIndicator={false}>
-    <ScreenHeader eyebrow="INTELIGENCIA COMERCIAL" title="Métricas" subtitle={isAdmin ? 'Entendé qué vende, quién impulsa el negocio y dónde están las oportunidades.' : 'Seguí tus ventas, tu ganancia y tu evolución mes a mes.'} />
+    <ScreenHeader eyebrow="INTELIGENCIA COMERCIAL" title="Métricas" subtitle={isAdmin ? 'Entendé qué vende, quién impulsa el negocio y dónde están las oportunidades.' : 'Seguí tus ventas, tu ganancia y tu evolución mes a mes.'} icon="analytics" iconTone="insights" />
     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.months}>
       {months.map(month => <Pressable key={month} onPress={() => setPeriod(month)} style={[styles.monthChip, month === period && styles.monthChipActive]}><Text style={[styles.monthText, month === period && styles.monthTextActive]}>{monthLabel(month, true)}</Text></Pressable>)}
     </ScrollView>

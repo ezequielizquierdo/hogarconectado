@@ -211,7 +211,7 @@ export default function ConsultasScreen() {
 
   return (
     <ScrollView contentContainerStyle={styles.page}>
-      <ScreenHeader eyebrow="ATENCIÓN COMERCIAL" title="Consultas" subtitle="Respondé y seguí cada interés recibido desde el catálogo." />
+      <ScreenHeader eyebrow="ATENCIÓN COMERCIAL" title="Consultas" subtitle="Respondé y seguí cada interés recibido desde el catálogo." icon="forum" iconTone="purchase" />
       <View style={styles.summaryRow}>
         <View style={styles.summaryCard}><Text style={styles.summaryValue}>{totals.nuevas}</Text><Text style={styles.summaryLabel}>Nuevas visibles</Text></View>
         <View style={styles.summaryCard}><Text style={styles.summaryValue}>{totals.abiertas}</Text><Text style={styles.summaryLabel}>Abiertas visibles</Text></View>

@@ -1,12 +1,17 @@
+import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import React, { ReactNode } from "react";
 import { Pressable, StyleSheet, Text, useWindowDimensions, View } from "react-native";
 
-import { COLORS, RADIUS, SPACING } from "@/constants/theme";
+import { SectionIcon } from "@/components/ui/SectionIcon";
+import type { SectionIconTone } from "@/components/ui/SectionIcon";
+import { COLORS, RADIUS, SEMANTIC_TONES, SPACING } from "@/constants/theme";
 
 type ScreenHeaderProps = {
   eyebrow: string;
   title: string;
   subtitle: string;
+  icon?: keyof typeof MaterialIcons.glyphMap;
+  iconTone?: SectionIconTone;
   actionLabel?: string;
   actionIcon?: ReactNode;
   onAction?: () => void;
@@ -14,16 +19,20 @@ type ScreenHeaderProps = {
 };
 
 /** Encabezado contextual común para todas las superficies operativas. */
-export function ScreenHeader({ eyebrow, title, subtitle, actionLabel, actionIcon, onAction, actionVariant = "primary" }: ScreenHeaderProps) {
+export function ScreenHeader({ eyebrow, title, subtitle, icon, iconTone = "neutral", actionLabel, actionIcon, onAction, actionVariant = "primary" }: ScreenHeaderProps) {
   const { width } = useWindowDimensions();
   const compact = width < 720;
+  const toneColors = SEMANTIC_TONES[iconTone];
 
   return (
     <View style={[styles.container, compact && styles.containerCompact]}>
-      <View style={styles.copy}>
-        <Text style={styles.eyebrow}>{eyebrow}</Text>
-        <Text style={[styles.title, compact && styles.titleCompact]}>{title}</Text>
-        <Text style={[styles.subtitle, compact && styles.subtitleCompact]}>{subtitle}</Text>
+      <View style={[styles.heading, compact && styles.headingCompact]}>
+        {icon ? <SectionIcon name={icon} tone={iconTone} size={compact ? "sm" : "md"} /> : null}
+        <View style={styles.copy}>
+          <Text style={[styles.eyebrow, { color: toneColors.strong }]}>{eyebrow}</Text>
+          <Text style={[styles.title, compact && styles.titleCompact]}>{title}</Text>
+          <Text style={[styles.subtitle, compact && styles.subtitleCompact]}>{subtitle}</Text>
+        </View>
       </View>
       {actionLabel && onAction ? (
         <Pressable
@@ -43,6 +52,8 @@ export function ScreenHeader({ eyebrow, title, subtitle, actionLabel, actionIcon
 const styles = StyleSheet.create({
   container: { width: "100%", minHeight: 88, flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between", gap: SPACING.lg },
   containerCompact: { minHeight: 0, alignItems: "stretch", flexDirection: "column", gap: SPACING.md },
+  heading: { flex: 1, minWidth: 0, flexDirection: "row", alignItems: "center", gap: SPACING.md },
+  headingCompact: { width: "100%", alignItems: "flex-start" },
   copy: { flex: 1, minWidth: 0 },
   eyebrow: { color: COLORS.primaryDark, fontSize: 11, lineHeight: 16, fontWeight: "800", letterSpacing: 1.1 },
   title: { marginTop: 2, color: COLORS.text, fontSize: 34, lineHeight: 40, fontWeight: "800" },

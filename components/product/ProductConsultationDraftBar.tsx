@@ -119,7 +119,7 @@ export function ProductConsultationDraftBar({ products, onClear, onRemove, onCon
 }
 
 const styles = StyleSheet.create({
-  floatingBar: { position: "absolute", zIndex: 50, minHeight: 64, flexDirection: "row", alignItems: "center", gap: SPACING.sm, paddingHorizontal: SPACING.md, borderWidth: 1, borderColor: COLORS.primaryDark, borderRadius: RADIUS.lg, backgroundColor: COLORS.secondary, ...SHADOWS.lg },
+  floatingBar: { position: "absolute", zIndex: 50, minHeight: 64, flexDirection: "row", alignItems: "center", gap: SPACING.sm, paddingHorizontal: SPACING.md, borderWidth: 1, borderColor: COLORS.secondaryStrong, borderRadius: RADIUS.lg, backgroundColor: COLORS.secondary, ...SHADOWS.lg },
   floatingBarDesktop: { right: SPACING.lg, bottom: SPACING.lg, width: 410 },
   floatingBarMobile: { left: SPACING.sm, right: SPACING.sm, bottom: 76 },
   barBadge: { minWidth: 44, height: 38, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 2, borderRadius: RADIUS.full, backgroundColor: COLORS.surface },

@@ -124,6 +124,6 @@ const styles = StyleSheet.create({
   previousPrice: { color: COLORS.textLight, fontSize: 12, textDecorationLine: "line-through", marginTop: SPACING.sm },
   price: { color: COLORS.primaryDark, fontSize: 19, fontWeight: "900", marginTop: 2 },
   action: { minHeight: 46, margin: SPACING.sm, marginTop: 0, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, backgroundColor: COLORS.secondary, borderRadius: RADIUS.md, paddingHorizontal: SPACING.sm },
-  actionSelected: { backgroundColor: COLORS.primary },
+  actionSelected: { borderWidth: 1, borderColor: COLORS.secondaryStrong, backgroundColor: COLORS.secondaryDark },
   actionText: { color: COLORS.ink, fontSize: 13, fontWeight: "800" },
 });

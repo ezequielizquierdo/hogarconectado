@@ -519,6 +519,8 @@ export function QuoteHistoryScreen() {
           eyebrow="GESTIÓN COMERCIAL"
           title={isSeller ? "Mi negocio" : isAdmin ? "Operación comercial" : "Cotizaciones"}
           subtitle={isSeller ? "Tus ventas, ganancias y próximos pasos en un solo lugar." : isAdmin ? "Controlá pagos, entregas y cotizaciones desde una sola bandeja." : "Encontrá, compartí y seguí las propuestas guardadas."}
+          icon="request-quote"
+          iconTone="sales"
           actionLabel="Nueva desde Productos"
           actionIcon={<MaterialIcons name="add" size={20} color={COLORS.ink} />}
           onAction={() => router.push("/(tabs)/productos")}

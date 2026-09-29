@@ -225,6 +225,24 @@ test('la raíz abre el catálogo sin error de navegación', async ({ page }) => 
   await expect(page.getByText('Uncaught Error')).toHaveCount(0);
 });
 
+test('preguntas frecuentes públicas', async ({ page }) => {
+  await mockApi(page);
+  await page.goto('/preguntas-frecuentes');
+  await settle(page);
+  await expect(page.getByText('Preguntas frecuentes', { exact: true })).toBeVisible();
+  await expect(page.getByText('Quiero comprar un producto. ¿Cómo hago?', { exact: true })).toBeVisible();
+  await expect(page).toHaveScreenshot('preguntas-frecuentes-publicas.png', { fullPage: true });
+});
+
+test('preguntas frecuentes para vendedores', async ({ page }) => {
+  await mockApi(page, true, seller);
+  await page.goto('/preguntas-frecuentes');
+  await settle(page);
+  await expect(page.getByText('PARA COMPRADORES', { exact: true })).toBeVisible();
+  await expect(page.getByText('PARA VENDEDORES', { exact: true })).toBeVisible();
+  await expect(page).toHaveScreenshot('preguntas-frecuentes-vendedores.png', { fullPage: true });
+});
+
 test('detalle público de producto', async ({ page }) => {
   await mockApi(page);
   await page.goto('/productos');

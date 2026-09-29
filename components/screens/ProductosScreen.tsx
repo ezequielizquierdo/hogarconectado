@@ -1494,6 +1494,8 @@ export default function ProductosScreen() {
                     eyebrow="CATÁLOGO"
                     title={isStorefront ? "Encontrá lo que necesitás" : "Productos"}
                     subtitle={canEdit ? "Gestioná el catálogo, el stock y los recursos comerciales desde un solo lugar." : "Explorá el catálogo y elegí los productos que te interesan."}
+                    icon="inventory-2"
+                    iconTone="purchase"
                   />
                   {isStorefront ? (
                     <SellerReferralBanner
