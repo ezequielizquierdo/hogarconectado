@@ -245,6 +245,16 @@ export async function captureWebStory(
     textY += 126;
   }
 
+  if (data.comisionVendedor) {
+    context.fillStyle = TEXT_COLOR;
+    context.font = "700 25px Arial, sans-serif";
+    drawCenteredText(context, "COMISIÓN PARA VENDEDOR", textY + 16);
+    context.fillStyle = PRICE_COLOR;
+    context.font = "700 46px Arial, sans-serif";
+    drawCenteredText(context, `$ ${data.comisionVendedor}`, textY + 60);
+    textY += 92;
+  }
+
   if (data.stock) {
     context.fillStyle = TEXT_COLOR;
     context.font = "400 32px Arial, sans-serif";

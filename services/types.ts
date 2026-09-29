@@ -54,6 +54,7 @@ export interface Producto {
     };
     disponiblePorPedido?: boolean;
     precioConGanancia?: number;
+    comisionVendedor?: number;
     precios?: {
         contado: number;
         contadoSinDescuento?: number;

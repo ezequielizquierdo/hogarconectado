@@ -4,6 +4,7 @@ export interface InstagramStoryRenderData {
   modelo?: string;
   marca?: string;
   precio?: string;
+  comisionVendedor?: string;
   stock?: string;
   descripcion?: string;
   consultaPrecio?: string;

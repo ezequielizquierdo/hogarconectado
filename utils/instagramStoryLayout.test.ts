@@ -27,6 +27,7 @@ describe("instagramStoryLayout", () => {
       modelo: "IM7S523L",
       marca: "Electrolux",
       precio: "1.917.500",
+      comisionVendedor: "35.400",
       stock: "Stock: 1",
       descripcion: "Heladera no frost inverter multidoor",
     });
@@ -36,6 +37,17 @@ describe("instagramStoryLayout", () => {
     expect(priceOnly.image.height).toBeGreaterThan(complete.image.height);
     expect(imageOnly.image.height).toBeGreaterThan(priceOnly.image.height);
     expect(imageOnly.panel).toBeNull();
+  });
+
+  it("reserva espacio para la comisión del vendedor", () => {
+    const withoutCommission = calculateInstagramStoryLayout({ precio: "430.000" });
+    const withCommission = calculateInstagramStoryLayout({
+      precio: "430.000",
+      comisionVendedor: "35.400",
+    });
+
+    expect(withCommission.panel?.height).toBeGreaterThan(withoutCommission.panel?.height ?? 0);
+    expect(withCommission.image.height).toBeLessThan(withoutCommission.image.height);
   });
 
   it("reserva el margen inferior incluso con consulta de precio", () => {

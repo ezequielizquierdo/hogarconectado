@@ -38,6 +38,7 @@ export const hasInstagramStoryProductInfo = (
       data.modelo ||
       data.marca ||
       data.precio ||
+      data.comisionVendedor ||
       data.stock ||
       data.descripcion
   );
@@ -53,6 +54,7 @@ export const calculateInstagramStoryPanelHeight = (
   if (data.modelo) height += 66;
   if (data.marca) height += 46;
   if (data.precio) height += 126;
+  if (data.comisionVendedor) height += 92;
   if (data.stock) height += 48;
   if (data.descripcion) height += Math.max(1, descriptionLineCount) * 40 + 16;
   return height;

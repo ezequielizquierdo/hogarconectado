@@ -85,6 +85,7 @@ export default function ProductosScreen() {
   const canEdit = can("editor", "admin");
   const canQuote = can("admin", "vendedor");
   const canShare = can("admin", "editor", "vendedor");
+  const canCreateInstagramStory = can("admin");
   const isStorefront = !canEdit && !canQuote;
   const canDelete = can("admin");
   const {
@@ -130,6 +131,7 @@ export default function ProductosScreen() {
     showModelo: true,
     showCategoria: true,
     showPrecio: true,
+    showComisionVendedor: false,
     showStock: false,
     showDescripcion: false,
     showConsultaPrecio: false,
@@ -139,6 +141,7 @@ export default function ProductosScreen() {
       (instagramStoryOptions.showModelo && selectedProductForInstagram?.modelo) ||
       (instagramStoryOptions.showMarca && selectedProductForInstagram?.marca) ||
       (instagramStoryOptions.showPrecio && selectedProductForInstagram?.precios?.contado != null) ||
+      (instagramStoryOptions.showComisionVendedor && selectedProductForInstagram?.comisionVendedor != null) ||
       (instagramStoryOptions.showStock && selectedProductForInstagram?.stock) ||
       (instagramStoryOptions.showDescripcion && selectedProductForInstagram?.descripcion)
   );
@@ -563,6 +566,11 @@ export default function ProductosScreen() {
         instagramStoryOptions.showPrecio &&
         selectedProductForInstagram.precios?.contado != null
           ? formatPrecioLocal(selectedProductForInstagram.precios.contado)
+          : undefined,
+      comisionVendedor:
+        instagramStoryOptions.showComisionVendedor &&
+        selectedProductForInstagram.comisionVendedor != null
+          ? formatPrecioLocal(selectedProductForInstagram.comisionVendedor)
           : undefined,
       stock: instagramStoryOptions.showStock
         ? selectedProductForInstagram.stock?.disponible
@@ -1352,7 +1360,7 @@ export default function ProductosScreen() {
           onStockQuery={canEdit ? () => copiarConsultaStock(item) : undefined}
           onEdit={canEdit ? () => openModal(item) : undefined}
           onDelete={canDelete ? () => handleDelete(item) : undefined}
-          onInstagramStory={canShare ? () => openInstagramModal(item) : undefined}
+          onInstagramStory={canCreateInstagramStory ? () => openInstagramModal(item) : undefined}
           onShareImage={canShare ? () => shareProductImage(item) : undefined}
           onShareSellerLink={user?.rol === "vendedor" && user.codigoVendedor ? shareSellerStorefront : undefined}
           showConsultButton={!canEdit && !canQuote}
@@ -3040,6 +3048,18 @@ export default function ProductosScreen() {
                             </>
                           )}
 
+                        {instagramStoryOptions.showComisionVendedor &&
+                          selectedProductForInstagram?.comisionVendedor != null && (
+                            <View style={styles.storyCommissionBlock}>
+                              <ThemedText style={styles.storyCommissionLabel}>
+                                COMISIÓN PARA VENDEDOR
+                              </ThemedText>
+                              <ThemedText style={styles.storyCommissionValue}>
+                                $ {formatPrecioLocal(selectedProductForInstagram.comisionVendedor)}
+                              </ThemedText>
+                            </View>
+                          )}
+
                         {instagramStoryOptions.showStock &&
                           selectedProductForInstagram?.stock && (
                             <ThemedText style={styles.storyText}>
@@ -3235,6 +3255,33 @@ export default function ProductosScreen() {
                       </View>
                       <ThemedText style={styles.checkboxLabel}>
                         Mostrar Stock
+                      </ThemedText>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      accessibilityRole="checkbox"
+                      accessibilityLabel="Mostrar comisión para vendedor"
+                      accessibilityState={{ checked: instagramStoryOptions.showComisionVendedor }}
+                      style={styles.checkboxRow}
+                      onPress={() =>
+                        setInstagramStoryOptions((prev) => ({
+                          ...prev,
+                          showComisionVendedor: !prev.showComisionVendedor,
+                        }))
+                      }
+                    >
+                      <View
+                        style={[
+                          styles.checkbox,
+                          instagramStoryOptions.showComisionVendedor && styles.checkboxChecked,
+                        ]}
+                      >
+                        {instagramStoryOptions.showComisionVendedor && (
+                          <ThemedText style={styles.checkmark}>✓</ThemedText>
+                        )}
+                      </View>
+                      <ThemedText style={styles.checkboxLabel}>
+                        Comisión para vendedor
                       </ThemedText>
                     </TouchableOpacity>
 
@@ -3474,6 +3521,18 @@ export default function ProductosScreen() {
                           </>
                         )}
 
+                      {instagramStoryOptions.showComisionVendedor &&
+                        selectedProductForInstagram?.comisionVendedor != null && (
+                          <View style={styles.storyCommissionBlock}>
+                            <ThemedText style={styles.storyCommissionLabel}>
+                              COMISIÓN PARA VENDEDOR
+                            </ThemedText>
+                            <ThemedText style={styles.storyCommissionValue}>
+                              $ {formatPrecioLocal(selectedProductForInstagram.comisionVendedor)}
+                            </ThemedText>
+                          </View>
+                        )}
+
                       {instagramStoryOptions.showStock && (
                         <ThemedText numberOfLines={1} style={styles.storyText}>
                           {selectedProductForInstagram?.stock?.disponible
@@ -3653,6 +3712,33 @@ export default function ProductosScreen() {
                       </View>
                       <ThemedText style={styles.checkboxLabel}>
                         Mostrar Stock
+                      </ThemedText>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      accessibilityRole="checkbox"
+                      accessibilityLabel="Mostrar comisión para vendedor"
+                      accessibilityState={{ checked: instagramStoryOptions.showComisionVendedor }}
+                      style={styles.checkboxRow}
+                      onPress={() =>
+                        setInstagramStoryOptions((prev) => ({
+                          ...prev,
+                          showComisionVendedor: !prev.showComisionVendedor,
+                        }))
+                      }
+                    >
+                      <View
+                        style={[
+                          styles.checkbox,
+                          instagramStoryOptions.showComisionVendedor && styles.checkboxChecked,
+                        ]}
+                      >
+                        {instagramStoryOptions.showComisionVendedor && (
+                          <ThemedText style={styles.checkmark}>✓</ThemedText>
+                        )}
+                      </View>
+                      <ThemedText style={styles.checkboxLabel}>
+                        Comisión para vendedor
                       </ThemedText>
                     </TouchableOpacity>
 
@@ -5268,6 +5354,23 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
     textAlign: "center" as const,
     marginTop: SPACING.xs,
+  },
+  storyCommissionBlock: {
+    alignItems: "center" as const,
+    marginBottom: SPACING.sm,
+  },
+  storyCommissionLabel: {
+    color: "#FFFFFF" as const,
+    fontSize: 9,
+    fontWeight: "700" as const,
+    letterSpacing: 0.8,
+    textAlign: "center" as const,
+  },
+  storyCommissionValue: {
+    color: COLORS.secondary,
+    fontSize: 17,
+    fontWeight: "800" as const,
+    textAlign: "center" as const,
   },
   storyDescription: {
     color: "#FFFFFF" as const,
