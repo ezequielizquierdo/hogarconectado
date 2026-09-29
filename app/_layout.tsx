@@ -24,6 +24,7 @@ function AuthenticatedNavigator() {
   const isPublicHome = route === '(tabs)' && !tab;
   const isPublicQuote = route === 'cotizacion';
   const isPublicOnboarding = route === 'sumate';
+  const isPublicFaq = route === 'preguntas-frecuentes';
 
   useEffect(() => {
     // Expo Router no permite navegar hasta que el Stack raíz tenga una key.
@@ -32,7 +33,7 @@ function AuthenticatedNavigator() {
     let target: Href | null = null;
 
     if (state !== 'loading') {
-      if (state === 'unauthenticated' && route !== 'login' && !isPublicHome && !isPublicCatalog && !isPublicQuote && !isPublicOnboarding) {
+      if (state === 'unauthenticated' && route !== 'login' && !isPublicHome && !isPublicCatalog && !isPublicQuote && !isPublicOnboarding && !isPublicFaq) {
         target = '/(tabs)/productos';
       } else if ((state === 'pending' || state === 'blocked') && route !== 'acceso-pendiente') {
         target = '/acceso-pendiente';
@@ -56,9 +57,9 @@ function AuthenticatedNavigator() {
     // referencia termine de enlazarse antes de emitir la navegación.
     const timer = setTimeout(() => router.replace(target), 0);
     return () => clearTimeout(timer);
-  }, [isPublicCatalog, isPublicHome, isPublicOnboarding, isPublicQuote, rootNavigationState?.key, route, router, state, tab, user]);
+  }, [isPublicCatalog, isPublicFaq, isPublicHome, isPublicOnboarding, isPublicQuote, rootNavigationState?.key, route, router, state, tab, user]);
 
-  const showLaunchOverlay = state === 'loading' && !isPublicHome && !isPublicCatalog && !isPublicQuote && !isPublicOnboarding;
+  const showLaunchOverlay = state === 'loading' && !isPublicHome && !isPublicCatalog && !isPublicQuote && !isPublicOnboarding && !isPublicFaq;
 
   return (
     <ThemeProvider value={DefaultTheme}>
@@ -67,6 +68,7 @@ function AuthenticatedNavigator() {
         <Stack.Screen name="acceso-pendiente" options={{ headerShown: false }} />
         <Stack.Screen name="cotizacion" options={{ headerShown: false }} />
         <Stack.Screen name="sumate" options={{ headerShown: false }} />
+        <Stack.Screen name="preguntas-frecuentes" options={{ headerShown: false }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="+not-found" />
       </Stack>

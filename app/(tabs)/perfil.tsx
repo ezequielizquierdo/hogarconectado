@@ -50,6 +50,14 @@ export default function PerfilScreen() {
           </View>
         ) : null}
         <View style={styles.actions}>
+          <Pressable
+            style={({ pressed }) => [styles.secondaryButton, pressed && styles.buttonPressed]}
+            onPress={() => router.push('/preguntas-frecuentes')}
+            accessibilityRole="button"
+            accessibilityLabel="Abrir preguntas frecuentes"
+          >
+            <Text style={styles.secondaryButtonText}>Preguntas frecuentes</Text>
+          </Pressable>
           {user?.rol === 'admin' ? (
             <Pressable
               style={({ pressed }) => [styles.secondaryButton, pressed && styles.buttonPressed]}

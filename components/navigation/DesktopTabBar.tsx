@@ -192,10 +192,6 @@ export function DesktopTabBar({
         <View style={styles.accountMenuContainer}>
           <Pressable
             onPress={() => {
-              if (!isAuthenticated) {
-                router.push('/login');
-                return;
-              }
               setAccountMenuOpen((current) => !current);
             }}
             accessibilityRole="button"
@@ -213,18 +209,22 @@ export function DesktopTabBar({
               color={COLORS.textSecondary}
             />
             <Text style={styles.accountButtonLabel}>
-              {isAuthenticated ? "Cuenta" : "Ingresar"}
+              Cuenta
             </Text>
-            {isAuthenticated && <MaterialIcons
+            <MaterialIcons
                 name={accountMenuOpen ? "expand-less" : "expand-more"}
                 size={20}
                 color={COLORS.textSecondary}
-              />}
+              />
           </Pressable>
 
-          {isAuthenticated && accountMenuOpen && (
+          {accountMenuOpen && (
             <View style={styles.accountMenu} accessibilityRole="menu">
-              {visibleRoutes(SECONDARY_ROUTES).map((routeName) => {
+              {!isAuthenticated ? (
+                <Pressable onPress={() => { setAccountMenuOpen(false); router.push('/login'); }} accessibilityRole="menuitem" style={({ pressed }) => [styles.accountMenuItem, pressed && styles.itemPressed]}>
+                  <Text style={styles.accountMenuItemLabel}>Ingresar</Text>
+                </Pressable>
+              ) : visibleRoutes(SECONDARY_ROUTES).map((routeName) => {
                 const route = routesByName.get(routeName);
                 if (!route) return null;
                 const focused = state.index === state.routes.indexOf(route);
@@ -252,6 +252,9 @@ export function DesktopTabBar({
                   </Pressable>
                 );
               })}
+              <Pressable onPress={() => { setAccountMenuOpen(false); router.push('/preguntas-frecuentes'); }} accessibilityRole="menuitem" style={({ pressed }) => [styles.accountMenuItem, pressed && styles.itemPressed]}>
+                <Text style={styles.accountMenuItemLabel}>Preguntas frecuentes</Text>
+              </Pressable>
             </View>
           )}
         </View>
