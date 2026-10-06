@@ -73,6 +73,7 @@ import { InstagramStoryRenderData } from "@/utils/instagramStoryRenderer";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { ConsultaProductoModal } from "@/components/modals/ConsultaProductoModal";
 import sellerReferralService, { ActiveSeller, SellerReferral } from "@/services/sellerReferralService";
+import { getProductImageUrl } from "@/utils/productImageUrl";
 
 export default function ProductosScreen() {
   const { width } = useWindowDimensions();
@@ -98,6 +99,7 @@ export default function ProductosScreen() {
   const {
     productos,
     loading: productosLoading,
+    refreshingInBackground: productosRefreshing,
     error: productosError,
     pagination,
     filtros,
@@ -106,7 +108,15 @@ export default function ProductosScreen() {
     recargar,
     limpiarFiltros,
     setFiltros,
-  } = useProductos({ limite: 20 }); // 20 productos por página
+  } = useProductos(
+    { limite: 20 },
+    {
+      enabled: state !== "loading",
+      cachePublicCatalog:
+        state === "unauthenticated" ||
+        (state === "authenticated" && user?.rol === "consulta"),
+    }
+  ); // 20 productos por página
   const {
     marcas,
     loading: marcasLoading,
@@ -244,6 +254,18 @@ export default function ProductosScreen() {
   // Los productos ya vienen filtrados del backend, no necesitamos filtrar localmente
   const productosFiltrados = productos;
   const totalProductos = pagination?.total ?? productosFiltrados.length;
+
+  useEffect(() => {
+    const firstImages = productosFiltrados
+      .slice(0, 4)
+      .map(product => product.imagenes?.[0])
+      .filter((url): url is string => Boolean(url))
+      .map(url => getProductImageUrl(url));
+
+    if (firstImages.length) {
+      void Image.prefetch(firstImages, { cachePolicy: "memory-disk" });
+    }
+  }, [productosFiltrados]);
   const selectedUpdated = filtros.actualizados || "todos";
   const selectedOrder = filtros.ordenar || "recientes";
   const hasActiveFilters = Boolean(
@@ -1818,6 +1840,8 @@ export default function ProductosScreen() {
                 <ThemedText style={styles.mobileResultsText}>
                   {productosLoading
                     ? "Actualizando resultados…"
+                    : productosRefreshing
+                    ? `${totalProductos} ${totalProductos === 1 ? "producto" : "productos"} · Actualizando precios…`
                     : `${totalProductos} ${
                         totalProductos === 1 ? "producto" : "productos"
                       }`}

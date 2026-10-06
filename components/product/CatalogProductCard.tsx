@@ -6,6 +6,7 @@ import { StyleSheet, TouchableOpacity, View } from "react-native";
 import { ThemedText } from "@/components/ThemedText";
 import { COLORS, RADIUS, SHADOWS, SPACING } from "@/constants/theme";
 import { ProductoConPrecios } from "@/services/types";
+import { getProductImageUrl } from "@/utils/productImageUrl";
 
 interface CatalogProductCardProps {
   producto: ProductoConPrecios;
@@ -46,7 +47,7 @@ export default function CatalogProductCard({
         <View style={styles.imageShell}>
           {producto.imagenes?.[0] ? (
             <Image
-              source={{ uri: producto.imagenes[0] }}
+              source={{ uri: getProductImageUrl(producto.imagenes[0]) }}
               style={styles.image}
               contentFit="contain"
               cachePolicy="memory-disk"

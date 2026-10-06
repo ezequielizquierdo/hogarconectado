@@ -14,6 +14,7 @@ import { COLORS, SPACING, RADIUS, SHADOWS } from "@/constants/theme";
 import { ProductoConPrecios } from "@/services/types";
 import { IconActionButton } from "@/components/ui/IconActionButton";
 import { IconSymbol } from "@/components/ui/IconSymbol";
+import { getProductImageUrl } from "@/utils/productImageUrl";
 
 interface ProductCardProps {
   producto: ProductoConPrecios;
@@ -226,7 +227,7 @@ export default function ProductCard({
             >
               {producto.imagenes && producto.imagenes.length > 0 ? (
                 <Image
-                  source={{ uri: producto.imagenes[0] }}
+                  source={{ uri: getProductImageUrl(producto.imagenes[0]) }}
                   style={styles.productImage}
                   contentFit="contain"
                   cachePolicy="memory-disk"

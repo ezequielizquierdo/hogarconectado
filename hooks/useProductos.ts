@@ -1,18 +1,37 @@
 import { useCallback, useState, useEffect, useRef } from 'react';
 import { productosService, handleApiError } from '../services';
 import type { Producto, ProductoFiltros } from '../services';
+import { readProductCatalogCache, writeProductCatalogCache } from '../services/productCatalogCache';
 
-export const useProductos = (filtrosIniciales: ProductoFiltros = {}) => {
+interface UseProductosOptions {
+    enabled?: boolean;
+    cachePublicCatalog?: boolean;
+}
+
+export const useProductos = (
+    filtrosIniciales: ProductoFiltros = {},
+    { enabled = true, cachePublicCatalog = false }: UseProductosOptions = {}
+) => {
     const [productos, setProductos] = useState<Producto[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [pagination, setPagination] = useState<any>(null);
     const [filtros, setFiltros] = useState<ProductoFiltros>(filtrosIniciales);
     const filtrosRef = useRef<ProductoFiltros>(filtrosIniciales);
+    const enabledRef = useRef(enabled);
+    const cachePublicCatalogRef = useRef(cachePublicCatalog);
+    const [refreshingInBackground, setRefreshingInBackground] = useState(false);
+
+    enabledRef.current = enabled;
+    cachePublicCatalogRef.current = cachePublicCatalog;
 
     const latestRequestId = useRef<number>(0);
 
-    const cargarProductos = useCallback(async (nuevosFiltros?: ProductoFiltros) => {
+    const cargarProductos = useCallback(async (
+        nuevosFiltros?: ProductoFiltros,
+        options: { silent?: boolean } = {}
+    ) => {
+        if (!enabledRef.current) return;
         const requestId = ++latestRequestId.current;
         const filtrosFinales = nuevosFiltros || filtrosRef.current;
 
@@ -24,7 +43,11 @@ export const useProductos = (filtrosIniciales: ProductoFiltros = {}) => {
         }
 
         try {
-            setLoading(true);
+            if (options.silent) {
+                setRefreshingInBackground(true);
+            } else {
+                setLoading(true);
+            }
             setError(null);
 
             console.log('🔍 useProductos - Filtros enviados:', filtrosFinales);
@@ -40,6 +63,9 @@ export const useProductos = (filtrosIniciales: ProductoFiltros = {}) => {
             if (requestId === latestRequestId.current) {
                 setProductos(data);
                 setPagination(paginationData);
+                if (cachePublicCatalogRef.current) {
+                    void writeProductCatalogCache(filtrosFinales, data, paginationData);
+                }
             }
         } catch (err) {
             const errorMessage = handleApiError(err);
@@ -57,13 +83,35 @@ export const useProductos = (filtrosIniciales: ProductoFiltros = {}) => {
         } finally {
             if (requestId === latestRequestId.current) {
                 setLoading(false);
+                setRefreshingInBackground(false);
             }
         }
     }, []);
 
     useEffect(() => {
-        cargarProductos();
-    }, [cargarProductos]);
+        if (!enabled) return;
+        let active = true;
+
+        const initialize = async () => {
+            const cached = cachePublicCatalog
+                ? await readProductCatalogCache(filtrosRef.current)
+                : null;
+
+            if (!active) return;
+            if (cached) {
+                setProductos(cached.productos);
+                setPagination(cached.pagination);
+                setLoading(false);
+            }
+
+            await cargarProductos(undefined, { silent: Boolean(cached) });
+        };
+
+        void initialize();
+        return () => {
+            active = false;
+        };
+    }, [cachePublicCatalog, cargarProductos, enabled]);
 
     const buscar = useCallback((texto: string) => {
         cargarProductos({ ...filtrosRef.current, buscar: texto, pagina: 1 });
@@ -89,6 +137,7 @@ export const useProductos = (filtrosIniciales: ProductoFiltros = {}) => {
     return {
         productos,
         loading,
+        refreshingInBackground,
         error,
         pagination,
         filtros,

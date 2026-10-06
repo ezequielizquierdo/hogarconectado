@@ -199,6 +199,7 @@ test('catálogo público', async ({ page }) => {
   await settle(page);
   if ((page.viewportSize()?.width ?? 0) >= 1024) await expect(page.getByText('CATÁLOGO', { exact: true })).toBeVisible();
   else await expect(page.getByText('Productos', { exact: true }).first()).toBeVisible();
+  await expect(page.getByRole('button', { name: /Ver detalle de Electrolux IM7S 523L/ })).toBeVisible({ timeout: 15_000 });
   await expect(page).toHaveScreenshot('productos-publicos.png', { fullPage: true });
 });
 

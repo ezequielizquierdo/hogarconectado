@@ -110,6 +110,8 @@ export default function RootLayout() {
         <link rel="manifest" href="/manifest.webmanifest" />
         <link rel="icon" href="/pwa-icon.svg" type="image/svg+xml" />
         <link rel="apple-touch-icon" href="/pwa-icon.png" />
+        <link rel="preconnect" href="https://hogarconectado-backend.onrender.com" crossOrigin="anonymous" />
+        <link rel="preconnect" href="https://res.cloudinary.com" crossOrigin="anonymous" />
         <style>{`@keyframes hc-launch-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
       </Head>
       <WebAppSetup />
