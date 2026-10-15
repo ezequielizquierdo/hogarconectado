@@ -37,6 +37,7 @@ import FadeInView from "@/components/ui/FadeInView";
 import ProductCard from "@/components/product/ProductCard";
 import CatalogProductCard from "@/components/product/CatalogProductCard";
 import { ProductImageImportModal } from "@/components/product/ProductImageImportModal";
+import { ProductImageViewerModal } from "@/components/product/ProductImageViewerModal";
 import { ProductConsultationDraftBar } from "@/components/product/ProductConsultationDraftBar";
 import { InventoryStatsModal } from "@/components/product/InventoryStatsModal";
 import { SmartProductImage } from "@/components/product/SmartProductImage";
@@ -127,6 +128,7 @@ export default function ProductosScreen() {
   const [imageImportVisible, setImageImportVisible] = useState(false);
   const [statsModalVisible, setStatsModalVisible] = useState(false);
   const [detailModalVisible, setDetailModalVisible] = useState(false);
+  const [expandedImage, setExpandedImage] = useState<{ url: string; label: string } | null>(null);
   const [instagramModalVisible, setInstagramModalVisible] = useState(false);
   const [filtersModalVisible, setFiltersModalVisible] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Producto | null>(null);
@@ -1338,6 +1340,15 @@ export default function ProductosScreen() {
     },
   });
 
+  const expandProductImage = (producto: Producto) => {
+    const imageUrl = producto.imagenes?.[0];
+    if (!imageUrl) return;
+    setExpandedImage({
+      url: imageUrl,
+      label: `${producto.marca} ${producto.modelo}`.trim(),
+    });
+  };
+
   const copiarConsultaStock = async (producto: Producto) => {
     const categoriaNombre =
       typeof producto.categoria === "string"
@@ -1383,6 +1394,7 @@ export default function ProductosScreen() {
               setSelectedProduct(item);
               setDetailModalVisible(true);
             }}
+            onImagePress={() => expandProductImage(item)}
             onSelect={() => setConsultProducts(current => (
               current.some(product => product._id === item._id)
                 ? current.filter(product => product._id !== item._id)
@@ -1397,6 +1409,7 @@ export default function ProductosScreen() {
             setSelectedProduct(item);
             setDetailModalVisible(true);
           }}
+          onImagePress={() => expandProductImage(item)}
           showAdminButtons={canEdit || canShare}
           isQuoted={contains(item._id)}
           onQuote={canQuote ? () => {
@@ -1412,6 +1425,7 @@ export default function ProductosScreen() {
           onInstagramStory={canCreateInstagramStory ? () => openInstagramModal(item) : undefined}
           onShareImage={canShare ? () => shareProductImage(item) : undefined}
           onShareSellerLink={user?.rol === "vendedor" && user.codigoVendedor ? shareSellerStorefront : undefined}
+          showUpdatedAt={user?.rol === "admin"}
           showConsultButton={!canEdit && !canQuote}
           isConsultSelected={consultProducts.some(product => product._id === item._id)}
           onConsult={!canEdit && !canQuote ? () => setConsultProducts(current => (
@@ -2583,7 +2597,13 @@ export default function ProductosScreen() {
                     {/* Imagen del producto */}
                     {selectedProduct.imagenes &&
                       selectedProduct.imagenes.length > 0 && (
-                        <View style={styles.detailImageContainer}>
+                        <TouchableOpacity
+                          accessibilityRole="button"
+                          accessibilityLabel={`Ampliar imagen de ${selectedProduct.marca} ${selectedProduct.modelo}`}
+                          onPress={() => expandProductImage(selectedProduct)}
+                          activeOpacity={0.86}
+                          style={styles.detailImageContainer}
+                        >
                           <SmartProductImage
                             source={{ uri: selectedProduct.imagenes[0] }}
                             style={[
@@ -2616,7 +2636,11 @@ export default function ProductosScreen() {
                               )
                             }
                           />
-                        </View>
+                          <View style={styles.detailImageZoomBadge}>
+                            <MaterialIcons name="zoom-in" size={19} color={COLORS.text} />
+                            <ThemedText style={styles.detailImageZoomText}>Ampliar</ThemedText>
+                          </View>
+                        </TouchableOpacity>
                       )}
 
                     {/* Información básica */}
@@ -2800,7 +2824,13 @@ export default function ProductosScreen() {
                   {/* Imagen del producto */}
                   {selectedProduct.imagenes &&
                     selectedProduct.imagenes.length > 0 && (
-                      <View style={styles.detailImageContainer}>
+                      <TouchableOpacity
+                        accessibilityRole="button"
+                        accessibilityLabel={`Ampliar imagen de ${selectedProduct.marca} ${selectedProduct.modelo}`}
+                        onPress={() => expandProductImage(selectedProduct)}
+                        activeOpacity={0.86}
+                        style={styles.detailImageContainer}
+                      >
                         <SmartProductImage
                           source={{ uri: selectedProduct.imagenes[0] }}
                           style={[
@@ -2833,7 +2863,11 @@ export default function ProductosScreen() {
                             )
                           }
                         />
-                      </View>
+                        <View style={styles.detailImageZoomBadge}>
+                          <MaterialIcons name="zoom-in" size={19} color={COLORS.text} />
+                          <ThemedText style={styles.detailImageZoomText}>Ampliar</ThemedText>
+                        </View>
+                      </TouchableOpacity>
                     )}
 
                   {/* Información básica */}
@@ -2994,6 +3028,13 @@ export default function ProductosScreen() {
           </SafeAreaView>
         )}
       </Modal>
+
+      <ProductImageViewerModal
+        visible={Boolean(expandedImage)}
+        imageUrl={expandedImage?.url}
+        productLabel={expandedImage?.label}
+        onClose={() => setExpandedImage(null)}
+      />
 
       {/* Modal de Instagram Story */}
       <Modal
@@ -4901,6 +4942,26 @@ const styles = StyleSheet.create({
     maxHeight: "100%",
     borderRadius: RADIUS.md,
     flex: 1,
+  },
+  detailImageZoomBadge: {
+    position: "absolute",
+    right: SPACING.md,
+    bottom: SPACING.md,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: 7,
+    borderRadius: RADIUS.full,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    backgroundColor: "rgba(255,255,255,0.94)",
+    ...SHADOWS.sm,
+  },
+  detailImageZoomText: {
+    color: COLORS.text,
+    fontSize: 11,
+    fontWeight: "700",
   },
   detailSection: {
     gap: SPACING.md,

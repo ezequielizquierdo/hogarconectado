@@ -13,6 +13,7 @@ interface CatalogProductCardProps {
   imagePriority?: "low" | "normal" | "high";
   selected?: boolean;
   onPress?: () => void;
+  onImagePress?: () => void;
   onSelect?: () => void;
 }
 
@@ -27,6 +28,7 @@ export default function CatalogProductCard({
   imagePriority = "normal",
   selected = false,
   onPress,
+  onImagePress,
   onSelect,
 }: CatalogProductCardProps) {
   const category = typeof producto.categoria === "string"
@@ -38,14 +40,16 @@ export default function CatalogProductCard({
 
   return (
     <View style={[styles.card, selected && styles.cardSelected]}>
-      <TouchableOpacity
-        accessibilityRole="button"
-        accessibilityLabel={`Ver detalle de ${producto.marca} ${producto.modelo}`}
-        activeOpacity={0.82}
-        onPress={onPress}
-      >
-        <View style={styles.imageShell}>
-          {producto.imagenes?.[0] ? (
+      <View>
+        {producto.imagenes?.[0] && onImagePress ? (
+          <TouchableOpacity
+            accessibilityRole="button"
+            accessibilityLabel={`Ampliar imagen de ${producto.marca} ${producto.modelo}`}
+            accessibilityHint="Abre la imagen en pantalla completa"
+            activeOpacity={0.86}
+            onPress={onImagePress}
+            style={styles.imageShell}
+          >
             <Image
               source={{ uri: getProductImageUrl(producto.imagenes[0]) }}
               style={styles.image}
@@ -54,33 +58,72 @@ export default function CatalogProductCard({
               priority={imagePriority}
               transition={160}
             />
-          ) : (
-            <View style={styles.placeholder}>
+            <View style={styles.imageZoomBadge}>
+              <MaterialIcons name="zoom-in" size={18} color={COLORS.text} />
+            </View>
+            {discount > 0 ? (
+              <View style={styles.discountBadge}>
+                <ThemedText style={styles.discountText}>-{discount}%</ThemedText>
+              </View>
+            ) : null}
+            <View style={[styles.availabilityBadge, !isAvailable && styles.orderBadge]}>
+              <View style={[styles.availabilityDot, !isAvailable && styles.orderDot]} />
+              <ThemedText style={styles.availabilityText}>{isAvailable ? "Disponible" : "A pedido"}</ThemedText>
+            </View>
+          </TouchableOpacity>
+        ) : (
+          <View style={styles.imageShell}>
+            {producto.imagenes?.[0] ? (
+              <Image
+                source={{ uri: getProductImageUrl(producto.imagenes[0]) }}
+                style={styles.image}
+                contentFit="contain"
+                cachePolicy="memory-disk"
+                priority={imagePriority}
+                transition={160}
+              />
+            ) : (
+              <View style={styles.placeholder}>
               <MaterialIcons name="inventory-2" size={30} color={COLORS.textLight} />
               <ThemedText style={styles.placeholderText}>Sin imagen</ThemedText>
+              </View>
+            )}
+            {discount > 0 ? (
+              <View style={styles.discountBadge}>
+                <ThemedText style={styles.discountText}>-{discount}%</ThemedText>
+              </View>
+            ) : null}
+            <View style={[styles.availabilityBadge, !isAvailable && styles.orderBadge]}>
+              <View style={[styles.availabilityDot, !isAvailable && styles.orderDot]} />
+              <ThemedText style={styles.availabilityText}>{isAvailable ? "Disponible" : "A pedido"}</ThemedText>
             </View>
-          )}
-          {discount > 0 ? (
-            <View style={styles.discountBadge}>
-              <ThemedText style={styles.discountText}>-{discount}%</ThemedText>
-            </View>
-          ) : null}
-          <View style={[styles.availabilityBadge, !isAvailable && styles.orderBadge]}>
-            <View style={[styles.availabilityDot, !isAvailable && styles.orderDot]} />
-            <ThemedText style={styles.availabilityText}>{isAvailable ? "Disponible" : "A pedido"}</ThemedText>
           </View>
-        </View>
+        )}
 
         <View style={styles.copy}>
           <ThemedText numberOfLines={1} style={styles.category}>{category}</ThemedText>
           <ThemedText numberOfLines={1} style={styles.brand}>{producto.marca}</ThemedText>
           <ThemedText numberOfLines={2} style={styles.model}>{producto.modelo}</ThemedText>
+          {producto.descripcion ? (
+            <ThemedText numberOfLines={2} style={styles.description}>{producto.descripcion}</ThemedText>
+          ) : null}
+          {onPress ? (
+            <TouchableOpacity
+              accessibilityRole="button"
+              accessibilityLabel={`Ver más información de ${producto.marca} ${producto.modelo}`}
+              onPress={onPress}
+              style={styles.viewMoreButton}
+            >
+              <ThemedText style={styles.viewMoreText}>Ver más</ThemedText>
+              <MaterialIcons name="arrow-forward" size={15} color={COLORS.textSecondary} />
+            </TouchableOpacity>
+          ) : null}
           {discount > 0 && previousPrice > producto.precios.contado ? (
             <ThemedText style={styles.previousPrice}>{currency.format(previousPrice)}</ThemedText>
           ) : null}
           <ThemedText style={styles.price}>{currency.format(producto.precios.contado)}</ThemedText>
         </View>
-      </TouchableOpacity>
+      </View>
 
       <TouchableOpacity
         accessibilityRole="button"
@@ -109,6 +152,7 @@ const styles = StyleSheet.create({
   cardSelected: { borderColor: COLORS.primaryDark, borderWidth: 2 },
   imageShell: { height: 178, backgroundColor: COLORS.cardBackground, position: "relative", padding: SPACING.sm },
   image: { width: "100%", height: "100%" },
+  imageZoomBadge: { position: "absolute", right: SPACING.sm, top: SPACING.sm, width: 34, height: 34, alignItems: "center", justifyContent: "center", borderRadius: RADIUS.full, borderWidth: 1, borderColor: COLORS.border, backgroundColor: "rgba(255,255,255,0.94)", ...SHADOWS.sm },
   placeholder: { flex: 1, alignItems: "center", justifyContent: "center", gap: SPACING.xs },
   placeholderText: { color: COLORS.textSecondary, fontSize: 12 },
   discountBadge: { position: "absolute", top: SPACING.sm, left: SPACING.sm, backgroundColor: COLORS.errorStrong, borderRadius: RADIUS.full, paddingHorizontal: 9, paddingVertical: 5 },
@@ -122,6 +166,9 @@ const styles = StyleSheet.create({
   category: { color: COLORS.textSecondary, fontSize: 11, fontWeight: "700", textTransform: "uppercase", letterSpacing: 0.4 },
   brand: { color: COLORS.text, fontSize: 15, fontWeight: "800", marginTop: 5 },
   model: { color: COLORS.textSecondary, fontSize: 13, lineHeight: 17, minHeight: 34, marginTop: 2 },
+  description: { color: COLORS.textLight, fontSize: 11, lineHeight: 15, marginTop: 4 },
+  viewMoreButton: { alignSelf: "flex-end", flexDirection: "row", alignItems: "center", gap: 3, marginTop: 4, paddingVertical: 2 },
+  viewMoreText: { color: COLORS.textSecondary, fontSize: 12, fontWeight: "700" },
   previousPrice: { color: COLORS.textLight, fontSize: 12, textDecorationLine: "line-through", marginTop: SPACING.sm },
   price: { color: COLORS.primaryDark, fontSize: 19, fontWeight: "900", marginTop: 2 },
   action: { minHeight: 46, margin: SPACING.sm, marginTop: 0, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, backgroundColor: COLORS.secondary, borderRadius: RADIUS.md, paddingHorizontal: SPACING.sm },

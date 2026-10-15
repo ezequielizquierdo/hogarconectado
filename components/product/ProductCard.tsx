@@ -20,6 +20,7 @@ interface ProductCardProps {
   producto: ProductoConPrecios;
   imagePriority?: "low" | "normal" | "high";
   onPress?: () => void;
+  onImagePress?: () => void;
   onAddToCart?: () => void;
   onFavorite?: () => void;
   isFavorite?: boolean;
@@ -36,12 +37,14 @@ interface ProductCardProps {
   onConsult?: () => void;
   showAdminButtons?: boolean;
   showConsultButton?: boolean;
+  showUpdatedAt?: boolean;
 }
 
 export default function ProductCard({
   producto,
   imagePriority = "normal",
   onPress,
+  onImagePress,
   onAddToCart,
   onFavorite,
   isFavorite = false,
@@ -57,6 +60,7 @@ export default function ProductCard({
   onConsult,
   showAdminButtons = false,
   showConsultButton = false,
+  showUpdatedAt = false,
 }: ProductCardProps) {
   const { width } = useWindowDimensions();
   const [hasMounted, setHasMounted] = useState(false);
@@ -77,6 +81,16 @@ export default function ProductCard({
   const previousPrice = Number(producto.precios?.contadoSinDescuento ?? producto.descuento?.precioAnterior ?? 0);
   const hasImage = Boolean(producto.imagenes?.length);
   const [menuOpen, setMenuOpen] = useState(false);
+  const updatedAt = producto.updatedAt ? new Date(producto.updatedAt) : null;
+  const updatedAtLabel = updatedAt && !Number.isNaN(updatedAt.getTime())
+    ? updatedAt.toLocaleString("es-AR", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      })
+    : null;
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat("es-AR", {
@@ -198,15 +212,11 @@ export default function ProductCard({
           </View>
         )}
         {/* Zona de información del producto - clickeable para ver detalle */}
-        <TouchableOpacity
-          onPress={onPress}
-          accessibilityRole="button"
-          accessibilityLabel={`Ver detalle de ${producto.marca} ${producto.modelo}`}
+        <View
           style={[
             styles.productInfoSection,
             !isCompact && styles.productInfoSectionDesktop,
           ]}
-          activeOpacity={0.7}
         >
           <View
             style={[
@@ -215,17 +225,19 @@ export default function ProductCard({
               isNarrow && styles.mainContentNarrow,
             ]}
           >
-            <View
-              style={[
-                styles.imageContainer,
-                isCompact
-                  ? styles.imageContainerCompact
-                  : styles.imageContainerDesktop,
-                isNarrow && styles.imageContainerNarrow,
-                !isCompact && !hasImage && styles.imageContainerDesktopEmpty,
-              ]}
-            >
-              {producto.imagenes && producto.imagenes.length > 0 ? (
+            {hasImage && onImagePress ? (
+              <TouchableOpacity
+                accessibilityRole="button"
+                accessibilityLabel={`Ampliar imagen de ${producto.marca} ${producto.modelo}`}
+                accessibilityHint="Abre la imagen en pantalla completa"
+                activeOpacity={0.86}
+                onPress={onImagePress}
+                style={[
+                  styles.imageContainer,
+                  isCompact ? styles.imageContainerCompact : styles.imageContainerDesktop,
+                  isNarrow && styles.imageContainerNarrow,
+                ]}
+              >
                 <Image
                   source={{ uri: getProductImageUrl(producto.imagenes[0]) }}
                   style={styles.productImage}
@@ -235,7 +247,30 @@ export default function ProductCard({
                   transition={180}
                   accessibilityLabel={`Imagen de ${producto.marca} ${producto.modelo}`}
                 />
-              ) : (
+                <View style={styles.imageZoomBadge}>
+                  <MaterialIcons name="zoom-in" size={18} color={COLORS.text} />
+                </View>
+              </TouchableOpacity>
+            ) : (
+              <View
+                style={[
+                  styles.imageContainer,
+                  isCompact ? styles.imageContainerCompact : styles.imageContainerDesktop,
+                  isNarrow && styles.imageContainerNarrow,
+                  !isCompact && !hasImage && styles.imageContainerDesktopEmpty,
+                ]}
+              >
+                {hasImage ? (
+                  <Image
+                    source={{ uri: getProductImageUrl(producto.imagenes[0]) }}
+                    style={styles.productImage}
+                    contentFit="contain"
+                    cachePolicy="memory-disk"
+                    priority={imagePriority}
+                    transition={180}
+                    accessibilityLabel={`Imagen de ${producto.marca} ${producto.modelo}`}
+                  />
+                ) : (
                 <View style={styles.placeholderImage}>
                   <View style={styles.placeholderIcon}>
                     <IconSymbol
@@ -253,8 +288,9 @@ export default function ProductCard({
                     </ThemedText>
                   )}
                 </View>
-              )}
-            </View>
+                )}
+              </View>
+            )}
 
             <View
               style={[
@@ -326,6 +362,22 @@ export default function ProductCard({
                     {producto.descripcion}
                   </ThemedText>
                 )}
+                {onPress && (
+                  <TouchableOpacity
+                    accessibilityRole="button"
+                    accessibilityLabel={`Ver más información de ${producto.marca} ${producto.modelo}`}
+                    onPress={onPress}
+                    style={styles.viewMoreButton}
+                  >
+                    <ThemedText style={styles.viewMoreText}>Ver más</ThemedText>
+                    <MaterialIcons name="arrow-forward" size={15} color={COLORS.textSecondary} />
+                  </TouchableOpacity>
+                )}
+                {showUpdatedAt && updatedAtLabel && (
+                  <ThemedText style={styles.updatedAtText} numberOfLines={1}>
+                    Actualizado {updatedAtLabel}
+                  </ThemedText>
+                )}
               </View>
               </View>
 
@@ -340,7 +392,7 @@ export default function ProductCard({
               </View>
             </View>
           </View>
-        </TouchableOpacity>
+        </View>
 
         {/* Línea separatoria y zona de acciones */}
         {showAdminButtons && onQuote && (
@@ -527,6 +579,20 @@ const styles = StyleSheet.create({
     borderColor: COLORS.borderFocus,
     backgroundColor: COLORS.cardBackground,
   },
+  imageZoomBadge: {
+    position: "absolute",
+    right: SPACING.sm,
+    bottom: SPACING.sm,
+    width: 34,
+    height: 34,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: RADIUS.full,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    backgroundColor: "rgba(255,255,255,0.94)",
+    ...SHADOWS.sm,
+  },
   detailsColumn: {
     flex: 1,
   },
@@ -634,6 +700,25 @@ const styles = StyleSheet.create({
     color: COLORS.textLight,
     lineHeight: Platform.OS === "web" ? 18 : 16,
     marginTop: SPACING.xs,
+  },
+  updatedAtText: {
+    marginTop: SPACING.xs,
+    color: COLORS.textLight,
+    fontSize: 10,
+    lineHeight: 14,
+  },
+  viewMoreButton: {
+    alignSelf: "flex-end",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+    marginTop: SPACING.xs,
+    paddingVertical: 3,
+  },
+  viewMoreText: {
+    color: COLORS.textSecondary,
+    fontSize: 12,
+    fontWeight: "700",
   },
   priceContainer: {
     marginBottom: 0,

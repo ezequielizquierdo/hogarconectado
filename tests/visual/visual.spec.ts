@@ -47,6 +47,13 @@ const product = {
   },
 };
 
+const productWithImage = {
+  ...product,
+  imagenes: [
+    'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="800" height="800" viewBox="0 0 800 800"%3E%3Crect width="800" height="800" fill="%23eef0ff"/%3E%3Crect x="230" y="110" width="340" height="580" rx="24" fill="%23ffffff" stroke="%238b96ee" stroke-width="12"/%3E%3Ctext x="400" y="400" text-anchor="middle" fill="%2319284f" font-family="Arial" font-size="44"%3EProducto%3C/text%3E%3C/svg%3E',
+  ],
+};
+
 const quote = {
   _id: 'visual-quote',
   datosContacto: { nombre: 'Cliente de muestra', telefono: '+5491100000000' },
@@ -199,8 +206,36 @@ test('catálogo público', async ({ page }) => {
   await settle(page);
   if ((page.viewportSize()?.width ?? 0) >= 1024) await expect(page.getByText('CATÁLOGO', { exact: true })).toBeVisible();
   else await expect(page.getByText('Productos', { exact: true }).first()).toBeVisible();
-  await expect(page.getByRole('button', { name: /Ver detalle de Electrolux IM7S 523L/ })).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByRole('button', { name: /Ver más información de Electrolux IM7S 523L/ })).toBeVisible({ timeout: 15_000 });
   await expect(page).toHaveScreenshot('productos-publicos.png', { fullPage: true });
+});
+
+test('la imagen puede ampliarse desde la card y desde el detalle', async ({ page }) => {
+  await mockApi(page);
+  await page.route(
+    url => url.pathname === '/api/productos',
+    async route => route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        success: true,
+        data: [productWithImage],
+        pagination: { total: 1, pagina: 1, limite: 20, paginas: 1 },
+      }),
+    })
+  );
+  await page.goto('/productos');
+  await settle(page);
+
+  await page.getByRole('button', { name: /Ampliar imagen de Electrolux IM7S 523L/ }).click();
+  await expect(page.getByRole('button', { name: 'Cerrar imagen ampliada' })).toBeVisible();
+  await expect(page).toHaveScreenshot('imagen-ampliada-producto.png', { fullPage: true });
+  await page.getByRole('button', { name: 'Cerrar imagen ampliada' }).click();
+
+  await page.getByRole('button', { name: /Ver más información de Electrolux IM7S 523L/ }).click();
+  await expect(page.getByText('Precio contado', { exact: true })).toBeVisible();
+  await page.getByText('Ampliar', { exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Cerrar imagen ampliada' })).toBeVisible();
 });
 
 test('catálogo público atribuye y muestra al vendedor correcto', async ({ page }) => {
@@ -248,7 +283,7 @@ test('detalle público de producto', async ({ page }) => {
   await mockApi(page);
   await page.goto('/productos');
   await settle(page);
-  await page.getByRole('button', { name: /Ver detalle de Electrolux IM7S 523L/ }).click();
+  await page.getByRole('button', { name: /Ver más información de Electrolux IM7S 523L/ }).click();
   await expect(page.getByText('Precio contado', { exact: true })).toBeVisible();
   await expect(page.getByText('¡Lo quiero!', { exact: true }).last()).toBeVisible();
   await expect(page).toHaveScreenshot('detalle-producto-publico.png', { fullPage: true });
