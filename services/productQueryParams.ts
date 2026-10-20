@@ -10,6 +10,7 @@ export function buildProductQueryParams(filtros: ProductoFiltros): URLSearchPara
     if (filtros.pagina) params.append('pagina', filtros.pagina.toString());
     if (filtros.buscar) params.append('buscar', filtros.buscar);
     if (filtros.actualizados && filtros.actualizados !== 'todos') params.append('actualizados', filtros.actualizados);
+    if (filtros.imagenes && filtros.imagenes !== 'todos') params.append('imagenes', filtros.imagenes);
     if (filtros.ordenar && filtros.ordenar !== 'recientes') params.append('ordenar', filtros.ordenar);
     return params;
 }

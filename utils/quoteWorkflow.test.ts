@@ -46,4 +46,14 @@ describe("quoteWorkflow", () => {
     }), true);
     expect(result.title).toBe("Coordinar entrega");
   });
+
+  it("prioriza la consulta del valor cuando factura o cuotas siguen pendientes", () => {
+    const result = getQuoteNextStep(quote({
+      modalidadPago: "3-cuotas",
+      requiereConfirmacionPrecio: true,
+      estado: "enviada",
+      totales: { subtotal: 0, total: 0 },
+    }), true);
+    expect(result.title).toBe("Consultar valor actualizado");
+  });
 });

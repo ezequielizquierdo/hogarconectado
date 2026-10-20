@@ -8,6 +8,9 @@ export interface QuoteDraftItem {
 
 export type QuotePaymentMode = "contado" | "facturado" | "3-cuotas" | "6-cuotas";
 
+export const requiresCurrentPriceConfirmation = (modalidad: QuotePaymentMode) =>
+  modalidad !== "contado";
+
 // v3 separa la selección por cuenta para que un cambio de sesión no exponga
 // ni reutilice el borrador comercial de otra persona en el mismo dispositivo.
 const QUOTE_DRAFT_STORAGE_PREFIX = "hogar_conectado_quote_draft_v3";
@@ -78,9 +81,9 @@ export const getDraftUnitPrice = (
 };
 
 export const hasDraftPaymentMode = (
-  items: QuoteDraftItem[],
-  modalidad: QuotePaymentMode
-) => modalidad !== "facturado" || items.every((item) => !!item.producto.precios.factura);
+  _items: QuoteDraftItem[],
+  _modalidad: QuotePaymentMode
+) => true;
 
 export const getDraftInstallmentCount = (modalidad: QuotePaymentMode) => {
   if (modalidad === "3-cuotas") return 3;

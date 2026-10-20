@@ -7,6 +7,7 @@ import { ThemedText } from "@/components/ThemedText";
 import { COLORS, RADIUS, SHADOWS, SPACING } from "@/constants/theme";
 import { ProductoConPrecios } from "@/services/types";
 import { getProductImageUrl } from "@/utils/productImageUrl";
+import { hasAvailableStock } from "@/utils/productAvailability";
 
 interface CatalogProductCardProps {
   producto: ProductoConPrecios;
@@ -16,12 +17,6 @@ interface CatalogProductCardProps {
   onImagePress?: () => void;
   onSelect?: () => void;
 }
-
-const currency = new Intl.NumberFormat("es-AR", {
-  style: "currency",
-  currency: "ARS",
-  maximumFractionDigits: 0,
-});
 
 export default function CatalogProductCard({
   producto,
@@ -36,7 +31,13 @@ export default function CatalogProductCard({
     : producto.categoria.nombre;
   const discount = Number(producto.precios.descuentoPorcentaje ?? producto.descuento?.porcentaje ?? 0);
   const previousPrice = Number(producto.precios.contadoSinDescuento ?? producto.descuento?.precioAnterior ?? 0);
-  const isAvailable = producto.stock.disponible && producto.stock.cantidad > 0;
+  const isAvailable = hasAvailableStock(producto.stock);
+  const currencyCode = /^[A-Z]{3}$/.test(producto.moneda || '') ? producto.moneda! : 'ARS';
+  const currency = new Intl.NumberFormat("es-AR", {
+    style: "currency",
+    currency: currencyCode,
+    maximumFractionDigits: 0,
+  });
 
   return (
     <View style={[styles.card, selected && styles.cardSelected]}>
@@ -68,7 +69,7 @@ export default function CatalogProductCard({
             ) : null}
             <View style={[styles.availabilityBadge, !isAvailable && styles.orderBadge]}>
               <View style={[styles.availabilityDot, !isAvailable && styles.orderDot]} />
-              <ThemedText style={styles.availabilityText}>{isAvailable ? "Disponible" : "A pedido"}</ThemedText>
+              <ThemedText style={styles.availabilityText}>{isAvailable ? "Disponible" : "Sin stock"}</ThemedText>
             </View>
           </TouchableOpacity>
         ) : (
@@ -95,7 +96,7 @@ export default function CatalogProductCard({
             ) : null}
             <View style={[styles.availabilityBadge, !isAvailable && styles.orderBadge]}>
               <View style={[styles.availabilityDot, !isAvailable && styles.orderDot]} />
-              <ThemedText style={styles.availabilityText}>{isAvailable ? "Disponible" : "A pedido"}</ThemedText>
+              <ThemedText style={styles.availabilityText}>{isAvailable ? "Disponible" : "Sin stock"}</ThemedText>
             </View>
           </View>
         )}

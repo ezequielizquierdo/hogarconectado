@@ -44,6 +44,7 @@ No incorporar secretos al frontend ni versionar archivos `.env` locales.
 - No copiar fórmulas ni factores de precios dentro de componentes, pantallas o hooks.
 - Utilizar `services/preciosService.ts` y `/api/precios/calcular` para cálculos dinámicos.
 - Para productos, el precio de venta mostrado es `producto.precios.contado`.
+- El catálogo opera en pesos argentinos. Los productos de fuentes externas con otra moneda deben excluirse hasta incorporar soporte multimoneda completo.
 - Las imágenes persistentes se cargan y eliminan mediante la API; Cloudinary se configura únicamente en el backend.
 - La navegación del catálogo es pública; la autenticación utiliza Google y un JWT emitido por el backend para la operación interna.
 - Visitantes y perfiles no administradores ven Productos como única solapa operativa; su acceso real también debe estar restringido por el backend.
@@ -56,6 +57,7 @@ No incorporar secretos al frontend ni versionar archivos `.env` locales.
 - Los enlaces públicos nuevos de vendedor usan `/v/<slugVendedor>` y requieren la regla de reescritura documentada en `docs/ENLACES_VENDEDORES.md`; los enlaces históricos con `?ref=<codigoVendedor>` siguen vigentes.
 - Al confirmar una venta, el vendedor registra comprador y entrega. Las nuevas cotizaciones atribuidas asignan al vendedor 60% del margen comercial y a Hogar Conectado 40%; las históricas 50/50 conservan su regla. El envío se suma íntegramente al dinero a rendir y no genera comisión.
 - El enlace compartido de una cotización es público y privado por token: permite revisar y aceptar sin iniciar sesión, reserva stock por 24 horas y comunica expresamente que el pago continúa pendiente.
+- Las modalidades `facturado`, `3 cuotas` y `6 cuotas` se presentan como solicitudes de valor actualizado: no deben mostrar importes ni habilitar aceptación o confirmación hasta que el precio haya sido validado. `contado` conserva el cálculo inmediato.
 - Todo cambio visual debe revisarse tanto en escritorio como en viewport móvil.
 - Reutilizar tokens y componentes existentes antes de introducir estilos aislados.
 

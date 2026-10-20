@@ -30,6 +30,13 @@ export function getQuoteNextStep(quote: Cotizacion, isAdmin: boolean): QuoteNext
       ? { title: "Esperando pago", detail: "El stock está reservado para este cliente.", tone: "primary" }
       : { title: "Acompañar el pago", detail: "El cliente ya reservó los productos.", tone: "primary" };
   }
+  if (quote.requiereConfirmacionPrecio) {
+    return {
+      title: "Consultar valor actualizado",
+      detail: "Confirmá el total y las cuotas vigentes antes de cerrar la venta.",
+      tone: "warning",
+    };
+  }
   if (quote.estado === "confirmada") {
     if (quote.venta?.estadoEntrega === "entregada") {
       return { title: "Venta completada", detail: "Pago y entrega registrados.", tone: "success" };

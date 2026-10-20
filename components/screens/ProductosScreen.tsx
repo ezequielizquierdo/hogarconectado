@@ -44,7 +44,6 @@ import { SmartProductImage } from "@/components/product/SmartProductImage";
 import { SellerReferralBanner } from "@/components/product/SellerReferralBanner";
 import {
   formatModeloToUpperCase,
-  formatPrecioLocal,
   formatPrice,
   getShortCategoryName,
   parsePrice,
@@ -75,6 +74,14 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { ConsultaProductoModal } from "@/components/modals/ConsultaProductoModal";
 import sellerReferralService, { ActiveSeller, SellerReferral } from "@/services/sellerReferralService";
 import { getProductImageUrl } from "@/utils/productImageUrl";
+import { hasAvailableStock } from "@/utils/productAvailability";
+
+const formatProductCurrency = (value: number, currencyCode = "ARS") =>
+  new Intl.NumberFormat("es-AR", {
+    style: "currency",
+    currency: /^[A-Z]{3}$/.test(currencyCode) ? currencyCode : "ARS",
+    maximumFractionDigits: 0,
+  }).format(value);
 
 export default function ProductosScreen() {
   const { width } = useWindowDimensions();
@@ -89,6 +96,8 @@ export default function ProductosScreen() {
   const canShare = can("admin", "editor", "vendedor");
   const canCreateInstagramStory = can("admin", "vendedor");
   const canShowSellerCommission = can("admin");
+  const canViewStockQuantity = user?.rol === "admin";
+  const canFilterImages = user?.rol === "admin";
   const isStorefront = !canEdit && !canQuote;
   const canDelete = can("admin");
   const {
@@ -269,10 +278,11 @@ export default function ProductosScreen() {
     }
   }, [productosFiltrados]);
   const selectedUpdated = filtros.actualizados || "todos";
+  const selectedImages = filtros.imagenes || "todos";
   const selectedOrder = filtros.ordenar || "recientes";
   const hasActiveFilters = Boolean(
     searchText.trim() || filtroCategoria || filtroMarca || filtroStock ||
-    selectedUpdated !== "todos"
+    selectedUpdated !== "todos" || (canFilterImages && selectedImages !== "todos")
   );
   // Función para limpiar filtros (ahora usa el backend)
   const clearAllFilters = () => {
@@ -350,6 +360,14 @@ export default function ProductosScreen() {
     });
   };
 
+  const handleImagesChange = (value: string) => {
+    setFiltros({
+      ...filtros,
+      imagenes: value as ProductoFiltros["imagenes"],
+      pagina: 1,
+    });
+  };
+
   const handleOrderChange = (value: string) => {
     setFiltros({
       ...filtros,
@@ -362,13 +380,13 @@ export default function ProductosScreen() {
   const estadisticas = {
     total: pagination?.total || productos.length,
     disponibles: productos.filter(
-      (p) => p.stock.disponible && p.stock.cantidad > 0
+      (p) => hasAvailableStock(p.stock)
     ).length,
     agotados: productos.filter(
-      (p) => !p.stock.disponible || p.stock.cantidad === 0
+      (p) => !hasAvailableStock(p.stock)
     ).length,
     valorTotal: productos.reduce(
-      (sum, p) => sum + (p.precioBase ?? 0) * p.stock.cantidad,
+      (sum, p) => sum + (p.precioBase ?? 0) * (p.stock.cantidad ?? 0),
       0
     ),
   };
@@ -404,7 +422,7 @@ export default function ProductosScreen() {
         catalogoCampania: producto.catalogo?.campania || "",
         catalogoVigenciaHasta: producto.catalogo?.vigenciaHasta?.slice(0, 10) || "",
         catalogoPlazoEntrega: producto.catalogo?.plazoEntrega || "",
-        stockCantidad: producto.stock.cantidad.toString(),
+        stockCantidad: (producto.stock.cantidad ?? 0).toString(),
         stockDisponible: producto.stock.disponible.toString(),
         imagen:
           producto.imagenes && producto.imagenes.length > 0
@@ -592,17 +610,25 @@ export default function ProductosScreen() {
       precio:
         instagramStoryOptions.showPrecio &&
         selectedProductForInstagram.precios?.contado != null
-          ? formatPrecioLocal(selectedProductForInstagram.precios.contado)
+          ? formatProductCurrency(
+              selectedProductForInstagram.precios.contado,
+              selectedProductForInstagram.moneda
+            )
           : undefined,
       comisionVendedor:
         canShowSellerCommission &&
         instagramStoryOptions.showComisionVendedor &&
         selectedProductForInstagram.comisionVendedor != null
-          ? formatPrecioLocal(selectedProductForInstagram.comisionVendedor)
+          ? formatProductCurrency(
+              selectedProductForInstagram.comisionVendedor,
+              selectedProductForInstagram.moneda
+            )
           : undefined,
       stock: instagramStoryOptions.showStock
-        ? selectedProductForInstagram.stock?.disponible
-          ? `Stock: ${selectedProductForInstagram.stock.cantidad || "Disponible"}`
+        ? hasAvailableStock(selectedProductForInstagram.stock)
+          ? canViewStockQuantity && selectedProductForInstagram.stock.cantidad != null
+            ? `Stock: ${selectedProductForInstagram.stock.cantidad}`
+            : "Disponible"
           : "Sin stock"
         : undefined,
       descripcion: instagramStoryOptions.showDescripcion
@@ -612,7 +638,7 @@ export default function ProductosScreen() {
         ? "Consultá por el mejor precio"
         : undefined,
     };
-  }, [canShowSellerCommission, instagramStoryOptions, selectedProductForInstagram]);
+  }, [canShowSellerCommission, canViewStockQuantity, instagramStoryOptions, selectedProductForInstagram]);
 
   const openInstagramModal = async (producto: Producto) => {
     try {
@@ -1426,6 +1452,7 @@ export default function ProductosScreen() {
           onShareImage={canShare ? () => shareProductImage(item) : undefined}
           onShareSellerLink={user?.rol === "vendedor" && user.codigoVendedor ? shareSellerStorefront : undefined}
           showUpdatedAt={user?.rol === "admin"}
+          showStockQuantity={canViewStockQuantity}
           showConsultButton={!canEdit && !canQuote}
           isConsultSelected={consultProducts.some(product => product._id === item._id)}
           onConsult={!canEdit && !canQuote ? () => setConsultProducts(current => (
@@ -1501,11 +1528,14 @@ export default function ProductosScreen() {
               selectedMarca={filtroMarca}
               selectedStock={filtroStock}
               selectedUpdated={selectedUpdated}
+              selectedImages={selectedImages}
+              showImageFilter={canFilterImages}
               searchText={searchText}
               onCategoriaChange={handleCategoriaChange}
               onMarcaChange={handleMarcaChange}
               onStockChange={handleStockChange}
               onUpdatedChange={handleUpdatedChange}
+              onImagesChange={handleImagesChange}
               onSearchChange={setSearchText}
               onClearFilters={clearAllFilters}
               resultCount={totalProductos}
@@ -1651,11 +1681,11 @@ export default function ProductosScreen() {
                     color={COLORS.primaryDark}
                   />
                   <ThemedText style={styles.filterButtonText}>Filtrar</ThemedText>
-                  {(filtroCategoria || filtroMarca || filtroStock || selectedUpdated !== "todos") && (
+                  {(filtroCategoria || filtroMarca || filtroStock || selectedUpdated !== "todos" || (canFilterImages && selectedImages !== "todos")) && (
                     <View style={styles.activeFiltersBadge}>
                       <ThemedText style={styles.badgeText}>
                         {
-                          [filtroCategoria, filtroMarca, filtroStock, selectedUpdated !== "todos" ? selectedUpdated : ""].filter(
+                          [filtroCategoria, filtroMarca, filtroStock, selectedUpdated !== "todos" ? selectedUpdated : "", canFilterImages && selectedImages !== "todos" ? selectedImages : ""].filter(
                             (f) => f
                           ).length
                         }
@@ -1767,7 +1797,7 @@ export default function ProductosScreen() {
               )}
 
               {/* Chips de filtros activos */}
-              {(filtroCategoria || filtroMarca || filtroStock || selectedUpdated !== "todos") && (
+              {(filtroCategoria || filtroMarca || filtroStock || selectedUpdated !== "todos" || (canFilterImages && selectedImages !== "todos")) && (
                 <FadeInView delay={300}>
                   <View style={styles.activeFiltersChips}>
                     {filtroCategoria && (
@@ -1812,7 +1842,7 @@ export default function ProductosScreen() {
                         <ThemedText style={styles.chipText}>
                           {filtroStock === "disponible"
                             ? "Disponible"
-                            : "Agotado"}
+                            : "Sin stock"}
                         </ThemedText>
                         <TouchableOpacity
                           accessibilityRole="button"
@@ -1837,6 +1867,22 @@ export default function ProductosScreen() {
                           accessibilityLabel="Quitar filtro de actualización"
                           hitSlop={12}
                           onPress={() => handleUpdatedChange("todos")}
+                          style={styles.chipRemove}
+                        >
+                          <ThemedText style={styles.chipRemoveText}>×</ThemedText>
+                        </TouchableOpacity>
+                      </View>
+                    )}
+                    {canFilterImages && selectedImages !== "todos" && (
+                      <View style={styles.filterChip}>
+                        <ThemedText style={styles.chipText}>
+                          {selectedImages === "con-imagen" ? "Con imagen" : "Sin imagen"}
+                        </ThemedText>
+                        <TouchableOpacity
+                          accessibilityRole="button"
+                          accessibilityLabel="Quitar filtro de imágenes"
+                          hitSlop={12}
+                          onPress={() => handleImagesChange("todos")}
                           style={styles.chipRemove}
                         >
                           <ThemedText style={styles.chipRemoveText}>×</ThemedText>
@@ -2707,7 +2753,10 @@ export default function ProductosScreen() {
                         <View style={styles.storefrontDetailPriceBlock}>
                           <ThemedText style={styles.storefrontDetailPriceLabel}>Precio contado</ThemedText>
                           <ThemedText style={styles.storefrontDetailPrice}>
-                            ${formatPrecioLocal(convertirAProductoConPrecios(selectedProduct).precios.contado)}
+                            {formatProductCurrency(
+                              convertirAProductoConPrecios(selectedProduct).precios.contado,
+                              selectedProduct.moneda
+                            )}
                           </ThemedText>
                         </View>
                       ) : null}
@@ -2730,15 +2779,19 @@ export default function ProductosScreen() {
                         <ThemedText
                           style={[
                             styles.detailValue,
-                            selectedProduct.stock.disponible
+                            hasAvailableStock(selectedProduct.stock)
                               ? styles.availableText
                               : styles.unavailableText,
                             isStorefront && styles.storefrontAvailabilityValue,
                           ]}
                         >
-                          {isStorefront
-                            ? (selectedProduct.stock.disponible && selectedProduct.stock.cantidad > 0 ? "Disponible" : "Disponible a pedido")
-                            : `${selectedProduct.stock.cantidad} unidades${selectedProduct.stock.disponible ? " ✅ Disponible" : " ❌ No disponible"}`}
+                          {canViewStockQuantity
+                            ? hasAvailableStock(selectedProduct.stock)
+                              ? `Disponible · ${selectedProduct.stock.cantidad ?? 0} unidades`
+                              : "Sin stock"
+                            : hasAvailableStock(selectedProduct.stock)
+                              ? "Disponible"
+                              : "Sin stock"}
                         </ThemedText>
                       </View>
                     </View>
@@ -2932,7 +2985,10 @@ export default function ProductosScreen() {
                       <View style={styles.storefrontDetailPriceBlock}>
                         <ThemedText style={styles.storefrontDetailPriceLabel}>Precio contado</ThemedText>
                         <ThemedText style={styles.storefrontDetailPrice}>
-                          ${formatPrecioLocal(convertirAProductoConPrecios(selectedProduct).precios.contado)}
+                          {formatProductCurrency(
+                            convertirAProductoConPrecios(selectedProduct).precios.contado,
+                            selectedProduct.moneda
+                          )}
                         </ThemedText>
                       </View>
                     ) : null}
@@ -2953,15 +3009,19 @@ export default function ProductosScreen() {
                       <ThemedText
                         style={[
                           styles.detailValue,
-                          selectedProduct.stock.disponible
+                          hasAvailableStock(selectedProduct.stock)
                             ? styles.availableText
                             : styles.unavailableText,
                           isStorefront && styles.storefrontAvailabilityValue,
                         ]}
                       >
-                        {isStorefront
-                          ? (selectedProduct.stock.disponible && selectedProduct.stock.cantidad > 0 ? "Disponible" : "Disponible a pedido")
-                          : `${selectedProduct.stock.cantidad} unidades${selectedProduct.stock.disponible ? " ✅ Disponible" : " ❌ No disponible"}`}
+                        {canViewStockQuantity
+                          ? hasAvailableStock(selectedProduct.stock)
+                            ? `Disponible · ${selectedProduct.stock.cantidad ?? 0} unidades`
+                            : "Sin stock"
+                          : hasAvailableStock(selectedProduct.stock)
+                            ? "Disponible"
+                            : "Sin stock"}
                       </ThemedText>
                     </View>
                   </View>
@@ -3136,11 +3196,9 @@ export default function ProductosScreen() {
                                 PRECIO CONTADO
                               </ThemedText>
                               <ThemedText style={styles.storyPrice}>
-                                ${" "}
-                                {formatPrecioLocal(
-                                  Number(
-                                    selectedProductForInstagram.precios.contado
-                                  )
+                                {formatProductCurrency(
+                                  Number(selectedProductForInstagram.precios.contado),
+                                  selectedProductForInstagram.moneda
                                 )}
                               </ThemedText>
                             </>
@@ -3154,7 +3212,10 @@ export default function ProductosScreen() {
                                 COMISIÓN PARA VENDEDOR
                               </ThemedText>
                               <ThemedText style={styles.storyCommissionValue}>
-                                $ {formatPrecioLocal(selectedProductForInstagram.comisionVendedor)}
+                                {formatProductCurrency(
+                                  selectedProductForInstagram.comisionVendedor,
+                                  selectedProductForInstagram.moneda
+                                )}
                               </ThemedText>
                             </View>
                           )}
@@ -3162,11 +3223,11 @@ export default function ProductosScreen() {
                         {instagramStoryOptions.showStock &&
                           selectedProductForInstagram?.stock && (
                             <ThemedText style={styles.storyText}>
-                              Stock:{" "}
-                              {selectedProductForInstagram.stock.cantidad}
-                              {selectedProductForInstagram.stock.disponible
-                                ? " ✅"
-                                : " ❌"}
+                              {hasAvailableStock(selectedProductForInstagram.stock)
+                                ? canViewStockQuantity && selectedProductForInstagram.stock.cantidad != null
+                                  ? `Stock: ${selectedProductForInstagram.stock.cantidad}`
+                                  : "Disponible"
+                                : "Sin stock"}
                             </ThemedText>
                           )}
 
@@ -3610,11 +3671,9 @@ export default function ProductosScreen() {
                               PRECIO CONTADO
                             </ThemedText>
                             <ThemedText style={styles.storyPrice}>
-                              ${" "}
-                              {formatPrecioLocal(
-                                Number(
-                                  selectedProductForInstagram.precios.contado
-                                )
+                              {formatProductCurrency(
+                                Number(selectedProductForInstagram.precios.contado),
+                                selectedProductForInstagram.moneda
                               )}
                             </ThemedText>
                           </>
@@ -3628,18 +3687,20 @@ export default function ProductosScreen() {
                               COMISIÓN PARA VENDEDOR
                             </ThemedText>
                             <ThemedText style={styles.storyCommissionValue}>
-                              $ {formatPrecioLocal(selectedProductForInstagram.comisionVendedor)}
+                              {formatProductCurrency(
+                                selectedProductForInstagram.comisionVendedor,
+                                selectedProductForInstagram.moneda
+                              )}
                             </ThemedText>
                           </View>
                         )}
 
                       {instagramStoryOptions.showStock && (
                         <ThemedText numberOfLines={1} style={styles.storyText}>
-                          {selectedProductForInstagram?.stock?.disponible
-                            ? `Stock: ${
-                                selectedProductForInstagram.stock.cantidad ||
-                                "Disponible"
-                              }`
+                          {hasAvailableStock(selectedProductForInstagram?.stock)
+                            ? canViewStockQuantity && selectedProductForInstagram.stock.cantidad != null
+                              ? `Stock: ${selectedProductForInstagram.stock.cantidad}`
+                              : "Disponible"
                             : "Sin stock"}
                         </ThemedText>
                       )}
@@ -3941,7 +4002,9 @@ export default function ProductosScreen() {
         selectedBrand={filtroMarca}
         selectedStock={filtroStock}
         selectedUpdated={selectedUpdated}
+        selectedImages={selectedImages}
         selectedOrder={selectedOrder}
+        showImageFilter={canFilterImages}
         hasActiveFilters={hasActiveFilters}
         loading={productosLoading}
         totalProducts={totalProductos}
@@ -3949,6 +4012,7 @@ export default function ProductosScreen() {
         onBrandChange={handleMarcaChange}
         onStockChange={handleStockChange}
         onUpdatedChange={handleUpdatedChange}
+        onImagesChange={handleImagesChange}
         onOrderChange={handleOrderChange}
         onClear={clearAllFilters}
         onClose={() => setFiltersModalVisible(false)}

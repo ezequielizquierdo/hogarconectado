@@ -12,6 +12,7 @@ import {
   getQuoteDraftStorageKey,
   removeProductFromDraft,
   hasDraftPaymentMode,
+  requiresCurrentPriceConfirmation,
   updateDraftQuantity,
 } from "./quoteDraft";
 
@@ -91,5 +92,9 @@ describe("quoteDraft", () => {
     expect(getDraftInstallmentCount("3-cuotas")).toBe(3);
     expect(getDraftInstallmentCount("6-cuotas")).toBe(6);
     expect(hasDraftPaymentMode(withQuantity, "facturado")).toBe(true);
+    expect(requiresCurrentPriceConfirmation("contado")).toBe(false);
+    expect(requiresCurrentPriceConfirmation("facturado")).toBe(true);
+    expect(requiresCurrentPriceConfirmation("3-cuotas")).toBe(true);
+    expect(requiresCurrentPriceConfirmation("6-cuotas")).toBe(true);
   });
 });

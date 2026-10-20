@@ -33,6 +33,7 @@ export interface Producto {
     categoria: Categoria | string;
     marca: string;
     modelo: string;
+    moneda?: string;
     descripcion?: string;
     precioBase?: number;
     porcentajeGanancia?: number;
@@ -65,7 +66,7 @@ export interface Producto {
     };
     especificaciones?: Record<string, any>;
     stock: {
-        cantidad: number;
+        cantidad?: number;
         disponible: boolean;
     };
     tags?: string[];
@@ -224,6 +225,7 @@ export interface Cotizacion {
     datosContacto: DatosContacto;
     productos: ProductoCotizacion[];
     modalidadPago: CotizacionModalidad;
+    requiereConfirmacionPrecio?: boolean;
     totales: {
         subtotal: number;
         total: number;
@@ -308,6 +310,7 @@ export interface ProductoFiltros {
     pagina?: number;
     buscar?: string;
     actualizados?: 'todos' | 'dia' | 'semana' | 'mes';
+    imagenes?: 'todos' | 'con-imagen' | 'sin-imagen';
     ordenar?: 'recientes' | 'precio-asc' | 'precio-desc';
 }
 

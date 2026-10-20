@@ -1,6 +1,7 @@
 import { COLORS, RADIUS, SHADOWS, SPACING } from "@/constants/theme";
 import { useCalculoPrecios } from "@/hooks/useCalculoPrecios";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
+import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import * as Clipboard from "expo-clipboard";
 import React, { useState } from "react";
 import {
@@ -28,7 +29,7 @@ type ResultCardProps = {
   title: string;
   subtitle?: string;
   value: number;
-  accent?: "primary" | "secondary" | "accent";
+  accent?: "primary" | "secondary";
   copiedKey: string | null;
   valueKey: string;
   onCopy: (key: string, title: string, value: number) => void;
@@ -46,7 +47,6 @@ function ResultCard({
   const accentColors = {
     primary: COLORS.primary,
     secondary: COLORS.secondaryDark,
-    accent: COLORS.accentDark,
   };
 
   return (
@@ -126,9 +126,7 @@ export default function CalculadoraScreen() {
       `Valor inicial: ${formatMoney(base)}`,
       `Ganancia aplicada: ${porcentajeNumero}%`,
       `Efectivo / contado: ${formatMoney(resultados.efectivo)}`,
-      `Facturado en un pago: ${formatMoney(resultados.factura.unPago)}`,
-      `3 cuotas de ${formatMoney(resultados.tresCuotas.cuota)} · Total ${formatMoney(resultados.tresCuotas.total)}`,
-      `6 cuotas de ${formatMoney(resultados.seisCuotas.cuota)} · Total ${formatMoney(resultados.seisCuotas.total)}`,
+      "Facturado, 3 cuotas y 6 cuotas: consultar valor actualizado",
     ].join("\n");
     await Clipboard.setStringAsync(summary);
     confirmCopy("resumen", "Resumen completo copiado.");
@@ -149,7 +147,7 @@ export default function CalculadoraScreen() {
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.shell}>
-          <ScreenHeader eyebrow="OPERACIÓN COMERCIAL" title="Calculadora" subtitle="Calculá precios y copiá cada modalidad en pocos pasos." icon="calculate" iconTone="finance" />
+          <ScreenHeader eyebrow="OPERACIÓN COMERCIAL" title="Calculadora" subtitle="Calculá el valor contado. Facturación y cuotas se confirman al momento de cotizar." icon="calculate" iconTone="finance" />
 
           <View style={[styles.content, isDesktop && styles.contentDesktop]}>
           <View style={[styles.inputPanel, isDesktop && styles.inputPanelDesktop]}>
@@ -229,7 +227,7 @@ export default function CalculadoraScreen() {
                 <Text style={styles.emptyIcon}>％</Text>
                 <Text style={styles.emptyTitle}>Ingresá un valor inicial</Text>
                 <Text style={styles.emptyText}>
-                  Acá aparecerán efectivo, factura y cuotas listos para copiar.
+                  Acá aparecerá el valor contado. Facturación y cuotas requieren confirmación actualizada.
                 </Text>
               </View>
             ) : valorError || porcentajeError ? (
@@ -278,60 +276,15 @@ export default function CalculadoraScreen() {
                   valueKey="ganancia"
                   onCopy={copyValue}
                 />
-                <ResultCard
-                  title="Facturado en un pago"
-                  subtitle="Incluye 5% de costo de factura"
-                  value={resultados.factura.unPago}
-                  accent="accent"
-                  copiedKey={copiedKey}
-                  valueKey="facturado"
-                  onCopy={copyValue}
-                />
-                <ResultCard
-                  title="Costo facturado"
-                  subtitle="Valor inicial + 5%"
-                  value={resultados.factura.costoBase}
-                  copiedKey={copiedKey}
-                  valueKey="costoFacturado"
-                  onCopy={copyValue}
-                />
-
-                <View style={styles.installmentCard}>
-                  <Text style={styles.installmentTitle}>3 cuotas</Text>
-                  <ResultCard
-                    title="Valor por cuota"
-                    value={resultados.tresCuotas.cuota}
-                    accent="primary"
-                    copiedKey={copiedKey}
-                    valueKey="cuota3"
-                    onCopy={copyValue}
-                  />
-                  <ResultCard
-                    title="Total financiado"
-                    value={resultados.tresCuotas.total}
-                    copiedKey={copiedKey}
-                    valueKey="total3"
-                    onCopy={copyValue}
-                  />
-                </View>
-
-                <View style={styles.installmentCard}>
-                  <Text style={styles.installmentTitle}>6 cuotas</Text>
-                  <ResultCard
-                    title="Valor por cuota"
-                    value={resultados.seisCuotas.cuota}
-                    accent="primary"
-                    copiedKey={copiedKey}
-                    valueKey="cuota6"
-                    onCopy={copyValue}
-                  />
-                  <ResultCard
-                    title="Total financiado"
-                    value={resultados.seisCuotas.total}
-                    copiedKey={copiedKey}
-                    valueKey="total6"
-                    onCopy={copyValue}
-                  />
+                <View style={styles.currentPriceNotice}>
+                  <View style={styles.currentPriceIcon}>
+                    <MaterialIcons name="schedule" size={24} color={COLORS.primaryDark} />
+                  </View>
+                  <View style={styles.currentPriceCopy}>
+                    <Text style={styles.currentPriceTitle}>Facturado, 3 y 6 cuotas</Text>
+                    <Text style={styles.currentPriceText}>Consultar valor actualizado</Text>
+                    <Text style={styles.currentPriceHelp}>Estos importes cambian según los costos vigentes. Confirmalos antes de compartir una propuesta.</Text>
+                  </View>
                 </View>
               </View>
             )}
@@ -418,8 +371,12 @@ const styles = StyleSheet.create({
   copyButton: { alignItems: "center", justifyContent: "center", minWidth: 72, minHeight: 54, borderRadius: RADIUS.md, backgroundColor: COLORS.surface, marginLeft: SPACING.md, paddingHorizontal: SPACING.sm },
   copyIcon: { fontSize: 20, color: COLORS.primaryDark },
   copyText: { fontSize: 11, fontWeight: "700", color: COLORS.primaryDark, marginTop: 2 },
-  installmentCard: { padding: SPACING.md, borderRadius: RADIUS.lg, backgroundColor: COLORS.primary + "12", borderWidth: 1, borderColor: COLORS.primary + "45", gap: SPACING.sm },
-  installmentTitle: { fontSize: 18, fontWeight: "800", color: COLORS.text, marginBottom: SPACING.xs },
+  currentPriceNotice: { flexDirection: "row", alignItems: "flex-start", gap: SPACING.md, padding: SPACING.lg, borderWidth: 1, borderColor: COLORS.primary + "70", borderRadius: RADIUS.lg, backgroundColor: COLORS.primary + "12" },
+  currentPriceIcon: { width: 44, height: 44, alignItems: "center", justifyContent: "center", borderRadius: RADIUS.full, backgroundColor: COLORS.surface },
+  currentPriceCopy: { minWidth: 0, flex: 1 },
+  currentPriceTitle: { color: COLORS.text, fontSize: 16, fontWeight: "800" },
+  currentPriceText: { marginTop: 3, color: COLORS.primaryDark, fontSize: 18, fontWeight: "900" },
+  currentPriceHelp: { marginTop: SPACING.xs, color: COLORS.textSecondary, fontSize: 12, lineHeight: 18 },
   emptyState: { minHeight: 250, alignItems: "center", justifyContent: "center", padding: SPACING.lg },
   emptyStateDesktop: { minHeight: 380 },
   emptyIcon: { fontSize: 54, color: COLORS.primary, marginBottom: SPACING.md },

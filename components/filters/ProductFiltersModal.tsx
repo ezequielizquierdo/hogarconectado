@@ -21,7 +21,9 @@ interface ProductFiltersModalProps {
   selectedBrand: string;
   selectedStock: string;
   selectedUpdated: string;
+  selectedImages: string;
   selectedOrder: string;
+  showImageFilter?: boolean;
   hasActiveFilters: boolean;
   loading: boolean;
   totalProducts: number;
@@ -29,6 +31,7 @@ interface ProductFiltersModalProps {
   onBrandChange: (value: string) => void;
   onStockChange: (value: string) => void;
   onUpdatedChange: (value: string) => void;
+  onImagesChange: (value: string) => void;
   onOrderChange: (value: string) => void;
   onClear: () => void;
   onClose: () => void;
@@ -43,7 +46,9 @@ export function ProductFiltersModal({
   selectedBrand,
   selectedStock,
   selectedUpdated,
+  selectedImages,
   selectedOrder,
+  showImageFilter = false,
   hasActiveFilters,
   loading,
   totalProducts,
@@ -51,6 +56,7 @@ export function ProductFiltersModal({
   onBrandChange,
   onStockChange,
   onUpdatedChange,
+  onImagesChange,
   onOrderChange,
   onClear,
   onClose,
@@ -116,6 +122,21 @@ export function ProductFiltersModal({
             />
           </View>
 
+          {showImageFilter ? (
+            <View style={styles.section}>
+              <LabeledDropdown
+                label="Imágenes"
+                options={[
+                  { label: "Todos", value: "todos" },
+                  { label: "Con imagen", value: "con-imagen" },
+                  { label: "Sin imagen", value: "sin-imagen" },
+                ]}
+                selectedValue={selectedImages}
+                onSelect={onImagesChange}
+              />
+            </View>
+          ) : null}
+
           <FilterSection
             label="Categoría"
             options={[{ label: "Todas las categorías", value: "" }, ...generalCategories]}
@@ -150,11 +171,11 @@ export function ProductFiltersModal({
 
           <View style={styles.section}>
             <LabeledDropdown
-              label="Stock"
+              label="Disponibilidad"
               options={[
-                { label: "Todo el stock", value: "" },
+                { label: "Todos", value: "" },
                 { label: "Disponible", value: "disponible" },
-                { label: "Agotado", value: "agotado" },
+                { label: "Sin stock", value: "agotado" },
               ]}
               selectedValue={selectedStock}
               onSelect={onStockChange}

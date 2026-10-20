@@ -15,6 +15,7 @@ import { ProductoConPrecios } from "@/services/types";
 import { IconActionButton } from "@/components/ui/IconActionButton";
 import { IconSymbol } from "@/components/ui/IconSymbol";
 import { getProductImageUrl } from "@/utils/productImageUrl";
+import { hasAvailableStock } from "@/utils/productAvailability";
 
 interface ProductCardProps {
   producto: ProductoConPrecios;
@@ -38,6 +39,7 @@ interface ProductCardProps {
   showAdminButtons?: boolean;
   showConsultButton?: boolean;
   showUpdatedAt?: boolean;
+  showStockQuantity?: boolean;
 }
 
 export default function ProductCard({
@@ -61,6 +63,7 @@ export default function ProductCard({
   showAdminButtons = false,
   showConsultButton = false,
   showUpdatedAt = false,
+  showStockQuantity = false,
 }: ProductCardProps) {
   const { width } = useWindowDimensions();
   const [hasMounted, setHasMounted] = useState(false);
@@ -75,11 +78,14 @@ export default function ProductCard({
   const catalogValidityLabel = catalogValidity && !Number.isNaN(catalogValidity.getTime())
     ? catalogValidity.toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", year: "numeric" })
     : null;
-  const hasStock = producto.stock.disponible && producto.stock.cantidad > 0;
+  const hasStock = hasAvailableStock(producto.stock);
+  const stockQuantity = Number(producto.stock.cantidad);
+  const hasStockQuantity = Number.isFinite(stockQuantity);
   const discountPercentage = Number(producto.precios?.descuentoPorcentaje ?? producto.descuento?.porcentaje ?? 0);
   const hasDiscount = discountPercentage > 0;
   const previousPrice = Number(producto.precios?.contadoSinDescuento ?? producto.descuento?.precioAnterior ?? 0);
   const hasImage = Boolean(producto.imagenes?.length);
+  const currencyCode = /^[A-Z]{3}$/.test(producto.moneda || '') ? producto.moneda! : 'ARS';
   const [menuOpen, setMenuOpen] = useState(false);
   const updatedAt = producto.updatedAt ? new Date(producto.updatedAt) : null;
   const updatedAtLabel = updatedAt && !Number.isNaN(updatedAt.getTime())
@@ -95,7 +101,7 @@ export default function ProductCard({
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat("es-AR", {
       style: "currency",
-      currency: "ARS",
+      currency: currencyCode,
       minimumFractionDigits: 0,
     }).format(price);
   };
@@ -317,9 +323,11 @@ export default function ProductCard({
               >
                 <ThemedText style={styles.stockText}>
                   {isCatalogProduct
-                    ? "Disponible por pedido"
+                    ? hasStock ? "Disponible" : "Sin stock"
                     : hasStock
-                    ? `Disponible · ${producto.stock.cantidad}`
+                    ? showStockQuantity && hasStockQuantity
+                      ? `Disponible · ${stockQuantity}`
+                      : "Disponible"
                     : "Sin stock"}
                 </ThemedText>
               </View>

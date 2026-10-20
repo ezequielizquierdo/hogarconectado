@@ -129,7 +129,7 @@ function ProductLine({ item, quote }: { item: ProductoCotizacion; quote: Cotizac
         </Text>
       </View>
       <Text style={styles.productSubtotal}>
-        {formatMoney(getQuoteItemSubtotal(item, quote.modalidadPago))}
+        {quote.requiereConfirmacionPrecio ? "A confirmar" : formatMoney(getQuoteItemSubtotal(item, quote.modalidadPago))}
       </Text>
     </View>
   );
@@ -275,7 +275,7 @@ export function QuoteHistoryScreen() {
 
   const summary = useMemo(() => ({
     pending: quotes.filter((quote) => quote.estado === "pendiente").length,
-    amount: quotes.reduce((sum, quote) => sum + quote.totales.total, 0),
+    amount: quotes.reduce((sum, quote) => sum + (quote.requiereConfirmacionPrecio ? 0 : quote.totales.total), 0),
   }), [quotes]);
 
   const filterButtons = STATES.map((state) => (
@@ -301,6 +301,10 @@ export function QuoteHistoryScreen() {
       (quote.estado === state && (state !== "confirmada" || confirmationIsComplete))
     ) return;
     if (state === "confirmada") {
+      if (quote.requiereConfirmacionPrecio) {
+        setFeedback("Antes de confirmar la venta necesitás obtener el valor actualizado.");
+        return;
+      }
       setConfirming(quote);
       setSelected(null);
       setFeedback("");
@@ -538,7 +542,7 @@ export function QuoteHistoryScreen() {
           {isDesktop && (
             <View style={[styles.summaryCard, styles.summaryCardWide]}>
               <Text style={styles.summaryValue}>{formatMoney(summary.amount)}</Text>
-              <Text style={styles.summaryLabel}>Total de la vista actual</Text>
+              <Text style={styles.summaryLabel}>Total confirmado de la vista</Text>
             </View>
           )}
         </View>
@@ -611,6 +615,7 @@ export function QuoteHistoryScreen() {
                     <Text style={styles.cardMeta}>{formatDate(quote.createdAt)} · {quote.datosContacto.telefono}</Text>
                     {isAdmin ? <CommercialOwner quote={quote} /> : null}
                     {quote.disponibilidadCatalogo?.requerida ? <Text style={styles.catalogStatus}>{CATALOG_STATE_LABEL[quote.disponibilidadCatalogo.estado || "pendiente"]}</Text> : null}
+                    {quote.requiereConfirmacionPrecio ? <Text style={styles.pricePendingStatus}>Valor por confirmar</Text> : null}
                   </View>
                   <View style={[styles.statusBadge, styles[`status_${quote.estado}`]]}>
                     <Text style={styles.statusText}>{STATE_LABEL[quote.estado]}</Text>
@@ -633,12 +638,16 @@ export function QuoteHistoryScreen() {
                   <View>
                     <Text style={styles.modeLabel}>{QUOTE_MODE_LABEL[quote.modalidadPago]}</Text>
                     <Text style={styles.unitsLabel}>
-                      {getDraftInstallmentCount(quote.modalidadPago)
+                      {quote.requiereConfirmacionPrecio
+                        ? "Consultar valor actualizado"
+                        : getDraftInstallmentCount(quote.modalidadPago)
                         ? `${getDraftInstallmentCount(quote.modalidadPago)} cuotas de ${formatMoney(quote.totales.total / (getDraftInstallmentCount(quote.modalidadPago) ?? 1))}`
                         : `${quote.productos.reduce((sum, item) => sum + item.cantidad, 0)} unidades`}
                     </Text>
                   </View>
-                  <Text style={styles.total}>{formatMoney(quote.totales.total)}</Text>
+                  <Text style={[styles.total, quote.requiereConfirmacionPrecio && styles.totalPending]}>
+                    {quote.requiereConfirmacionPrecio ? "A confirmar" : formatMoney(quote.totales.total)}
+                  </Text>
                 </View>
 
                 <ConfirmationSummary quote={quote} />
@@ -703,12 +712,16 @@ export function QuoteHistoryScreen() {
                   <View>
                     <Text style={styles.modeLabel}>{QUOTE_MODE_LABEL[selected.modalidadPago]}</Text>
                     <Text style={styles.unitsLabel}>
-                      {getDraftInstallmentCount(selected.modalidadPago)
+                      {selected.requiereConfirmacionPrecio
+                        ? "Consultá el valor vigente antes de enviarlo al cliente."
+                        : getDraftInstallmentCount(selected.modalidadPago)
                         ? `${getDraftInstallmentCount(selected.modalidadPago)} cuotas de ${formatMoney(selected.totales.total / (getDraftInstallmentCount(selected.modalidadPago) ?? 1))}`
                         : "Total cotizado"}
                     </Text>
                   </View>
-                  <Text style={styles.detailTotalValue}>{formatMoney(selected.totales.total)}</Text>
+                  <Text style={[styles.detailTotalValue, selected.requiereConfirmacionPrecio && styles.detailTotalPending]}>
+                    {selected.requiereConfirmacionPrecio ? "Valor a confirmar" : formatMoney(selected.totales.total)}
+                  </Text>
                 </View>
                 <ConfirmationSummary quote={selected} detailed />
                 {selected.disponibilidadCatalogo?.requerida ? <View style={styles.saleTracking}>
@@ -744,11 +757,11 @@ export function QuoteHistoryScreen() {
                   {STATES.filter((state) => state.value !== "todas").map((state) => (
                     <Pressable
                       key={state.value}
-                      disabled={processingId === selected._id}
+                      disabled={processingId === selected._id || Boolean(selected.requiereConfirmacionPrecio && state.value === "confirmada")}
                       accessibilityRole="button"
-                      accessibilityState={{ selected: selected.estado === state.value, disabled: processingId === selected._id }}
+                      accessibilityState={{ selected: selected.estado === state.value, disabled: processingId === selected._id || Boolean(selected.requiereConfirmacionPrecio && state.value === "confirmada") }}
                       onPress={() => void updateState(selected, state.value as CotizacionEstado)}
-                      style={[styles.stateButton, selected.estado === state.value && styles.stateButtonActive]}
+                      style={[styles.stateButton, selected.estado === state.value && styles.stateButtonActive, selected.requiereConfirmacionPrecio && state.value === "confirmada" && styles.stateButtonDisabled]}
                     >
                       <Text style={[styles.stateButtonText, selected.estado === state.value && styles.stateButtonTextActive]}>{STATE_LABEL[state.value as CotizacionEstado]}</Text>
                     </Pressable>
@@ -873,6 +886,7 @@ const styles = StyleSheet.create({
   catalogQueueTitle: { color: COLORS.text, fontSize: 15, fontWeight: "800" },
   catalogQueueText: { color: COLORS.textSecondary, fontSize: 12, lineHeight: 17 },
   catalogStatus: { alignSelf: "flex-start", marginTop: 5, paddingHorizontal: 8, paddingVertical: 3, borderRadius: RADIUS.sm, overflow: "hidden", color: COLORS.primaryDark, backgroundColor: COLORS.primary + "20", fontSize: 11, fontWeight: "800" },
+  pricePendingStatus: { alignSelf: "flex-start", marginTop: 5, paddingHorizontal: 8, paddingVertical: 3, borderRadius: RADIUS.sm, overflow: "hidden", color: COLORS.text, backgroundColor: COLORS.warning + "75", fontSize: 11, fontWeight: "800" },
   catalogTrackingHelp: { marginBottom: SPACING.sm, color: COLORS.textSecondary, fontSize: 12, lineHeight: 18 },
   grid: { flexDirection: "row", flexWrap: "wrap", gap: SPACING.md },
   card: { width: "100%", padding: SPACING.lg, borderWidth: 1, borderColor: COLORS.border, borderTopWidth: 4, borderTopColor: COLORS.primary, borderRadius: RADIUS.lg, backgroundColor: COLORS.surface, ...SHADOWS.sm },
@@ -916,6 +930,7 @@ const styles = StyleSheet.create({
   modeLabel: { color: COLORS.text, fontSize: 13, fontWeight: "800" },
   unitsLabel: { marginTop: 2, color: COLORS.textSecondary, fontSize: 12 },
   total: { color: COLORS.primaryDark, fontSize: 23, fontWeight: "800" },
+  totalPending: { maxWidth: 130, fontSize: 16, textAlign: "right" },
   confirmationBox: { gap: SPACING.sm, marginTop: SPACING.md, padding: SPACING.md, borderRadius: RADIUS.md, backgroundColor: COLORS.success + "24" },
   confirmationBoxDetailed: { marginTop: SPACING.lg, borderWidth: 1, borderColor: COLORS.success },
   confirmationHeader: { flexDirection: "row", alignItems: "center", gap: SPACING.sm },
@@ -956,6 +971,7 @@ const styles = StyleSheet.create({
   detailProducts: { gap: SPACING.md },
   detailTotal: { flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between", marginTop: SPACING.lg, padding: SPACING.md, borderRadius: RADIUS.lg, backgroundColor: COLORS.primary + "20" },
   detailTotalValue: { color: COLORS.primaryDark, fontSize: 25, fontWeight: "800" },
+  detailTotalPending: { maxWidth: 180, fontSize: 17, textAlign: "right" },
   notes: { marginTop: SPACING.md, padding: SPACING.md, borderRadius: RADIUS.md, backgroundColor: COLORS.cardBackground },
   notesTitle: { color: COLORS.text, fontSize: 13, fontWeight: "800" },
   notesText: { marginTop: SPACING.xs, color: COLORS.textSecondary, fontSize: 13, lineHeight: 19 },
@@ -963,6 +979,7 @@ const styles = StyleSheet.create({
   stateActions: { flexDirection: "row", flexWrap: "wrap", gap: SPACING.sm },
   stateButton: { minHeight: 40, justifyContent: "center", paddingHorizontal: SPACING.md, borderWidth: 1, borderColor: COLORS.border, borderRadius: RADIUS.full },
   stateButtonActive: { borderColor: COLORS.primaryDark, backgroundColor: COLORS.primary },
+  stateButtonDisabled: { opacity: 0.4 },
   stateButtonText: { color: COLORS.textSecondary, fontSize: 12, fontWeight: "700" },
   stateButtonTextActive: { color: COLORS.ink },
   modalFeedback: { marginTop: SPACING.md, color: COLORS.text, fontSize: 13, lineHeight: 18, fontWeight: "700" },

@@ -377,6 +377,21 @@ test('armado de cotización', async ({ page }) => {
   await expect(page).toHaveScreenshot('armado-cotizacion.png', { fullPage: true });
 });
 
+test('cotización con valor variable solicita confirmación sin mostrar importes', async ({ page }) => {
+  await mockApi(page, true);
+  await page.goto('/productos');
+  await settle(page);
+  await page.getByText('+ Cotizar', { exact: true }).click();
+  await page.getByText('Ver selección', { exact: true }).click();
+  await page.getByText('Preparar cotización', { exact: true }).click();
+  await page.getByRole('radio', { name: '3 cuotas' }).click();
+
+  await expect(page.getByText('Valor a confirmar', { exact: true }).first()).toBeVisible();
+  await expect(page.getByText('Consultar valor actualizado', { exact: false }).first()).toBeVisible();
+  await expect(page.getByText('$ 2.109.250', { exact: true })).toHaveCount(0);
+  await expect(page).toHaveScreenshot('armado-cotizacion-valor-pendiente.png', { fullPage: true });
+});
+
 test('filtros de productos en móvil', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'mobile', 'El panel lateral cumple esta función en escritorio.');
   await mockApi(page, true);
@@ -384,7 +399,48 @@ test('filtros de productos en móvil', async ({ page }, testInfo) => {
   await settle(page);
   await page.getByText('Filtrar', { exact: true }).click();
   await expect(page.getByText('Filtrar productos', { exact: true })).toBeVisible();
+  await expect(page.getByText('Imágenes', { exact: true })).toBeVisible();
+  await page.getByLabel('Imágenes').click();
+  const filteredRequest = page.waitForRequest(request => {
+    const url = new URL(request.url());
+    return url.pathname.endsWith('/productos') && url.searchParams.get('imagenes') === 'sin-imagen';
+  });
+  await page.getByRole('button', { name: 'Sin imagen', exact: true }).click();
+  await filteredRequest;
+  await expect(page.getByRole('button', { name: 'Imágenes', exact: true })).toContainText('Sin imagen');
+
+  await page.getByRole('button', { name: 'Disponibilidad', exact: true }).click();
+  const unavailableRequest = page.waitForRequest(request => {
+    const url = new URL(request.url());
+    return url.pathname.endsWith('/productos') && url.searchParams.get('disponible') === 'false';
+  });
+  await page.getByRole('button', { name: 'Sin stock', exact: true }).click();
+  await unavailableRequest;
+  await expect(page.getByRole('button', { name: 'Disponibilidad', exact: true })).toContainText('Sin stock');
   await expect(page).toHaveScreenshot('filtros-productos.png', { fullPage: true });
+});
+
+test('filtro administrativo de imágenes en escritorio', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop', 'El modal móvil cubre este filtro en pantallas pequeñas.');
+  await mockApi(page, true);
+  await page.goto('/productos');
+  await settle(page);
+  await expect(page.getByText('Imágenes', { exact: true })).toBeVisible();
+
+  const filteredRequest = page.waitForRequest(request => {
+    const url = new URL(request.url());
+    return url.pathname.endsWith('/productos') && url.searchParams.get('imagenes') === 'sin-imagen';
+  });
+  const withoutImage = page.getByRole('button', { name: 'Sin imagen', exact: true });
+  await withoutImage.click();
+  await filteredRequest;
+  const unavailableRequest = page.waitForRequest(request => {
+    const url = new URL(request.url());
+    return url.pathname.endsWith('/productos') && url.searchParams.get('disponible') === 'false';
+  });
+  await page.getByRole('button', { name: 'Sin stock', exact: true }).click();
+  await unavailableRequest;
+  await expect(page.getByText('Filtros activos', { exact: true })).toBeVisible();
 });
 
 test('detalle y confirmación de una cotización', async ({ page }) => {

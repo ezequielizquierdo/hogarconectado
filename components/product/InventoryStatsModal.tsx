@@ -46,7 +46,7 @@ export function InventoryStatsModal({
           <View style={styles.grid}>
             <StatItem value={stats.total} label="Total de Productos" />
             <StatItem value={stats.disponibles} label="Disponibles" tone="available" />
-            <StatItem value={stats.agotados} label="Agotados" tone="unavailable" />
+            <StatItem value={stats.agotados} label="Sin stock" tone="unavailable" />
             <StatItem
               value={`$${stats.valorTotal.toLocaleString()}`}
               label="Valor Total del Inventario"

@@ -23,6 +23,7 @@ import {
   getDraftTotal,
   getDraftUnitPrice,
   hasDraftPaymentMode,
+  requiresCurrentPriceConfirmation,
   type QuotePaymentMode,
 } from "@/utils/quoteDraft";
 
@@ -71,6 +72,7 @@ export function QuoteComposerModal({ visible, onClose }: QuoteComposerModalProps
   const paymentLabel = paymentModes.find((mode) => mode.value === paymentMode)?.label;
   const installmentCount = getDraftInstallmentCount(paymentMode);
   const installmentAmount = installmentCount ? total / installmentCount : null;
+  const priceNeedsConfirmation = requiresCurrentPriceConfirmation(paymentMode);
 
   const resetComposer = () => {
     setStep("form");
@@ -150,7 +152,7 @@ export function QuoteComposerModal({ visible, onClose }: QuoteComposerModalProps
                 {step === "preview" ? "VISTA PREVIA" : step === "success" ? "LISTA PARA ENVIAR" : "NUEVA COTIZACIÓN"}
               </ThemedText>
               <ThemedText style={styles.title}>
-                {step === "preview" ? "Revisá antes de guardar" : step === "success" ? "Cotización guardada" : "Prepará la propuesta"}
+                {step === "preview" ? "Revisá antes de guardar" : step === "success" ? priceNeedsConfirmation ? "Solicitud guardada" : "Cotización guardada" : "Prepará la propuesta"}
               </ThemedText>
               {step !== "success" && (
                 <ThemedText style={styles.subtitle}>
@@ -213,8 +215,18 @@ export function QuoteComposerModal({ visible, onClose }: QuoteComposerModalProps
                     );
                   })}
                 </View>
-                <View style={styles.paymentSummary}>
-                  {installmentCount && installmentAmount !== null ? (
+                <View style={[styles.paymentSummary, priceNeedsConfirmation && styles.paymentSummaryPending]}>
+                  {priceNeedsConfirmation ? (
+                    <View style={styles.pendingPriceCopy}>
+                      <View style={styles.pendingPriceTitleRow}>
+                        <MaterialIcons name="schedule" size={20} color={COLORS.primaryDark} />
+                        <ThemedText style={styles.pendingPriceTitle}>Valor a confirmar</ThemedText>
+                      </View>
+                      <ThemedText style={styles.pendingPriceText}>
+                        Consultaremos el valor actualizado de {paymentLabel?.toLowerCase()} antes de enviarlo al cliente.
+                      </ThemedText>
+                    </View>
+                  ) : installmentCount && installmentAmount !== null ? (
                     <>
                       <View>
                         <ThemedText style={styles.paymentSummaryLabel}>{installmentCount} cuotas de</ThemedText>
@@ -242,7 +254,7 @@ export function QuoteComposerModal({ visible, onClose }: QuoteComposerModalProps
               <View style={styles.section}>
                 <View style={styles.sectionHeaderRow}>
                   <ThemedText style={styles.sectionTitle}>Productos</ThemedText>
-                  <ThemedText style={styles.sectionMeta}>{formatPrice(total)}</ThemedText>
+                  <ThemedText style={styles.sectionMeta}>{priceNeedsConfirmation ? "Valor a confirmar" : formatPrice(total)}</ThemedText>
                 </View>
                 <View style={styles.productsList}>
                   {items.map((item) => (
@@ -259,8 +271,9 @@ export function QuoteComposerModal({ visible, onClose }: QuoteComposerModalProps
                           {item.producto.marca} {item.producto.modelo}
                         </ThemedText>
                         <ThemedText style={styles.unitPrice}>
-                          {formatPrice(getDraftUnitPrice(item, paymentMode))} c/u
-                          {installmentCount ? ` · ${installmentCount} × ${formatPrice(getDraftUnitPrice(item, paymentMode) / installmentCount)}` : ""}
+                          {priceNeedsConfirmation
+                            ? `${paymentLabel}: consultar valor actualizado`
+                            : `${formatPrice(getDraftUnitPrice(item, paymentMode))} c/u`}
                         </ThemedText>
                         <View style={styles.quantityRow}>
                           <Pressable disabled={item.cantidad <= 1} onPress={() => setQuantity(item.producto._id, item.cantidad - 1)} style={[styles.quantityButton, item.cantidad <= 1 && styles.disabled]}>
@@ -276,7 +289,7 @@ export function QuoteComposerModal({ visible, onClose }: QuoteComposerModalProps
                         <Pressable accessibilityLabel="Quitar producto" onPress={() => removeProduct(item.producto._id)} style={styles.removeButton}>
                           <MaterialIcons name="close" size={18} color={COLORS.errorStrong} />
                         </Pressable>
-                        <ThemedText style={styles.subtotal}>{formatPrice(getDraftItemSubtotal(item, paymentMode))}</ThemedText>
+                        <ThemedText style={styles.subtotal}>{priceNeedsConfirmation ? "A confirmar" : formatPrice(getDraftItemSubtotal(item, paymentMode))}</ThemedText>
                       </View>
                     </View>
                   ))}
@@ -316,26 +329,34 @@ export function QuoteComposerModal({ visible, onClose }: QuoteComposerModalProps
                     <View key={item.producto._id} style={styles.previewRow}>
                       <View style={styles.previewRowCopy}>
                         <ThemedText style={styles.previewProductName}>{item.producto.marca} {item.producto.modelo}</ThemedText>
-                        <ThemedText style={styles.previewDetail}>{item.cantidad} × {formatPrice(getDraftUnitPrice(item, paymentMode))}</ThemedText>
-                        {installmentCount && (
+                        <ThemedText style={styles.previewDetail}>
+                          {priceNeedsConfirmation
+                            ? `${item.cantidad} ${item.cantidad === 1 ? "unidad" : "unidades"} · Valor a confirmar`
+                            : `${item.cantidad} × ${formatPrice(getDraftUnitPrice(item, paymentMode))}`}
+                        </ThemedText>
+                        {!priceNeedsConfirmation && installmentCount && (
                           <ThemedText style={styles.previewDetail}>
                             Por unidad: {installmentCount} cuotas de {formatPrice(getDraftUnitPrice(item, paymentMode) / installmentCount)}
                           </ThemedText>
                         )}
                       </View>
-                      <ThemedText style={styles.previewSubtotal}>{formatPrice(getDraftItemSubtotal(item, paymentMode))}</ThemedText>
+                      <ThemedText style={styles.previewSubtotal}>{priceNeedsConfirmation ? "A confirmar" : formatPrice(getDraftItemSubtotal(item, paymentMode))}</ThemedText>
                     </View>
                   ))}
                 </View>
                 {!!notes.trim() && <ThemedText style={styles.previewNotes}>{notes.trim()}</ThemedText>}
                 <View style={styles.previewTotalRow}>
                   <View>
-                    <ThemedText style={styles.previewTotalLabel}>{installmentCount ? "TOTAL FINANCIADO" : paymentMode === "facturado" ? "TOTAL FACTURADO EN 1 CUOTA" : "TOTAL"}</ThemedText>
-                    {installmentCount && installmentAmount !== null && (
+                    <ThemedText style={styles.previewTotalLabel}>{priceNeedsConfirmation ? "VALOR ACTUALIZADO" : installmentCount ? "TOTAL FINANCIADO" : paymentMode === "facturado" ? "TOTAL FACTURADO EN 1 CUOTA" : "TOTAL"}</ThemedText>
+                    {priceNeedsConfirmation ? (
+                      <ThemedText style={styles.previewInstallment}>Se confirmará antes de enviar la propuesta final.</ThemedText>
+                    ) : installmentCount && installmentAmount !== null && (
                       <ThemedText style={styles.previewInstallment}>{installmentCount} cuotas de {formatPrice(installmentAmount)}</ThemedText>
                     )}
                   </View>
-                  <ThemedText style={styles.previewTotal}>{formatPrice(total)}</ThemedText>
+                  <ThemedText style={[styles.previewTotal, priceNeedsConfirmation && styles.previewTotalPending]}>
+                    {priceNeedsConfirmation ? "A confirmar" : formatPrice(total)}
+                  </ThemedText>
                 </View>
               </View>
               {!!error && <ThemedText style={styles.error}>{error}</ThemedText>}
@@ -347,9 +368,11 @@ export function QuoteComposerModal({ visible, onClose }: QuoteComposerModalProps
               <View style={styles.successIcon}>
                 <MaterialIcons name="check" size={42} color={COLORS.ink} />
               </View>
-              <ThemedText style={styles.successTitle}>Cotización guardada</ThemedText>
+              <ThemedText style={styles.successTitle}>{priceNeedsConfirmation ? "Solicitud guardada" : "Cotización guardada"}</ThemedText>
               <ThemedText style={styles.successText}>
-                La propuesta de {formatPrice(total)} quedó registrada y lista para compartir.
+                {priceNeedsConfirmation
+                  ? `La solicitud de ${paymentLabel?.toLowerCase()} quedó registrada. Podés compartirla sin mostrar importes hasta confirmar el valor vigente.`
+                  : `La propuesta de ${formatPrice(total)} quedó registrada y lista para compartir.`}
               </ThemedText>
               {!!savedId && <ThemedText style={styles.successId}>Referencia {savedId.slice(-8).toUpperCase()}</ThemedText>}
             </View>
@@ -372,7 +395,7 @@ export function QuoteComposerModal({ visible, onClose }: QuoteComposerModalProps
                   <ThemedText style={styles.secondaryButtonText}>Editar</ThemedText>
                 </Pressable>
                 <Pressable disabled={saving} onPress={saveQuote} style={[styles.primaryButton, saving && styles.disabled]}>
-                  {saving ? <ActivityIndicator color={COLORS.ink} /> : <ThemedText style={styles.primaryButtonText}>Guardar cotización</ThemedText>}
+                  {saving ? <ActivityIndicator color={COLORS.ink} /> : <ThemedText style={styles.primaryButtonText}>{priceNeedsConfirmation ? "Guardar solicitud" : "Guardar cotización"}</ThemedText>}
                 </Pressable>
               </>
             )}
@@ -417,6 +440,11 @@ const styles = StyleSheet.create({
   modeText: { color: COLORS.textSecondary, fontSize: 13, fontWeight: "700" },
   modeTextSelected: { color: COLORS.ink },
   paymentSummary: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: SPACING.md, padding: SPACING.md, borderRadius: RADIUS.md, backgroundColor: COLORS.cardBackground },
+  paymentSummaryPending: { borderWidth: 1, borderColor: COLORS.primary + "70", backgroundColor: COLORS.primary + "12" },
+  pendingPriceCopy: { flex: 1, gap: 4 },
+  pendingPriceTitleRow: { flexDirection: "row", alignItems: "center", gap: SPACING.xs },
+  pendingPriceTitle: { color: COLORS.text, fontSize: 14, fontWeight: "900" },
+  pendingPriceText: { color: COLORS.textSecondary, fontSize: 12, lineHeight: 17 },
   paymentSummaryAside: { alignItems: "flex-end" },
   paymentSummaryLabel: { color: COLORS.textSecondary, fontSize: 11, fontWeight: "700" },
   paymentSummaryValue: { marginTop: 2, color: COLORS.primaryDark, fontSize: 18, fontWeight: "900" },
@@ -454,6 +482,7 @@ const styles = StyleSheet.create({
   previewTotalLabel: { color: COLORS.heroTextMuted, fontSize: 12, fontWeight: "800", letterSpacing: 1 },
   previewInstallment: { marginTop: 4, color: COLORS.heroTextMuted, fontSize: 12, fontWeight: "700" },
   previewTotal: { color: COLORS.surface, fontSize: 24, fontWeight: "900" },
+  previewTotalPending: { maxWidth: 160, fontSize: 18, textAlign: "right" },
   successContent: { alignItems: "center", padding: SPACING.xl, gap: SPACING.sm },
   successIcon: { width: 76, height: 76, alignItems: "center", justifyContent: "center", borderRadius: RADIUS.full, backgroundColor: COLORS.secondary },
   successTitle: { marginTop: SPACING.sm, color: COLORS.text, fontSize: 24, fontWeight: "900" },

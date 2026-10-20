@@ -25,11 +25,14 @@ interface SidebarFiltersProps {
   selectedMarca: string;
   selectedStock: string;
   selectedUpdated: string;
+  selectedImages: string;
+  showImageFilter?: boolean;
   searchText: string;
   onCategoriaChange: (value: string) => void;
   onMarcaChange: (value: string) => void;
   onStockChange: (value: string) => void;
   onUpdatedChange: (value: string) => void;
+  onImagesChange: (value: string) => void;
   onSearchChange: (value: string) => void;
   onClearFilters: () => void;
   resultCount: number;
@@ -45,11 +48,14 @@ const SidebarFilters: React.FC<SidebarFiltersProps> = ({
   selectedMarca,
   selectedStock,
   selectedUpdated,
+  selectedImages,
+  showImageFilter = false,
   searchText,
   onCategoriaChange,
   onMarcaChange,
   onStockChange,
   onUpdatedChange,
+  onImagesChange,
   onSearchChange,
   onClearFilters,
   resultCount,
@@ -60,6 +66,7 @@ const SidebarFilters: React.FC<SidebarFiltersProps> = ({
   const [marcasCollapsed, setMarcasCollapsed] = useState(false);
   const [stockCollapsed, setStockCollapsed] = useState(false);
   const [updatedCollapsed, setUpdatedCollapsed] = useState(false);
+  const [imagesCollapsed, setImagesCollapsed] = useState(false);
 
   const updatedOptions = [
     { label: "Todos los productos", value: "todos" },
@@ -70,7 +77,13 @@ const SidebarFilters: React.FC<SidebarFiltersProps> = ({
 
   const stockOptions = [
     { label: "Disponible", value: "disponible" },
-    { label: "Agotado", value: "agotado" },
+    { label: "Sin stock", value: "agotado" },
+  ];
+
+  const imageOptions = [
+    { label: "Todos", value: "todos" },
+    { label: "Con imagen", value: "con-imagen" },
+    { label: "Sin imagen", value: "sin-imagen" },
   ];
 
   const essenCategories = categorias
@@ -176,6 +189,7 @@ const SidebarFilters: React.FC<SidebarFiltersProps> = ({
     selectedMarca !== "" ||
     selectedStock !== "" ||
     selectedUpdated !== "todos" ||
+    (showImageFilter && selectedImages !== "todos") ||
     searchText.trim() !== "";
 
   return (
@@ -242,6 +256,22 @@ const SidebarFilters: React.FC<SidebarFiltersProps> = ({
         )}
 
         <View style={styles.divider} />
+
+        {showImageFilter && (
+          <>
+            {renderFilterSection(
+              "Imágenes",
+              "image",
+              imageOptions,
+              selectedImages,
+              onImagesChange,
+              false,
+              imagesCollapsed,
+              () => setImagesCollapsed(!imagesCollapsed)
+            )}
+            <View style={styles.divider} />
+          </>
+        )}
 
         {/* Categorías */}
         {renderFilterSection(

@@ -10,14 +10,15 @@ export interface PublicQuote {
     modelo: string;
     cantidad: number;
     imagen?: string;
-    precioUnitario: number;
-    subtotal: number;
+    precioUnitario: number | null;
+    subtotal: number | null;
     tipoComercializacion?: 'stock-propio' | 'producto-tercero' | 'venta-catalogo';
     disponiblePorPedido?: boolean;
     catalogo?: { nombre?: string; campania?: string; vigenciaHasta?: string; plazoEntrega?: string };
   }>;
   modalidadPago: CotizacionModalidad;
-  total: number;
+  requiereConfirmacionPrecio?: boolean;
+  total: number | null;
   cuotas?: { cantidad: number; monto: number } | null;
   observaciones?: string;
   incluyeProductosCatalogo?: boolean;
