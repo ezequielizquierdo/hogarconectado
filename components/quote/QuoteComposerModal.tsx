@@ -240,7 +240,7 @@ export function QuoteComposerModal({ visible, onClose }: QuoteComposerModalProps
                   ) : (
                     <>
                       <ThemedText style={styles.paymentSummaryLabel}>
-                        {paymentMode === "facturado" ? "Total facturado en 1 cuota" : "Total contado"}
+                        Total contado
                       </ThemedText>
                       <ThemedText style={styles.paymentSummaryTotal}>{formatPrice(total)}</ThemedText>
                     </>
@@ -347,7 +347,7 @@ export function QuoteComposerModal({ visible, onClose }: QuoteComposerModalProps
                 {!!notes.trim() && <ThemedText style={styles.previewNotes}>{notes.trim()}</ThemedText>}
                 <View style={styles.previewTotalRow}>
                   <View>
-                    <ThemedText style={styles.previewTotalLabel}>{priceNeedsConfirmation ? "VALOR ACTUALIZADO" : installmentCount ? "TOTAL FINANCIADO" : paymentMode === "facturado" ? "TOTAL FACTURADO EN 1 CUOTA" : "TOTAL"}</ThemedText>
+                    <ThemedText style={styles.previewTotalLabel}>{priceNeedsConfirmation ? "VALOR ACTUALIZADO" : "TOTAL"}</ThemedText>
                     {priceNeedsConfirmation ? (
                       <ThemedText style={styles.previewInstallment}>Se confirmará antes de enviar la propuesta final.</ThemedText>
                     ) : installmentCount && installmentAmount !== null && (

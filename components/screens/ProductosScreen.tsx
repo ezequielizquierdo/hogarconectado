@@ -3698,7 +3698,7 @@ export default function ProductosScreen() {
                       {instagramStoryOptions.showStock && (
                         <ThemedText numberOfLines={1} style={styles.storyText}>
                           {hasAvailableStock(selectedProductForInstagram?.stock)
-                            ? canViewStockQuantity && selectedProductForInstagram.stock.cantidad != null
+                            ? canViewStockQuantity && selectedProductForInstagram?.stock?.cantidad != null
                               ? `Stock: ${selectedProductForInstagram.stock.cantidad}`
                               : "Disponible"
                             : "Sin stock"}
